@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "beq-critic"
+version = "0.2.0"
+description = "Learned equivalence scorer for Lean autoformalization candidates"
+requires-python = ">=3.9"
+dependencies = ["datasets", "transformers", "torch"]
+
+[tool.setuptools.packages.find]
+where = ["."]
