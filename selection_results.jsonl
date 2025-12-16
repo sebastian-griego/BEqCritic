@@ -1,0 +1,2 @@
+{"problem_id": "test_1", "chosen": "theorem t1 : 1 = 1 := rfl", "chosen_index": 0, "component_size": 1, "component_indices": [0]}
+{"problem_id": "test_2", "chosen": "theorem t2 : True := trivial", "chosen_index": 0, "component_size": 1, "component_indices": [0]}

@@ -1,0 +1,2 @@
+{"problem_id": "test_1", "candidates": ["theorem t1 : 1 = 1 := rfl", "theorem t1 : 1 = 1 := by rfl", "theorem t1 : 2 = 2 := rfl"]}
+{"problem_id": "test_2", "candidates": ["theorem t2 : True := trivial"]}

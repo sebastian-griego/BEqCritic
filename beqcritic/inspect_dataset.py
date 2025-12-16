@@ -2,11 +2,12 @@
 Small helper to print the column names of a HuggingFace dataset split.
 
 Example:
-  python -m beq_critic.inspect_dataset --dataset PAug/ProofNetVerif --split train
+  python -m beqcritic.inspect_dataset --dataset PAug/ProofNetVerif --split train
 """
 from __future__ import annotations
 import argparse
-from datasets import load_dataset
+
+from .hf_datasets import load_dataset_split
 
 def main():
     p = argparse.ArgumentParser()
@@ -15,7 +16,7 @@ def main():
     p.add_argument("--n", type=int, default=2, help="Number of rows to print")
     args = p.parse_args()
 
-    ds = load_dataset(args.dataset, split=args.split)
+    ds = load_dataset_split(args.dataset, args.split)
     print("Columns:", ds.column_names)
     for i in range(min(args.n, len(ds))):
         row = ds[i]

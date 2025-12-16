@@ -7,15 +7,15 @@ Focus:
 - cluster autoformalization candidates by predicted equivalence and select from the largest class
 
 Contents:
-- beq_critic/inspect_dataset.py: print dataset columns and sample rows
-- beq_critic/train_beq_critic.py: train the critic
-- beq_critic/score_and_select.py: apply clustering and selection
+- beqcritic/inspect_dataset.py: print dataset columns and sample rows
+- beqcritic/train_beq_critic.py: train the critic
+- beqcritic/score_and_select.py: apply clustering and selection
 
 Minimal training run:
 
-python -m beq_critic.inspect_dataset --dataset PAug/ProofNetVerif --split train
+python -m beqcritic.inspect_dataset --dataset PAug/ProofNetVerif --split train
 
-python -m beq_critic.train_beq_critic \
+python -m beqcritic.train_beq_critic \
   --dataset PAug/ProofNetVerif \
   --split train \
   --pred-key prediction \

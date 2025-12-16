@@ -2,7 +2,7 @@
 Training script for BeqCritic.
 
 Example:
-  python -m beq_critic.train_beq_critic \
+  python -m beqcritic.train_beq_critic \
     --dataset PAug/ProofNetVerif \
     --split train \
     --pred-key prediction \
@@ -23,9 +23,10 @@ from __future__ import annotations
 import argparse
 import random
 from typing import Any
+from pathlib import Path
 
 import numpy as np
-from datasets import load_dataset, Dataset
+from datasets import Dataset
 from transformers import (
     AutoTokenizer,
     AutoModelForSequenceClassification,
@@ -38,6 +39,26 @@ from transformers import (
 from .textnorm import normalize_lean_statement
 from .features import featurize_pair
 from .pairgen import make_pred_vs_ref_pairs, make_cand_vs_cand_pairs, PairExample
+from .hf_datasets import load_dataset_split
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+def _resolve_base_model(name_or_path: str) -> str:
+    p = Path(name_or_path)
+    if p.exists():
+        return name_or_path
+
+    if not p.is_absolute():
+        from_repo = REPO_ROOT / p
+        if from_repo.exists():
+            return str(from_repo)
+
+    if "/" in name_or_path:
+        local = REPO_ROOT / "hf_models" / name_or_path.replace("/", "--")
+        if local.exists():
+            return str(local)
+
+    return name_or_path
 
 def _guess_bool_label(x: Any) -> int:
     if isinstance(x, bool):
@@ -147,7 +168,7 @@ def main():
 
     set_seed(args.seed)
 
-    raw = load_dataset(args.dataset, split=args.split)
+    raw = load_dataset_split(args.dataset, args.split)
     rows = _rows_from_hf(raw)
     examples = _build_examples(rows, args)
     ds = _to_hf_dataset(examples)
@@ -157,8 +178,14 @@ def main():
     eval_ds = ds.select(range(n_eval))
     train_ds = ds.select(range(n_eval, len(ds)))
 
-    tok = AutoTokenizer.from_pretrained(args.base_model, use_fast=True)
-    model = AutoModelForSequenceClassification.from_pretrained(args.base_model, num_labels=2)
+    base_model = _resolve_base_model(args.base_model)
+    local_only = Path(base_model).exists()
+    tok = AutoTokenizer.from_pretrained(base_model, use_fast=True, local_files_only=local_only)
+    model = AutoModelForSequenceClassification.from_pretrained(
+        base_model,
+        num_labels=2,
+        local_files_only=local_only,
+    )
 
     def preprocess(batch):
         a_clean = [normalize_lean_statement(x) for x in batch["a"]]
