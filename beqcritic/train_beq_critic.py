@@ -43,6 +43,53 @@ from .hf_datasets import load_dataset_split
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+def _split_rows_by_problem_id(
+    rows: list[dict],
+    problem_id_key: str | None,
+    eval_size: float,
+    seed: int,
+) -> tuple[list[dict], list[dict]]:
+    if not rows:
+        return [], []
+    if not problem_id_key:
+        return _split_rows_random(rows, eval_size, seed)
+
+    missing = [i for i, r in enumerate(rows) if problem_id_key not in r]
+    if missing:
+        raise ValueError(
+            f"Cannot split by problem id: {problem_id_key!r} missing from {len(missing)} rows. "
+            f"Pass the correct --problem-id-key."
+        )
+
+    pids = sorted({str(r.get(problem_id_key)) for r in rows})
+    if len(pids) < 2:
+        return _split_rows_random(rows, eval_size, seed)
+
+    rnd = random.Random(seed)
+    rnd.shuffle(pids)
+    n_eval = int(len(pids) * float(eval_size))
+    n_eval = max(1, n_eval)
+    n_eval = min(n_eval, len(pids) - 1)
+    eval_pids = set(pids[:n_eval])
+
+    eval_rows = [r for r in rows if str(r.get(problem_id_key)) in eval_pids]
+    train_rows = [r for r in rows if str(r.get(problem_id_key)) not in eval_pids]
+    return train_rows, eval_rows
+
+
+def _split_rows_random(rows: list[dict], eval_size: float, seed: int) -> tuple[list[dict], list[dict]]:
+    if not rows:
+        return [], []
+    idx = list(range(len(rows)))
+    random.Random(seed).shuffle(idx)
+    n_eval = int(len(rows) * float(eval_size))
+    n_eval = max(1, n_eval)
+    n_eval = min(n_eval, len(rows) - 1) if len(rows) > 1 else 1
+    eval_rows = [rows[i] for i in idx[:n_eval]]
+    train_rows = [rows[i] for i in idx[n_eval:]]
+    return train_rows, eval_rows
+
+
 def _resolve_base_model(name_or_path: str) -> str:
     p = Path(name_or_path)
     if p.exists():
@@ -155,7 +202,7 @@ def main():
     p.add_argument("--max-pos-per-problem", type=int, default=16)
     p.add_argument("--max-neg-per-problem", type=int, default=32)
 
-    p.add_argument("--eval-size", type=float, default=0.1)
+    p.add_argument("--eval-size", type=float, default=0.1, help="Fraction of problem IDs to use for eval (group split)")
     p.add_argument("--seed", type=int, default=0)
 
     p.add_argument("--epochs", type=float, default=1.0)
@@ -170,13 +217,28 @@ def main():
 
     raw = load_dataset_split(args.dataset, args.split)
     rows = _rows_from_hf(raw)
-    examples = _build_examples(rows, args)
-    ds = _to_hf_dataset(examples)
+    train_rows, eval_rows = _split_rows_by_problem_id(
+        rows,
+        args.problem_id_key if args.problem_id_key else None,
+        args.eval_size,
+        args.seed,
+    )
 
-    ds = ds.shuffle(seed=args.seed)
-    n_eval = max(1, int(len(ds) * args.eval_size))
-    eval_ds = ds.select(range(n_eval))
-    train_ds = ds.select(range(n_eval, len(ds)))
+    if args.problem_id_key:
+        train_pids = {str(r.get(args.problem_id_key)) for r in train_rows}
+        eval_pids = {str(r.get(args.problem_id_key)) for r in eval_rows}
+        if train_pids & eval_pids:
+            raise RuntimeError("Problem-id split failed: train/eval problem IDs overlap")
+        print(
+            f"Group split by {args.problem_id_key}: "
+            f"{len(train_rows)} train rows ({len(train_pids)} problems), "
+            f"{len(eval_rows)} eval rows ({len(eval_pids)} problems)"
+        )
+
+    train_examples = _build_examples(train_rows, args)
+    eval_examples = _build_examples(eval_rows, args)
+    train_ds = _to_hf_dataset(train_examples)
+    eval_ds = _to_hf_dataset(eval_examples)
 
     base_model = _resolve_base_model(args.base_model)
     local_only = Path(base_model).exists()
@@ -222,6 +284,7 @@ def main():
         save_steps=200,
         logging_steps=50,
         save_total_limit=2,
+        save_only_model=True,
         fp16=bool(args.fp16),
         bf16=bool(args.bf16),
         report_to=[],
