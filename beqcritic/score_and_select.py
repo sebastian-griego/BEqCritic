@@ -42,6 +42,12 @@ def main():
         default=0,
         help="If >0, keep edges only when i and j are mutual top-k neighbors (reduces bridge errors).",
     )
+    p.add_argument(
+        "--triangle-prune-margin",
+        type=float,
+        default=0.2,
+        help="If >0, prune inconsistent triangles where AB and BC are strong but AC is weak.",
+    )
     args = p.parse_args()
 
     critic = BeqCritic(model_name_or_path=args.model, max_length=args.max_length)
@@ -61,6 +67,7 @@ def main():
                 component_rank=args.cluster_rank,
                 symmetric=args.symmetric,
                 mutual_top_k=args.mutual_k,
+                triangle_prune_margin=args.triangle_prune_margin,
             )
             out = {
                 "problem_id": obj.get("problem_id"),

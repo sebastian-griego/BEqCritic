@@ -13,6 +13,7 @@ import json
 from typing import Any
 
 from .hf_datasets import load_dataset_split
+from .textnorm import normalize_lean_statement
 
 
 def _guess_bool_label(x: Any) -> int:
@@ -34,16 +35,18 @@ def main() -> None:
     p.add_argument("--dataset", type=str, required=True)
     p.add_argument("--split", type=str, default="valid")
     p.add_argument("--pred-key", type=str, default="prediction")
+    p.add_argument("--ref-key", type=str, default="", help="Optional reference key (for length bucketing)")
     p.add_argument("--label-key", type=str, default="label")
     p.add_argument("--problem-id-key", type=str, default="problem_id")
     p.add_argument("--output", type=str, required=True)
     p.add_argument("--max-problems", type=int, default=0, help="Limit number of problems (0 = no limit)")
     p.add_argument("--dedupe", action="store_true", help="Drop duplicate candidate strings per problem")
+    p.add_argument("--include-reference", action="store_true", help="Include the reference statement text in output")
     args = p.parse_args()
 
     ds = load_dataset_split(args.dataset, args.split)
 
-    grouped: dict[str, dict[str, list]] = {}
+    grouped: dict[str, dict[str, Any]] = {}
     seen: dict[str, set[str]] = {}
     for r in ds:
         pid = str(r.get(args.problem_id_key))
@@ -54,6 +57,12 @@ def main() -> None:
             if args.max_problems and len(grouped) >= int(args.max_problems):
                 break
             grouped[pid] = {"candidates": [], "labels": []}
+            if args.ref_key:
+                ref = "" if r.get(args.ref_key) is None else str(r.get(args.ref_key))
+                norm_ref = normalize_lean_statement(ref)
+                grouped[pid]["ref_len_chars"] = len(norm_ref)
+                if args.include_reference:
+                    grouped[pid]["reference"] = ref
             seen[pid] = set()
 
         if args.dedupe:
@@ -72,4 +81,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

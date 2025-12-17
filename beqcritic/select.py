@@ -128,6 +128,41 @@ def _medoid(comp: list[int], scores: list[list[float]], norm: list[str]) -> tupl
     return best_idx, float(best_score)
 
 
+def _triangle_prune(
+    adj: list[set[int]],
+    scores: list[list[float]],
+    threshold: float,
+    margin: float,
+) -> None:
+    if margin <= 0:
+        return
+    n = len(adj)
+    to_remove: set[tuple[int, int]] = set()
+
+    for j in range(n):
+        neigh = [i for i in adj[j] if i != j]
+        for a in range(len(neigh)):
+            i = neigh[a]
+            for b in range(a + 1, len(neigh)):
+                k = neigh[b]
+                s_ij = scores[i][j]
+                s_jk = scores[j][k]
+                s_ik = scores[i][k]
+                if s_ik >= threshold:
+                    continue
+                if min(s_ij, s_jk) - s_ik < margin:
+                    continue
+                if s_ij <= s_jk:
+                    u, v = (i, j) if i < j else (j, i)
+                else:
+                    u, v = (j, k) if j < k else (k, j)
+                to_remove.add((u, v))
+
+    for u, v in to_remove:
+        adj[u].discard(v)
+        adj[v].discard(u)
+
+
 def select_from_score_matrix(
     candidates: list[str],
     norm: list[str],
@@ -136,6 +171,7 @@ def select_from_score_matrix(
     tie_break: str = "medoid",
     component_rank: str = "size_then_cohesion",
     mutual_top_k: int = 0,
+    triangle_prune_margin: float = 0.0,
 ) -> SelectionResult:
     if not candidates:
         raise ValueError("No candidates provided")
@@ -166,6 +202,8 @@ def select_from_score_matrix(
                     continue
             adj[i].add(j)
             adj[j].add(i)
+
+    _triangle_prune(adj=adj, scores=scores, threshold=threshold, margin=float(triangle_prune_margin))
 
     comps = _connected_components(adj)
     comp_stats = []
@@ -216,6 +254,7 @@ def select_by_equivalence_clustering(
     component_rank: str = "size_then_cohesion",
     symmetric: bool = False,
     mutual_top_k: int = 0,
+    triangle_prune_margin: float = 0.0,
 ) -> SelectionResult:
     norm, scores = _score_matrix(candidates, critic=critic, batch_size=batch_size, symmetric=bool(symmetric))
     return select_from_score_matrix(
@@ -226,4 +265,5 @@ def select_by_equivalence_clustering(
         tie_break=tie_break,
         component_rank=component_rank,
         mutual_top_k=mutual_top_k,
+        triangle_prune_margin=triangle_prune_margin,
     )

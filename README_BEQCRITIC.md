@@ -34,6 +34,7 @@ python -m beqcritic.make_grouped_candidates \
   --dataset PAug/ProofNetVerif \
   --split test \
   --pred-key lean4_prediction \
+  --ref-key lean4_formalization \
   --label-key correct \
   --problem-id-key id \
   --output proofnetverif_test_candidates.jsonl
@@ -44,7 +45,8 @@ python -m beqcritic.score_and_select \
   --output proofnetverif_test_selection.jsonl \
   --threshold 0.5 \
   --tie-break medoid \
-  --cluster-rank size_then_cohesion
+  --cluster-rank size_then_cohesion \
+  --triangle-prune-margin 0.2
 
 python -m beqcritic.evaluate_selection \
   --candidates proofnetverif_test_candidates.jsonl \
@@ -58,4 +60,7 @@ python -m beqcritic.benchmark_selection \
   --thresholds 0.3,0.4,0.5,0.6,0.7 \
   --tie-breaks medoid,shortest,first \
   --cluster-ranks size_then_cohesion,size \
-  --mutual-k 0
+  --mutual-ks 0,3 \
+  --triangle-prune-margin 0.2 \
+  --bootstrap 1000 \
+  --report-buckets
