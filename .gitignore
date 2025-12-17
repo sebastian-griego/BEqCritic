@@ -7,3 +7,6 @@ hf_datasets/
 hf_models/
 beqcritic_offline_bundle.zip
 .hf_cache/
+*_candidates.jsonl
+*_selection.jsonl
+selection_results*.jsonl

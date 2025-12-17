@@ -27,3 +27,35 @@ python -m beqcritic.train_beq_critic \
   --task-mix pred_vs_ref,cand_vs_cand \
   --epochs 1 \
   --batch-size 8
+
+Build grouped candidates JSONL (for `score_and_select`) and evaluate selection:
+
+python -m beqcritic.make_grouped_candidates \
+  --dataset PAug/ProofNetVerif \
+  --split test \
+  --pred-key lean4_prediction \
+  --label-key correct \
+  --problem-id-key id \
+  --output proofnetverif_test_candidates.jsonl
+
+python -m beqcritic.score_and_select \
+  --model checkpoints/beqcritic_deberta \
+  --input proofnetverif_test_candidates.jsonl \
+  --output proofnetverif_test_selection.jsonl \
+  --threshold 0.5 \
+  --tie-break medoid \
+  --cluster-rank size_then_cohesion
+
+python -m beqcritic.evaluate_selection \
+  --candidates proofnetverif_test_candidates.jsonl \
+  --selections proofnetverif_test_selection.jsonl
+
+Benchmark multiple thresholds and selection strategies without re-scoring:
+
+python -m beqcritic.benchmark_selection \
+  --model checkpoints/beqcritic_deberta \
+  --input proofnetverif_test_candidates.jsonl \
+  --thresholds 0.3,0.4,0.5,0.6,0.7 \
+  --tie-breaks medoid,shortest,first \
+  --cluster-ranks size_then_cohesion,size \
+  --mutual-k 0

@@ -154,6 +154,12 @@ def _build_examples(rows: list[dict], args) -> list[PairExample]:
             seed=args.seed,
         )))
 
+    if getattr(args, "symmetrize", False):
+        examples = examples + [
+            PairExample(a=e.b, b=e.a, label=e.label, task=e.task, problem_id=e.problem_id)
+            for e in examples
+        ]
+
     random.Random(args.seed).shuffle(examples)
     return examples
 
@@ -203,7 +209,9 @@ def main():
     p.add_argument("--max-neg-per-problem", type=int, default=32)
 
     p.add_argument("--eval-size", type=float, default=0.1, help="Fraction of problem IDs to use for eval (group split)")
+    p.add_argument("--eval-split", type=str, default="", help="Optional separate eval split (disables --eval-size)")
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--symmetrize", action="store_true", help="Train on both (A,B) and (B,A) for every pair")
 
     p.add_argument("--epochs", type=float, default=1.0)
     p.add_argument("--lr", type=float, default=2e-5)
@@ -215,25 +223,41 @@ def main():
 
     set_seed(args.seed)
 
-    raw = load_dataset_split(args.dataset, args.split)
-    rows = _rows_from_hf(raw)
-    train_rows, eval_rows = _split_rows_by_problem_id(
-        rows,
-        args.problem_id_key if args.problem_id_key else None,
-        args.eval_size,
-        args.seed,
-    )
+    if args.eval_split:
+        train_raw = load_dataset_split(args.dataset, args.split)
+        eval_raw = load_dataset_split(args.dataset, args.eval_split)
+        train_rows = _rows_from_hf(train_raw)
+        eval_rows = _rows_from_hf(eval_raw)
 
-    if args.problem_id_key:
-        train_pids = {str(r.get(args.problem_id_key)) for r in train_rows}
-        eval_pids = {str(r.get(args.problem_id_key)) for r in eval_rows}
-        if train_pids & eval_pids:
-            raise RuntimeError("Problem-id split failed: train/eval problem IDs overlap")
-        print(
-            f"Group split by {args.problem_id_key}: "
-            f"{len(train_rows)} train rows ({len(train_pids)} problems), "
-            f"{len(eval_rows)} eval rows ({len(eval_pids)} problems)"
+        if args.problem_id_key:
+            train_pids = {str(r.get(args.problem_id_key)) for r in train_rows}
+            eval_pids = {str(r.get(args.problem_id_key)) for r in eval_rows}
+            if train_pids & eval_pids:
+                raise RuntimeError("Train/eval splits overlap on problem IDs; choose a different --eval-split.")
+            print(
+                f"Dataset split: {args.split} -> train ({len(train_rows)} rows, {len(train_pids)} problems), "
+                f"{args.eval_split} -> eval ({len(eval_rows)} rows, {len(eval_pids)} problems)"
+            )
+    else:
+        raw = load_dataset_split(args.dataset, args.split)
+        rows = _rows_from_hf(raw)
+        train_rows, eval_rows = _split_rows_by_problem_id(
+            rows,
+            args.problem_id_key if args.problem_id_key else None,
+            args.eval_size,
+            args.seed,
         )
+
+        if args.problem_id_key:
+            train_pids = {str(r.get(args.problem_id_key)) for r in train_rows}
+            eval_pids = {str(r.get(args.problem_id_key)) for r in eval_rows}
+            if train_pids & eval_pids:
+                raise RuntimeError("Problem-id split failed: train/eval problem IDs overlap")
+            print(
+                f"Group split by {args.problem_id_key}: "
+                f"{len(train_rows)} train rows ({len(train_pids)} problems), "
+                f"{len(eval_rows)} eval rows ({len(eval_pids)} problems)"
+            )
 
     train_examples = _build_examples(train_rows, args)
     eval_examples = _build_examples(eval_rows, args)

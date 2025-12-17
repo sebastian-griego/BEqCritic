@@ -23,7 +23,25 @@ def main():
     p.add_argument("--threshold", type=float, default=0.5)
     p.add_argument("--batch-size", type=int, default=16)
     p.add_argument("--max-length", type=int, default=512)
-    p.add_argument("--tie-break", type=str, default="shortest", choices=["shortest", "first"])
+    p.add_argument("--tie-break", type=str, default="medoid", choices=["medoid", "shortest", "first"])
+    p.add_argument(
+        "--cluster-rank",
+        type=str,
+        default="size_then_cohesion",
+        choices=["size", "size_then_cohesion", "cohesion", "size_times_cohesion"],
+    )
+    p.add_argument(
+        "--symmetric",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Average score(A,B) and score(B,A). Slower but can reduce order bias.",
+    )
+    p.add_argument(
+        "--mutual-k",
+        type=int,
+        default=0,
+        help="If >0, keep edges only when i and j are mutual top-k neighbors (reduces bridge errors).",
+    )
     args = p.parse_args()
 
     critic = BeqCritic(model_name_or_path=args.model, max_length=args.max_length)
@@ -40,6 +58,9 @@ def main():
                 threshold=args.threshold,
                 batch_size=args.batch_size,
                 tie_break=args.tie_break,
+                component_rank=args.cluster_rank,
+                symmetric=args.symmetric,
+                mutual_top_k=args.mutual_k,
             )
             out = {
                 "problem_id": obj.get("problem_id"),
@@ -48,6 +69,10 @@ def main():
                 "component_size": res.component_size,
                 "component_indices": res.component_indices,
             }
+            if res.component_cohesion is not None:
+                out["component_cohesion"] = res.component_cohesion
+            if res.chosen_centrality is not None:
+                out["chosen_centrality"] = res.chosen_centrality
             fout.write(json.dumps(out, ensure_ascii=False) + "\n")
 
 if __name__ == "__main__":
