@@ -25,6 +25,13 @@ class SelectionResult:
     component_size: int
     component_cohesion: float | None = None
     chosen_centrality: float | None = None
+    edges_before: int | None = None
+    edges_after: int | None = None
+    components_before: int | None = None
+    components_after: int | None = None
+    isolated_before: int | None = None
+    isolated_after: int | None = None
+    edges_readded: int | None = None
 
 def _mean(xs: list[float]) -> float:
     return sum(xs) / max(1, len(xs))
@@ -96,6 +103,15 @@ def _connected_components(adj: list[set[int]]) -> list[list[int]]:
     return comps
 
 
+def _edge_count(adj: list[set[int]]) -> int:
+    # Each adjacency set includes the node itself, so subtract self-loops.
+    return sum(max(0, len(s) - 1) for s in adj) // 2
+
+
+def _isolated_count(adj: list[set[int]]) -> int:
+    return sum(1 for s in adj if len(s) <= 1)
+
+
 def _component_cohesion(comp: list[int], scores: list[list[float]]) -> float:
     if len(comp) <= 1:
         return 1.0
@@ -163,6 +179,108 @@ def _triangle_prune(
         adj[v].discard(u)
 
 
+def _keep_best_edge_per_isolate(
+    adj: list[set[int]],
+    scores: list[list[float]],
+    threshold: float,
+    topk: list[set[int]] | None,
+) -> int:
+    """
+    Guardrail: if pruning isolates a node but it has at least one eligible edge, keep its strongest edge.
+
+    Returns the number of edges re-added.
+    """
+    n = len(adj)
+    readded = 0
+    for i in range(n):
+        if len(adj[i]) > 1:
+            continue
+
+        best_j = None
+        best_s = float("-inf")
+        for j in range(n):
+            if j == i:
+                continue
+            if scores[i][j] < threshold:
+                continue
+            if topk is not None:
+                if j not in topk[i] or i not in topk[j]:
+                    continue
+            if scores[i][j] > best_s:
+                best_s = scores[i][j]
+                best_j = j
+
+        if best_j is None:
+            continue
+        j = int(best_j)
+        if j not in adj[i]:
+            adj[i].add(j)
+            adj[j].add(i)
+            readded += 1
+    return readded
+
+
+def _densify_cluster(
+    cluster: set[int],
+    adj: list[set[int]],
+    support_frac: float,
+) -> set[int]:
+    """
+    Post-process a cluster so every node has >= support_frac connectivity within the cluster.
+    """
+    if support_frac <= 0:
+        return cluster
+
+    changed = True
+    while changed and len(cluster) >= 2:
+        changed = False
+        n = len(cluster)
+        min_support = int((support_frac * n) + 0.999999)  # ceil
+        # Support counts include self due to adj[u] containing u.
+        bad = []
+        for u in cluster:
+            support = sum(1 for v in cluster if v in adj[u])
+            if support < min_support:
+                bad.append((support, u))
+        if bad:
+            bad.sort(key=lambda x: (x[0], x[1]))
+            _, u = bad[0]
+            cluster.remove(u)
+            changed = True
+    return cluster
+
+
+def _support_cluster_from_seed(
+    seed: int,
+    adj: list[set[int]],
+    scores: list[list[float]],
+    support_frac: float,
+) -> list[int]:
+    cluster: set[int] = {int(seed)}
+    remaining = set(range(len(adj))) - cluster
+    while remaining:
+        n = len(cluster)
+        min_support = int((support_frac * n) + 0.999999)  # ceil
+        best = None
+        best_key = None
+        for k in remaining:
+            support = sum(1 for m in cluster if k in adj[m])
+            if support < min_support:
+                continue
+            avg = _mean([scores[k][m] for m in cluster])
+            key = (avg, support, -k)
+            if best_key is None or key > best_key:
+                best_key = key
+                best = k
+        if best is None:
+            break
+        cluster.add(int(best))
+        remaining.remove(int(best))
+
+    cluster = _densify_cluster(cluster, adj=adj, support_frac=support_frac)
+    return sorted(cluster)
+
+
 def select_from_score_matrix(
     candidates: list[str],
     norm: list[str],
@@ -172,6 +290,9 @@ def select_from_score_matrix(
     component_rank: str = "size_then_cohesion",
     mutual_top_k: int = 0,
     triangle_prune_margin: float = 0.0,
+    triangle_prune_keep_best_edge: bool = True,
+    cluster_mode: str = "components",
+    support_frac: float = 0.7,
 ) -> SelectionResult:
     if not candidates:
         raise ValueError("No candidates provided")
@@ -203,13 +324,40 @@ def select_from_score_matrix(
             adj[i].add(j)
             adj[j].add(i)
 
-    _triangle_prune(adj=adj, scores=scores, threshold=threshold, margin=float(triangle_prune_margin))
+    edges_before = _edge_count(adj)
+    comps_before = len(_connected_components(adj))
+    isolated_before = _isolated_count(adj)
 
-    comps = _connected_components(adj)
-    comp_stats = []
-    for comp in comps:
-        coh = _component_cohesion(comp, scores)
-        comp_stats.append((comp, coh))
+    _triangle_prune(adj=adj, scores=scores, threshold=threshold, margin=float(triangle_prune_margin))
+    edges_readded = 0
+    if triangle_prune_keep_best_edge:
+        edges_readded = _keep_best_edge_per_isolate(adj=adj, scores=scores, threshold=threshold, topk=topk)
+
+    edges_after = _edge_count(adj)
+    comps_after = len(_connected_components(adj))
+    isolated_after = _isolated_count(adj)
+
+    if cluster_mode == "components":
+        comps = _connected_components(adj)
+        comp_stats = []
+        for comp in comps:
+            coh = _component_cohesion(comp, scores)
+            comp_stats.append((comp, coh))
+    elif cluster_mode == "support":
+        comp_stats = []
+        seen = set()
+        for seed in range(n):
+            comp = _support_cluster_from_seed(seed, adj=adj, scores=scores, support_frac=float(support_frac))
+            t = tuple(comp)
+            if t in seen:
+                continue
+            seen.add(t)
+            coh = _component_cohesion(comp, scores)
+            comp_stats.append((comp, coh))
+        if not comp_stats:
+            comp_stats = [([0], 1.0)]
+    else:
+        raise ValueError(f"Unknown cluster_mode={cluster_mode!r}")
 
     def _rank_key(comp: list[int], coh: float):
         if component_rank == "size":
@@ -243,6 +391,13 @@ def select_from_score_matrix(
         component_size=len(best_comp),
         component_cohesion=float(best_coh),
         chosen_centrality=float(chosen_cent) if chosen_cent is not None else None,
+        edges_before=int(edges_before),
+        edges_after=int(edges_after),
+        components_before=int(comps_before),
+        components_after=int(comps_after),
+        isolated_before=int(isolated_before),
+        isolated_after=int(isolated_after),
+        edges_readded=int(edges_readded),
     )
 
 def select_by_equivalence_clustering(
@@ -255,6 +410,9 @@ def select_by_equivalence_clustering(
     symmetric: bool = False,
     mutual_top_k: int = 0,
     triangle_prune_margin: float = 0.0,
+    triangle_prune_keep_best_edge: bool = True,
+    cluster_mode: str = "components",
+    support_frac: float = 0.7,
 ) -> SelectionResult:
     norm, scores = _score_matrix(candidates, critic=critic, batch_size=batch_size, symmetric=bool(symmetric))
     return select_from_score_matrix(
@@ -266,4 +424,7 @@ def select_by_equivalence_clustering(
         component_rank=component_rank,
         mutual_top_k=mutual_top_k,
         triangle_prune_margin=triangle_prune_margin,
+        triangle_prune_keep_best_edge=triangle_prune_keep_best_edge,
+        cluster_mode=cluster_mode,
+        support_frac=support_frac,
     )

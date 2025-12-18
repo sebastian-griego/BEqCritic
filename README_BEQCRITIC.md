@@ -43,7 +43,22 @@ python -m beqcritic.score_and_select \
   --model checkpoints/beqcritic_deberta \
   --input proofnetverif_test_candidates.jsonl \
   --output proofnetverif_test_selection.jsonl \
+  --device cuda:0 \
   --threshold 0.5 \
+  --tie-break medoid \
+  --cluster-rank size_then_cohesion \
+  --triangle-prune-margin 0.2 \
+  --emit-stats
+
+Alternative clustering mode (denser, bridge-resistant):
+
+python -m beqcritic.score_and_select \
+  --model checkpoints/beqcritic_deberta \
+  --input proofnetverif_test_candidates.jsonl \
+  --output proofnetverif_test_selection_support.jsonl \
+  --threshold 0.5 \
+  --cluster-mode support \
+  --support-frac 0.7 \
   --tie-break medoid \
   --cluster-rank size_then_cohesion \
   --triangle-prune-margin 0.2
@@ -57,10 +72,13 @@ Benchmark multiple thresholds and selection strategies without re-scoring:
 python -m beqcritic.benchmark_selection \
   --model checkpoints/beqcritic_deberta \
   --input proofnetverif_test_candidates.jsonl \
+  --device cuda:0 \
   --thresholds 0.3,0.4,0.5,0.6,0.7 \
   --tie-breaks medoid,shortest,first \
   --cluster-ranks size_then_cohesion,size \
   --mutual-ks 0,3 \
-  --triangle-prune-margin 0.2 \
+  --triangle-prune-margins 0.0,0.2 \
   --bootstrap 1000 \
-  --report-buckets
+  --report-buckets \
+  --report-cand-buckets \
+  --report-comp-buckets

@@ -161,9 +161,13 @@ def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--model", type=str, required=True)
     p.add_argument("--input", type=str, required=True)
+    p.add_argument("--device", type=str, default="", help="e.g. cuda:0, cuda:1, or cpu (default: auto)")
     p.add_argument("--max-length", type=int, default=512)
     p.add_argument("--batch-size", type=int, default=16)
     p.add_argument("--max-problems", type=int, default=0, help="Limit number of problems (0 = no limit)")
+
+    p.add_argument("--cluster-mode", type=str, default="components", choices=["components", "support"])
+    p.add_argument("--support-frac", type=float, default=0.7, help="Used when --cluster-mode=support")
 
     p.add_argument("--thresholds", type=str, default="0.5", help="Comma-separated thresholds, e.g. 0.3,0.4,0.5")
     p.add_argument("--tie-breaks", type=str, default="medoid,shortest,first")
@@ -188,6 +192,10 @@ def main() -> None:
     p.add_argument("--length-key", type=str, default="ref_len_chars", help="Optional per-problem length field to bucket by")
     p.add_argument("--length-buckets", type=str, default="", help="Comma-separated bucket upper bounds (chars)")
     p.add_argument("--report-buckets", action="store_true")
+    p.add_argument("--cand-buckets", type=str, default="", help="Comma-separated bucket upper bounds (candidate count)")
+    p.add_argument("--report-cand-buckets", action="store_true")
+    p.add_argument("--comp-buckets", type=str, default="", help="Comma-separated bucket upper bounds (selected component size)")
+    p.add_argument("--report-comp-buckets", action="store_true")
     p.add_argument("--random-seed", type=int, default=0)
     p.add_argument("--top-strategies", type=int, default=0, help="If >0, print only the top-N strategies")
     p.add_argument("--sort-by", type=str, default="acc_any", choices=["acc", "acc_any"])
@@ -197,7 +205,8 @@ def main() -> None:
     tie_breaks = _parse_csv(args.tie_breaks)
     cluster_ranks = _parse_csv(args.cluster_ranks)
 
-    critic = BeqCritic(model_name_or_path=args.model, max_length=args.max_length)
+    device = args.device.strip() or None
+    critic = BeqCritic(model_name_or_path=args.model, max_length=args.max_length, device=device)
 
     if args.mutual_ks:
         mutual_ks = [int(x) for x in _parse_csv(args.mutual_ks)]
@@ -226,7 +235,9 @@ def main() -> None:
     n_seen = 0
     any_correct_flags: list[int] = []
     lengths: list[int | None] = []
+    cand_counts: list[int] = []
     per_strategy_correct: dict[tuple[float, str, str, int, float], list[int]] = {cfg: [] for cfg in configs}
+    per_strategy_comp_size: dict[tuple[float, str, str, int, float], list[int]] = {cfg: [] for cfg in configs}
     first_correct: list[int] = []
     shortest_correct: list[int] = []
     random_correct: list[int] = []
@@ -249,6 +260,7 @@ def main() -> None:
         labels01 = [1 if int(x) else 0 for x in labels]
         any_correct = any(labels01)
         any_correct_flags.append(int(any_correct))
+        cand_counts.append(int(len(candidates)))
         if args.length_key and args.length_key in obj and obj[args.length_key] is not None:
             try:
                 lengths.append(int(obj[args.length_key]))
@@ -310,9 +322,12 @@ def main() -> None:
                 component_rank=cr,
                 mutual_top_k=mk,
                 triangle_prune_margin=tm,
+                cluster_mode=args.cluster_mode,
+                support_frac=args.support_frac,
             )
             is_correct = int(bool(labels01[int(res.chosen_index)]))
             per_strategy_correct[(thr, tb, cr, mk, tm)].append(is_correct)
+            per_strategy_comp_size[(thr, tb, cr, mk, tm)].append(int(res.component_size))
             metrics[(thr, tb, cr, mk, tm)].add(
                 any_correct=any_correct,
                 selected_correct=bool(is_correct),
@@ -346,36 +361,33 @@ def main() -> None:
     _report_with_ci("Baseline random", random_correct, baseline_random)
     _report_with_ci("Baseline BLEU-medoid", bleu_medoid_correct, baseline_bleu_medoid)
 
-    bucket_bounds: list[int] = []
-    if args.report_buckets:
-        if args.length_buckets:
-            bucket_bounds = sorted({int(x) for x in _parse_csv(args.length_buckets)})
-        else:
-            lens = sorted([l for l in lengths if l is not None])
-            if len(lens) >= 3:
-                bucket_bounds = [lens[len(lens) // 3], lens[(2 * len(lens)) // 3]]
-
-    def _bucket_idx(l: int) -> int:
-        for i, b in enumerate(bucket_bounds):
-            if l <= b:
+    def _bucket_idx(val: int, bounds: list[int]) -> int:
+        for i, b in enumerate(bounds):
+            if val <= b:
                 return i
-        return len(bucket_bounds)
+        return len(bounds)
 
-    def _report_buckets(name: str, correct_flags: list[int]) -> None:
-        if not bucket_bounds:
+    def _report_bucketed(
+        name: str,
+        correct_flags: list[int],
+        values: list[int | None],
+        bounds: list[int],
+        label: str,
+    ) -> None:
+        if not bounds:
             return
         buckets: dict[int, list[int]] = {}
         buckets_any: dict[int, list[int]] = {}
-        for i, l in enumerate(lengths):
-            if l is None:
+        for i, v in enumerate(values):
+            if v is None:
                 continue
-            bi = _bucket_idx(l)
+            bi = _bucket_idx(int(v), bounds)
             buckets.setdefault(bi, []).append(correct_flags[i])
             if any_correct_flags[i] == 1:
                 buckets_any.setdefault(bi, []).append(correct_flags[i])
 
-        print(f"{name} buckets ({args.length_key}) bounds={bucket_bounds}")
-        for bi in range(len(bucket_bounds) + 1):
+        print(f"{name} buckets ({label}) bounds={bounds}")
+        for bi in range(len(bounds) + 1):
             xs = buckets.get(bi, [])
             if not xs:
                 continue
@@ -388,11 +400,49 @@ def main() -> None:
                 print(f"  bucket {bi}: {len(xs)} problems acc={acc:.1f}%")
         print()
 
-    if args.report_buckets and bucket_bounds:
-        _report_buckets("Baseline first", first_correct)
-        _report_buckets("Baseline shortest", shortest_correct)
-        _report_buckets("Baseline random", random_correct)
-        _report_buckets("Baseline BLEU-medoid", bleu_medoid_correct)
+    len_bounds: list[int] = []
+    if args.report_buckets:
+        if args.length_buckets:
+            len_bounds = sorted({int(x) for x in _parse_csv(args.length_buckets)})
+        else:
+            lens = sorted([l for l in lengths if l is not None])
+            if len(lens) >= 3:
+                len_bounds = [lens[len(lens) // 3], lens[(2 * len(lens)) // 3]]
+
+    cand_bounds: list[int] = []
+    if args.report_cand_buckets:
+        if args.cand_buckets:
+            cand_bounds = sorted({int(x) for x in _parse_csv(args.cand_buckets)})
+        else:
+            cs = sorted(cand_counts)
+            if len(cs) >= 3:
+                cand_bounds = [cs[len(cs) // 3], cs[(2 * len(cs)) // 3]]
+
+    comp_bounds: list[int] = []
+    if args.report_comp_buckets:
+        if args.comp_buckets:
+            comp_bounds = sorted({int(x) for x in _parse_csv(args.comp_buckets)})
+        else:
+            comp_bounds = [1, 2, 3, 5, 10]
+
+    if args.report_buckets and len_bounds:
+        _report_bucketed("Baseline first", first_correct, lengths, len_bounds, args.length_key)
+        _report_bucketed("Baseline shortest", shortest_correct, lengths, len_bounds, args.length_key)
+        _report_bucketed("Baseline random", random_correct, lengths, len_bounds, args.length_key)
+        _report_bucketed("Baseline BLEU-medoid", bleu_medoid_correct, lengths, len_bounds, args.length_key)
+
+    if args.report_cand_buckets and cand_bounds:
+        _report_bucketed("Baseline first", first_correct, cand_counts, cand_bounds, "n_candidates")
+        _report_bucketed("Baseline shortest", shortest_correct, cand_counts, cand_bounds, "n_candidates")
+        _report_bucketed("Baseline random", random_correct, cand_counts, cand_bounds, "n_candidates")
+        _report_bucketed("Baseline BLEU-medoid", bleu_medoid_correct, cand_counts, cand_bounds, "n_candidates")
+
+    if args.report_comp_buckets and comp_bounds:
+        ones = [1] * len(first_correct)
+        _report_bucketed("Baseline first", first_correct, ones, comp_bounds, "selected_component_size")
+        _report_bucketed("Baseline shortest", shortest_correct, ones, comp_bounds, "selected_component_size")
+        _report_bucketed("Baseline random", random_correct, ones, comp_bounds, "selected_component_size")
+        _report_bucketed("Baseline BLEU-medoid", bleu_medoid_correct, ones, comp_bounds, "selected_component_size")
 
     if args.top_strategies and int(args.top_strategies) > 0:
         rows = []
@@ -417,11 +467,21 @@ def main() -> None:
     for thr, tb, cr, mk, tm in configs:
         name = (
             f"Strategy: threshold={thr} tie_break={tb} cluster_rank={cr} "
-            f"symmetric={args.symmetric} mutual_k={mk} tri_margin={tm}"
+            f"symmetric={args.symmetric} mutual_k={mk} tri_margin={tm} mode={args.cluster_mode} support={args.support_frac}"
         )
         _report_with_ci(name, per_strategy_correct[(thr, tb, cr, mk, tm)], metrics[(thr, tb, cr, mk, tm)])
-        if args.report_buckets and bucket_bounds:
-            _report_buckets(name, per_strategy_correct[(thr, tb, cr, mk, tm)])
+        if args.report_buckets and len_bounds:
+            _report_bucketed(name, per_strategy_correct[(thr, tb, cr, mk, tm)], lengths, len_bounds, args.length_key)
+        if args.report_cand_buckets and cand_bounds:
+            _report_bucketed(name, per_strategy_correct[(thr, tb, cr, mk, tm)], cand_counts, cand_bounds, "n_candidates")
+        if args.report_comp_buckets and comp_bounds:
+            _report_bucketed(
+                name,
+                per_strategy_correct[(thr, tb, cr, mk, tm)],
+                per_strategy_comp_size[(thr, tb, cr, mk, tm)],
+                comp_bounds,
+                "selected_component_size",
+            )
 
 
 if __name__ == "__main__":

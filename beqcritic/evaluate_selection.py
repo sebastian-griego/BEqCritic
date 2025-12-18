@@ -53,6 +53,13 @@ def main() -> None:
     comp_sizes: list[int] = []
     comp_cohesions: list[float] = []
     chosen_centralities: list[float] = []
+    edges_before: list[int] = []
+    edges_after: list[int] = []
+    components_before: list[int] = []
+    components_after: list[int] = []
+    isolated_before: list[int] = []
+    isolated_after: list[int] = []
+    edges_readded: list[int] = []
 
     for pid in pids:
         c = cand[pid]
@@ -89,6 +96,20 @@ def main() -> None:
             comp_cohesions.append(float(s["component_cohesion"]))
         if "chosen_centrality" in s:
             chosen_centralities.append(float(s["chosen_centrality"]))
+        if "edges_before" in s:
+            edges_before.append(int(s["edges_before"]))
+        if "edges_after" in s:
+            edges_after.append(int(s["edges_after"]))
+        if "components_before" in s:
+            components_before.append(int(s["components_before"]))
+        if "components_after" in s:
+            components_after.append(int(s["components_after"]))
+        if "isolated_before" in s:
+            isolated_before.append(int(s["isolated_before"]))
+        if "isolated_after" in s:
+            isolated_after.append(int(s["isolated_after"]))
+        if "edges_readded" in s:
+            edges_readded.append(int(s["edges_readded"]))
 
     if n == 0:
         raise SystemExit("No overlapping problem_ids to evaluate.")
@@ -112,6 +133,20 @@ def main() -> None:
     if chosen_centralities:
         avg_cent = sum(chosen_centralities) / len(chosen_centralities)
         print(f"Avg chosen_centrality: {avg_cent:.3f}")
+    if edges_before and edges_after:
+        print(f"Avg edges_before/after: {sum(edges_before)/len(edges_before):.1f} -> {sum(edges_after)/len(edges_after):.1f}")
+    if components_before and components_after:
+        print(
+            f"Avg components_before/after: {sum(components_before)/len(components_before):.2f} -> "
+            f"{sum(components_after)/len(components_after):.2f}"
+        )
+    if isolated_before and isolated_after:
+        print(
+            f"Avg isolated_before/after: {sum(isolated_before)/len(isolated_before):.2f} -> "
+            f"{sum(isolated_after)/len(isolated_after):.2f}"
+        )
+    if edges_readded:
+        print(f"Avg edges_readded: {sum(edges_readded)/len(edges_readded):.2f}")
 
 
 if __name__ == "__main__":
