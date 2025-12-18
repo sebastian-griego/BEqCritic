@@ -48,8 +48,16 @@ class BeqCritic:
         self.model.eval()
 
     @torch.inference_mode()
-    def score_pairs(self, pairs: list[tuple[str, str]], batch_size: int = 16) -> list[float]:
+    def score_pairs(
+        self,
+        pairs: list[tuple[str, str]],
+        batch_size: int = 16,
+        temperature: float = 1.0,
+    ) -> list[float]:
         scores: list[float] = []
+        temp = float(temperature)
+        if temp <= 0:
+            raise ValueError(f"temperature must be > 0, got {temperature!r}")
         for i in range(0, len(pairs), batch_size):
             chunk = pairs[i:i+batch_size]
             a = [x[0] for x in chunk]
@@ -62,6 +70,8 @@ class BeqCritic:
                 return_tensors="pt",
             ).to(self.device)
             logits = self.model(**enc).logits
+            if temp != 1.0:
+                logits = logits / temp
             probs = torch.softmax(logits, dim=-1)[:, 1].detach().cpu().tolist()
             scores.extend(probs)
         return scores

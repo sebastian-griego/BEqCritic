@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .bleu import bleu_score_matrix
 from .textnorm import normalize_lean_statement
 from .features import extract_features
 from .modeling import BeqCritic
@@ -53,6 +54,7 @@ def _score_matrix(
     critic: BeqCritic,
     batch_size: int,
     symmetric: bool,
+    temperature: float = 1.0,
 ) -> tuple[list[str], list[list[float]]]:
     norm = [normalize_lean_statement(c) for c in candidates]
     prefixes = [extract_features(s).to_prefix() for s in norm]
@@ -62,13 +64,15 @@ def _score_matrix(
     pair_texts = [(prefixed[i], prefixed[j]) for i, j in idx_pairs]
     if symmetric and pair_texts:
         pair_texts = pair_texts + [(prefixed[j], prefixed[i]) for i, j in idx_pairs]
-        scores_all = critic.score_pairs(pair_texts, batch_size=batch_size)
+        scores_all = critic.score_pairs(pair_texts, batch_size=batch_size, temperature=float(temperature))
         half = len(idx_pairs)
         scores_fwd = scores_all[:half]
         scores_rev = scores_all[half:]
         scores = [(a + b) / 2.0 for a, b in zip(scores_fwd, scores_rev)]
     else:
-        scores = critic.score_pairs(pair_texts, batch_size=batch_size) if pair_texts else []
+        scores = (
+            critic.score_pairs(pair_texts, batch_size=batch_size, temperature=float(temperature)) if pair_texts else []
+        )
 
     n = len(norm)
     mat = [[0.0] * n for _ in range(n)]
@@ -86,11 +90,76 @@ def score_candidate_matrix(
     critic: BeqCritic,
     batch_size: int = 16,
     symmetric: bool = False,
+    temperature: float = 1.0,
 ) -> tuple[list[str], list[list[float]]]:
     """
     Compute a symmetric NxN score matrix for candidates, where score[i][j] ~= P(equivalent).
     """
-    return _score_matrix(candidates=candidates, critic=critic, batch_size=batch_size, symmetric=bool(symmetric))
+    return _score_matrix(
+        candidates=candidates,
+        critic=critic,
+        batch_size=batch_size,
+        symmetric=bool(symmetric),
+        temperature=float(temperature),
+    )
+
+def similarity_matrix(
+    candidates: list[str],
+    similarity: str = "critic",
+    critic: BeqCritic | None = None,
+    batch_size: int = 16,
+    symmetric: bool = False,
+    critic_temperature: float = 1.0,
+    hybrid_alpha: float = 0.5,
+    bleu_max_n: int = 4,
+    bleu_smooth: float = 1.0,
+) -> tuple[list[str], list[list[float]]]:
+    """
+    Compute a symmetric NxN similarity matrix for candidates.
+
+    similarity:
+      - "critic": cross-encoder BeqCritic score matrix (default)
+      - "bleu": symmetric BLEU similarity matrix
+      - "hybrid": alpha * critic + (1-alpha) * bleu
+    """
+    sim = str(similarity).strip().lower()
+    if sim == "critic":
+        if critic is None:
+            raise ValueError("critic is required for similarity='critic'")
+        return score_candidate_matrix(
+            candidates=candidates,
+            critic=critic,
+            batch_size=batch_size,
+            symmetric=symmetric,
+            temperature=float(critic_temperature),
+        )
+    if sim == "bleu":
+        return bleu_score_matrix(candidates=candidates, max_n=int(bleu_max_n), smooth=float(bleu_smooth))
+    if sim == "hybrid":
+        if critic is None:
+            raise ValueError("critic is required for similarity='hybrid'")
+        a = float(hybrid_alpha)
+        if not (0.0 <= a <= 1.0):
+            raise ValueError(f"hybrid_alpha must be in [0,1], got {hybrid_alpha!r}")
+        norm, critic_scores = score_candidate_matrix(
+            candidates=candidates,
+            critic=critic,
+            batch_size=batch_size,
+            symmetric=symmetric,
+            temperature=float(critic_temperature),
+        )
+        _norm_bleu, bleu_scores = bleu_score_matrix(
+            candidates=candidates,
+            max_n=int(bleu_max_n),
+            smooth=float(bleu_smooth),
+        )
+        n = len(candidates)
+        out = [[0.0] * n for _ in range(n)]
+        for i in range(n):
+            for j in range(n):
+                out[i][j] = float(a) * float(critic_scores[i][j]) + (1.0 - float(a)) * float(bleu_scores[i][j])
+        return norm, out
+    raise ValueError(f"Unknown similarity={similarity!r}")
 
 
 def _connected_components(adj: list[set[int]]) -> list[list[int]]:
@@ -633,13 +702,20 @@ def select_by_equivalence_clustering(
     tie_break: str = "medoid",
     component_rank: str = "size_then_cohesion",
     symmetric: bool = False,
+    temperature: float = 1.0,
     mutual_top_k: int = 0,
     triangle_prune_margin: float = 0.0,
     triangle_prune_keep_best_edge: bool = True,
     cluster_mode: str = "components",
     support_frac: float = 0.7,
 ) -> SelectionResult:
-    norm, scores = _score_matrix(candidates, critic=critic, batch_size=batch_size, symmetric=bool(symmetric))
+    norm, scores = _score_matrix(
+        candidates,
+        critic=critic,
+        batch_size=batch_size,
+        symmetric=bool(symmetric),
+        temperature=float(temperature),
+    )
     return select_from_score_matrix(
         candidates=candidates,
         norm=norm,

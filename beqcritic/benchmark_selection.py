@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 from .bleu import bleu_medoid_index
 from .modeling import BeqCritic
-from .select import score_candidate_matrix, select_from_score_matrix, global_medoid_index, knn_medoid_index, ensemble_vote
+from .select import similarity_matrix, select_from_score_matrix, global_medoid_index, knn_medoid_index, ensemble_vote
 from .textnorm import normalize_lean_statement
 
 
@@ -108,12 +108,28 @@ def _load_lines(path: str):
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--model", type=str, required=True)
+    p.add_argument("--model", type=str, default="", help="Required for --similarity critic|hybrid")
     p.add_argument("--input", type=str, required=True)
     p.add_argument("--device", type=str, default="", help="e.g. cuda:0, cuda:1, or cpu (default: auto)")
     p.add_argument("--max-length", type=int, default=512)
     p.add_argument("--batch-size", type=int, default=16)
     p.add_argument("--max-problems", type=int, default=0, help="Limit number of problems (0 = no limit)")
+
+    p.add_argument("--similarity", type=str, default="critic", choices=["critic", "bleu", "hybrid"])
+    p.add_argument(
+        "--critic-temperature",
+        type=float,
+        default=1.0,
+        help="Temperature scaling for critic probabilities (only for --similarity critic|hybrid).",
+    )
+    p.add_argument(
+        "--hybrid-alpha",
+        type=float,
+        default=0.5,
+        help="Score = alpha*critic + (1-alpha)*BLEU (only for --similarity hybrid).",
+    )
+    p.add_argument("--bleu-max-n", type=int, default=4, help="Used for --similarity bleu|hybrid.")
+    p.add_argument("--bleu-smooth", type=float, default=1.0, help="Used for --similarity bleu|hybrid.")
 
     p.add_argument("--cluster-mode", type=str, default="components", choices=["components", "support"])
     p.add_argument("--support-frac", type=float, default=0.7, help="Used when --cluster-mode=support")
@@ -165,7 +181,7 @@ def main() -> None:
     p.add_argument("--mutual-ks", type=str, default="", help="Optional comma-separated mutual-k values")
     p.add_argument("--triangle-prune-margin", type=float, default=0.0)
     p.add_argument("--triangle-prune-margins", type=str, default="", help="Optional comma-separated triangle prune margins")
-    p.add_argument("--bootstrap", type=int, default=0, help="If >0, compute 95% CIs with bootstrap resampling")
+    p.add_argument("--bootstrap", type=int, default=0, help="If >0, compute 95%% CIs with bootstrap resampling")
     p.add_argument("--bootstrap-seed", type=int, default=0)
     p.add_argument("--length-key", type=str, default="ref_len_chars", help="Optional per-problem length field to bucket by")
     p.add_argument("--length-buckets", type=str, default="", help="Comma-separated bucket upper bounds (chars)")
@@ -193,8 +209,20 @@ def main() -> None:
             f" min_comp={args.fallback_min_component_size} min_coh={args.fallback_min_cohesion}"
         )
 
-    device = args.device.strip() or None
-    critic = BeqCritic(model_name_or_path=args.model, max_length=args.max_length, device=device)
+    sim_desc = f" similarity={args.similarity}"
+    if args.similarity in ["critic", "hybrid"] and float(args.critic_temperature) != 1.0:
+        sim_desc += f" temp={float(args.critic_temperature)}"
+    if args.similarity == "hybrid":
+        sim_desc += f" alpha={float(args.hybrid_alpha)}"
+    if args.similarity in ["bleu", "hybrid"] and (int(args.bleu_max_n) != 4 or float(args.bleu_smooth) != 1.0):
+        sim_desc += f" bleu_n={int(args.bleu_max_n)} bleu_smooth={float(args.bleu_smooth)}"
+
+    critic = None
+    if args.similarity in ["critic", "hybrid"]:
+        if not args.model:
+            raise ValueError("--model is required when --similarity is critic or hybrid")
+        device = args.device.strip() or None
+        critic = BeqCritic(model_name_or_path=args.model, max_length=args.max_length, device=device)
 
     if args.mutual_ks:
         mutual_ks = [int(x) for x in _parse_csv(args.mutual_ks)]
@@ -301,11 +329,16 @@ def main() -> None:
         random_correct.append(random_is_correct)
         bleu_medoid_correct.append(bleu_is_correct)
 
-        norm_scored, scores = score_candidate_matrix(
+        norm_scored, scores = similarity_matrix(
             candidates=candidates,
             critic=critic,
             batch_size=args.batch_size,
             symmetric=args.symmetric,
+            similarity=args.similarity,
+            critic_temperature=args.critic_temperature,
+            hybrid_alpha=args.hybrid_alpha,
+            bleu_max_n=args.bleu_max_n,
+            bleu_smooth=args.bleu_smooth,
         )
 
         per_problem_results = []
@@ -520,6 +553,7 @@ def main() -> None:
         rows.sort(key=lambda r: (-r[0], -r[1], r[3], r[4], r[5], r[6], r[7], r[8]))
 
         print(f"Top {int(args.top_strategies)} strategies (sorted by {args.sort_by})")
+        print(f"Note:{sim_desc.strip()}")
         if fallback_desc:
             print(f"Note:{fallback_desc}")
         for rank, (_, acc, acc_any, thr, tb, cr, mk, tm, sf, m) in enumerate(
@@ -540,7 +574,7 @@ def main() -> None:
         if args.cluster_mode == "support":
             support_desc = f" support={sf}"
         name = (
-            f"Strategy: threshold={thr} tie_break={tb} cluster_rank={cr} "
+            f"Strategy:{sim_desc} threshold={thr} tie_break={tb} cluster_rank={cr} "
             f"symmetric={args.symmetric} mutual_k={mk} tri_margin={tm} mode={args.cluster_mode}{support_desc}"
             f"{fallback_desc}"
         )

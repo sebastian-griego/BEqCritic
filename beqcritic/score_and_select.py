@@ -19,19 +19,34 @@ from .select import (
     global_medoid_index,
     knn_medoid_index,
     ranked_components_from_scores,
-    score_candidate_matrix,
+    similarity_matrix,
     select_from_score_matrix,
 )
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--model", type=str, required=True)
+    p.add_argument("--model", type=str, default="", help="Required for --similarity critic|hybrid")
     p.add_argument("--input", type=str, required=True)
     p.add_argument("--output", type=str, required=True)
     p.add_argument("--device", type=str, default="", help="e.g. cuda:0, cuda:1, or cpu (default: auto)")
     p.add_argument("--threshold", type=float, default=0.5)
     p.add_argument("--batch-size", type=int, default=16)
     p.add_argument("--max-length", type=int, default=512)
+    p.add_argument("--similarity", type=str, default="critic", choices=["critic", "bleu", "hybrid"])
+    p.add_argument(
+        "--critic-temperature",
+        type=float,
+        default=1.0,
+        help="Temperature scaling for critic probabilities (only for --similarity critic|hybrid).",
+    )
+    p.add_argument(
+        "--hybrid-alpha",
+        type=float,
+        default=0.5,
+        help="Score = alpha*critic + (1-alpha)*BLEU (only for --similarity hybrid).",
+    )
+    p.add_argument("--bleu-max-n", type=int, default=4, help="Used for --similarity bleu|hybrid.")
+    p.add_argument("--bleu-smooth", type=float, default=1.0, help="Used for --similarity bleu|hybrid.")
     p.add_argument("--tie-break", type=str, default="medoid", choices=["medoid", "shortest", "first"])
     p.add_argument("--cluster-mode", type=str, default="components", choices=["components", "support"])
     p.add_argument("--support-frac", type=float, default=0.7, help="Used when --cluster-mode=support")
@@ -101,8 +116,12 @@ def main():
     )
     args = p.parse_args()
 
-    device = args.device.strip() or None
-    critic = BeqCritic(model_name_or_path=args.model, max_length=args.max_length, device=device)
+    critic = None
+    if args.similarity in ["critic", "hybrid"]:
+        if not args.model:
+            raise ValueError("--model is required when --similarity is critic or hybrid")
+        device = args.device.strip() or None
+        critic = BeqCritic(model_name_or_path=args.model, max_length=args.max_length, device=device)
 
     with open(args.input, "r", encoding="utf-8") as fin, open(args.output, "w", encoding="utf-8") as fout:
         for line in fin:
@@ -110,11 +129,16 @@ def main():
                 continue
             obj = json.loads(line)
             candidates = obj.get("candidates", [])
-            norm_scored, scores = score_candidate_matrix(
+            norm_scored, scores = similarity_matrix(
                 candidates=candidates,
                 critic=critic,
                 batch_size=args.batch_size,
                 symmetric=args.symmetric,
+                similarity=args.similarity,
+                critic_temperature=args.critic_temperature,
+                hybrid_alpha=args.hybrid_alpha,
+                bleu_max_n=args.bleu_max_n,
+                bleu_smooth=args.bleu_smooth,
             )
             res = select_from_score_matrix(
                 candidates=candidates,
@@ -138,7 +162,7 @@ def main():
 
             chosen_index = critic_chosen_index
             chosen_statement = critic_chosen_statement
-            selection_method = "critic"
+            selection_method = str(args.similarity)
             fallback_used = False
 
             if args.fallback != "none":
@@ -229,7 +253,17 @@ def main():
                 "component_size": component_size,
                 "component_indices": component_indices,
                 "selection_method": selection_method,
+                "similarity": str(args.similarity),
             }
+            if args.similarity in ["critic", "hybrid"] and float(args.critic_temperature) != 1.0:
+                out["critic_temperature"] = float(args.critic_temperature)
+            if args.similarity == "hybrid":
+                out["hybrid_alpha"] = float(args.hybrid_alpha)
+            if args.similarity in ["bleu", "hybrid"] and (
+                int(args.bleu_max_n) != 4 or float(args.bleu_smooth) != 1.0
+            ):
+                out["bleu_max_n"] = int(args.bleu_max_n)
+                out["bleu_smooth"] = float(args.bleu_smooth)
             if component_cohesion is not None:
                 out["component_cohesion"] = float(component_cohesion)
             if chosen_centrality is not None:

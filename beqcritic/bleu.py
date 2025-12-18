@@ -53,6 +53,39 @@ def sym_bleu(a: str, b: str) -> float:
     tb = _tokenize(normalize_lean_statement(b))
     return 0.5 * (_bleu_score(ta, tb) + _bleu_score(tb, ta))
 
+def bleu_score_matrix(
+    candidates: list[str],
+    max_n: int = 4,
+    smooth: float = 1.0,
+) -> tuple[list[str], list[list[float]]]:
+    """
+    Return (norm, scores) where scores[i][j] is symmetric BLEU similarity between candidates.
+
+    This is intended as a cheap baseline similarity matrix for the same clustering/selection
+    algorithms used with the learned critic.
+    """
+    if not candidates:
+        raise ValueError("No candidates provided")
+    if len(candidates) == 1:
+        norm = [normalize_lean_statement(candidates[0])]
+        return norm, [[1.0]]
+
+    norm = [normalize_lean_statement(c) for c in candidates]
+    toks = [_tokenize(s) for s in norm]
+    n = len(candidates)
+    mat = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        mat[i][i] = 1.0
+    for i in range(n):
+        for j in range(i + 1, n):
+            s = 0.5 * (
+                _bleu_score(toks[i], toks[j], max_n=max_n, smooth=smooth)
+                + _bleu_score(toks[j], toks[i], max_n=max_n, smooth=smooth)
+            )
+            mat[i][j] = float(s)
+            mat[j][i] = float(s)
+    return norm, mat
+
 
 def bleu_centrality_ranking(candidates: list[str]) -> list[tuple[int, float]]:
     """
