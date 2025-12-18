@@ -67,6 +67,28 @@ python -m beqcritic.evaluate_selection \
   --candidates proofnetverif_test_candidates.jsonl \
   --selections proofnetverif_test_selection.jsonl
 
+Emit/evaluate top-k selections (to reduce verifier compute):
+
+python -m beqcritic.score_and_select \
+  --model checkpoints/beqcritic_deberta \
+  --input proofnetverif_test_candidates.jsonl \
+  --output proofnetverif_test_selection_topk.jsonl \
+  --device cuda:0 \
+  --cluster-mode support \
+  --support-frac 0.6 \
+  --threshold 0.3 \
+  --mutual-k 3 \
+  --triangle-prune-margin 0.2 \
+  --cluster-rank size_times_cohesion \
+  --tie-break medoid \
+  --fallback bleu_medoid --fallback-min-component-size 2 \
+  --top-k 5
+
+python -m beqcritic.evaluate_selection \
+  --candidates proofnetverif_test_candidates.jsonl \
+  --selections proofnetverif_test_selection_topk.jsonl \
+  --max-k 5
+
 Benchmark multiple thresholds and selection strategies without re-scoring:
 
 python -m beqcritic.benchmark_selection \
@@ -78,14 +100,52 @@ python -m beqcritic.benchmark_selection \
   --cluster-ranks size_then_cohesion,size \
   --mutual-ks 0,3 \
   --triangle-prune-margins 0.0,0.2 \
+  --cluster-mode support --support-frac 0.7 \
   --bootstrap 1000 \
   --report-buckets \
   --report-cand-buckets \
   --report-comp-buckets
 
+To sweep support strictness without re-scoring, use `--support-fracs`:
+
+python -m beqcritic.benchmark_selection \
+  --model checkpoints/beqcritic_deberta \
+  --input proofnetverif_test_candidates.jsonl \
+  --thresholds 0.3 \
+  --tie-breaks medoid \
+  --cluster-ranks size_times_cohesion \
+  --mutual-ks 3 \
+  --triangle-prune-margins 0.2 \
+  --cluster-mode support --support-fracs 0.6,0.7,0.8
+
+Optional: fallback strategies (used when the chosen cluster looks weak).
+
+- `--fallback bleu_medoid`: use self-BLEU medoid as a baseline fallback
+- `--fallback critic_medoid`: use the critic score matrix to pick the global medoid (no BLEU)
+- `--fallback critic_knn_medoid --fallback-knn-k 3`: critic-only fallback using mean top-k similarity (more local than global medoid)
+
+Optional: ensemble selection (critic-only).
+
+`benchmark_selection` can ensemble over the provided hyperparameter grid and vote:
+
+python -m beqcritic.benchmark_selection \
+  --model checkpoints/beqcritic_deberta \
+  --input proofnetverif_test_candidates.jsonl \
+  --thresholds 0.2,0.3,0.4,0.5 \
+  --tie-breaks medoid \
+  --cluster-ranks size_times_cohesion,size_then_cohesion \
+  --mutual-ks 0,3 \
+  --triangle-prune-margins 0.0,0.2 \
+  --cluster-mode support --support-frac 0.7 \
+  --ensemble --ensemble-vote majority \
+  --top-strategies 10
+
 Clean train/dev/test on ProofNetVerif (avoid test leakage):
 
 Preferred setup (uses the dataset's official splits):
+
+If your local/offline copy has `train` synthesized as `valid+test`, this will fail with an overlap error.
+In that case, use the alternative setup below (train on `valid` with `--eval-size`).
 
 1) Train on `train` and evaluate on `valid` (no overlap on `id`), and write the split ids:
 

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 from .bleu import bleu_medoid_index
 from .modeling import BeqCritic
-from .select import score_candidate_matrix, select_from_score_matrix
+from .select import score_candidate_matrix, select_from_score_matrix, global_medoid_index, knn_medoid_index, ensemble_vote
 from .textnorm import normalize_lean_statement
 
 
@@ -117,8 +117,17 @@ def main() -> None:
 
     p.add_argument("--cluster-mode", type=str, default="components", choices=["components", "support"])
     p.add_argument("--support-frac", type=float, default=0.7, help="Used when --cluster-mode=support")
+    p.add_argument("--support-fracs", type=str, default="", help="Optional comma-separated support-frac values")
 
-    p.add_argument("--fallback", type=str, default="none", choices=["none", "bleu_medoid"])
+    p.add_argument("--ensemble", action="store_true", help="Ensemble across all provided configs and vote.")
+    p.add_argument("--ensemble-vote", type=str, default="weighted", choices=["weighted", "majority"])
+
+    p.add_argument(
+        "--fallback",
+        type=str,
+        default="none",
+        choices=["none", "bleu_medoid", "critic_medoid", "critic_knn_medoid"],
+    )
     p.add_argument(
         "--fallback-min-component-size",
         type=int,
@@ -130,6 +139,12 @@ def main() -> None:
         type=float,
         default=0.0,
         help="If >0, use fallback when chosen component_cohesion < this value.",
+    )
+    p.add_argument(
+        "--fallback-knn-k",
+        type=int,
+        default=3,
+        help="k for --fallback=critic_knn_medoid (mean of top-k critic similarities).",
     )
 
     p.add_argument("--thresholds", type=str, default="0.5", help="Comma-separated thresholds, e.g. 0.3,0.4,0.5")
@@ -170,7 +185,13 @@ def main() -> None:
 
     fallback_desc = ""
     if args.fallback != "none":
-        fallback_desc = f" fallback={args.fallback} min_comp={args.fallback_min_component_size} min_coh={args.fallback_min_cohesion}"
+        extra = ""
+        if args.fallback == "critic_knn_medoid":
+            extra = f" knn_k={int(args.fallback_knn_k)}"
+        fallback_desc = (
+            f" fallback={args.fallback}{extra}"
+            f" min_comp={args.fallback_min_component_size} min_coh={args.fallback_min_cohesion}"
+        )
 
     device = args.device.strip() or None
     critic = BeqCritic(model_name_or_path=args.model, max_length=args.max_length, device=device)
@@ -185,30 +206,47 @@ def main() -> None:
     else:
         tri_margins = [float(args.triangle_prune_margin)]
 
+    if args.support_fracs:
+        support_fracs = [float(x) for x in _parse_csv(args.support_fracs)]
+    else:
+        support_fracs = [float(args.support_frac)]
+    if args.cluster_mode != "support" and args.support_fracs and len(support_fracs) > 1:
+        raise ValueError("--support-fracs is only meaningful with --cluster-mode=support")
+
     configs = []
     for thr in thresholds:
         for tb in tie_breaks:
             for cr in cluster_ranks:
                 for mk in mutual_ks:
                     for tm in tri_margins:
-                        configs.append((thr, tb, cr, mk, tm))
+                        for sf in support_fracs:
+                            configs.append((thr, tb, cr, mk, tm, sf))
 
     metrics = {cfg: Metrics() for cfg in configs}
     baseline_first = Metrics()
     baseline_shortest = Metrics()
     baseline_random = Metrics()
     baseline_bleu_medoid = Metrics()
+    ensemble_metrics = Metrics()
 
     n_seen = 0
     any_correct_flags: list[int] = []
     lengths: list[int | None] = []
     cand_counts: list[int] = []
-    per_strategy_correct: dict[tuple[float, str, str, int, float], list[int]] = {cfg: [] for cfg in configs}
-    per_strategy_comp_size: dict[tuple[float, str, str, int, float], list[int]] = {cfg: [] for cfg in configs}
+    per_strategy_correct: dict[tuple[float, str, str, int, float, float], list[int]] = {cfg: [] for cfg in configs}
+    per_strategy_comp_size: dict[tuple[float, str, str, int, float, float], list[int]] = {cfg: [] for cfg in configs}
     first_correct: list[int] = []
     shortest_correct: list[int] = []
     random_correct: list[int] = []
     bleu_medoid_correct: list[int] = []
+    ensemble_correct: list[int] = []
+    ensemble_comp_size: list[int] = []
+
+    if args.ensemble:
+        if len(tie_breaks) != 1:
+            raise ValueError("--ensemble requires exactly one tie-break (e.g. --tie-breaks medoid)")
+        if args.fallback != "none":
+            raise ValueError("--ensemble is not supported together with --fallback (run ensemble standalone).")
 
     rnd = random.Random(int(args.random_seed))
 
@@ -270,7 +308,8 @@ def main() -> None:
             symmetric=args.symmetric,
         )
 
-        for thr, tb, cr, mk, tm in configs:
+        per_problem_results = []
+        for thr, tb, cr, mk, tm, sf in configs:
             res = select_from_score_matrix(
                 candidates=candidates,
                 norm=norm_scored,
@@ -281,8 +320,9 @@ def main() -> None:
                 mutual_top_k=mk,
                 triangle_prune_margin=tm,
                 cluster_mode=args.cluster_mode,
-                support_frac=args.support_frac,
+                support_frac=float(sf),
             )
+            per_problem_results.append(res)
             chosen_index = int(res.chosen_index)
             used_fallback = False
             if args.fallback != "none":
@@ -295,19 +335,39 @@ def main() -> None:
                     used_fallback = True
                     if args.fallback == "bleu_medoid":
                         chosen_index = int(bleu_idx)
+                    elif args.fallback == "critic_medoid":
+                        fb_idx, _ = global_medoid_index(norm_scored, scores)
+                        chosen_index = int(fb_idx)
+                    elif args.fallback == "critic_knn_medoid":
+                        fb_idx, _ = knn_medoid_index(norm_scored, scores, k=int(args.fallback_knn_k))
+                        chosen_index = int(fb_idx)
                     else:
                         raise ValueError(f"Unknown fallback={args.fallback!r}")
 
             is_correct = int(bool(labels01[int(chosen_index)]))
-            per_strategy_correct[(thr, tb, cr, mk, tm)].append(is_correct)
-            per_strategy_comp_size[(thr, tb, cr, mk, tm)].append(int(res.component_size))
-            metrics[(thr, tb, cr, mk, tm)].add(
+            per_strategy_correct[(thr, tb, cr, mk, tm, sf)].append(is_correct)
+            per_strategy_comp_size[(thr, tb, cr, mk, tm, sf)].append(int(res.component_size))
+            metrics[(thr, tb, cr, mk, tm, sf)].add(
                 any_correct=any_correct,
                 selected_correct=bool(is_correct),
                 component_size=int(res.component_size),
                 cohesion=res.component_cohesion,
                 centrality=res.chosen_centrality,
                 fallback_used=bool(used_fallback),
+            )
+
+        if args.ensemble:
+            ens = ensemble_vote(per_problem_results, norm_scored, vote=args.ensemble_vote)
+            ens_idx = int(ens.chosen_index)
+            ens_correct_flag = int(bool(labels01[ens_idx]))
+            ensemble_correct.append(ens_correct_flag)
+            ensemble_comp_size.append(int(ens.component_size))
+            ensemble_metrics.add(
+                any_correct=any_correct,
+                selected_correct=bool(ens_correct_flag),
+                component_size=int(ens.component_size),
+                cohesion=ens.component_cohesion,
+                centrality=ens.chosen_centrality,
             )
 
         n_seen += 1
@@ -334,6 +394,12 @@ def main() -> None:
     _report_with_ci("Baseline shortest", shortest_correct, baseline_shortest)
     _report_with_ci("Baseline random", random_correct, baseline_random)
     _report_with_ci("Baseline BLEU-medoid", bleu_medoid_correct, baseline_bleu_medoid)
+    if args.ensemble:
+        _report_with_ci(
+            f"Ensemble ({args.ensemble_vote} vote over {len(configs)} configs)",
+            ensemble_correct,
+            ensemble_metrics,
+        )
 
     def _bucket_idx(val: int, bounds: list[int]) -> int:
         for i, b in enumerate(bounds):
@@ -404,12 +470,28 @@ def main() -> None:
         _report_bucketed("Baseline shortest", shortest_correct, lengths, len_bounds, args.length_key)
         _report_bucketed("Baseline random", random_correct, lengths, len_bounds, args.length_key)
         _report_bucketed("Baseline BLEU-medoid", bleu_medoid_correct, lengths, len_bounds, args.length_key)
+        if args.ensemble:
+            _report_bucketed(
+                f"Ensemble ({args.ensemble_vote})",
+                ensemble_correct,
+                lengths,
+                len_bounds,
+                args.length_key,
+            )
 
     if args.report_cand_buckets and cand_bounds:
         _report_bucketed("Baseline first", first_correct, cand_counts, cand_bounds, "n_candidates")
         _report_bucketed("Baseline shortest", shortest_correct, cand_counts, cand_bounds, "n_candidates")
         _report_bucketed("Baseline random", random_correct, cand_counts, cand_bounds, "n_candidates")
         _report_bucketed("Baseline BLEU-medoid", bleu_medoid_correct, cand_counts, cand_bounds, "n_candidates")
+        if args.ensemble:
+            _report_bucketed(
+                f"Ensemble ({args.ensemble_vote})",
+                ensemble_correct,
+                cand_counts,
+                cand_bounds,
+                "n_candidates",
+            )
 
     if args.report_comp_buckets and comp_bounds:
         ones = [1] * len(first_correct)
@@ -417,45 +499,73 @@ def main() -> None:
         _report_bucketed("Baseline shortest", shortest_correct, ones, comp_bounds, "selected_component_size")
         _report_bucketed("Baseline random", random_correct, ones, comp_bounds, "selected_component_size")
         _report_bucketed("Baseline BLEU-medoid", bleu_medoid_correct, ones, comp_bounds, "selected_component_size")
+        if args.ensemble:
+            _report_bucketed(
+                f"Ensemble ({args.ensemble_vote})",
+                ensemble_correct,
+                ensemble_comp_size,
+                comp_bounds,
+                "selected_component_size",
+            )
 
     if args.top_strategies and int(args.top_strategies) > 0:
         rows = []
-        for thr, tb, cr, mk, tm in configs:
-            flags = per_strategy_correct[(thr, tb, cr, mk, tm)]
+        for thr, tb, cr, mk, tm, sf in configs:
+            flags = per_strategy_correct[(thr, tb, cr, mk, tm, sf)]
             acc = sum(flags) / max(1, len(flags))
             any_idx = [i for i, a in enumerate(any_correct_flags) if a == 1]
             acc_any = (sum(flags[i] for i in any_idx) / max(1, len(any_idx))) if any_idx else 0.0
-            m = metrics[(thr, tb, cr, mk, tm)]
-            rows.append((acc_any if args.sort_by == "acc_any" else acc, acc, acc_any, thr, tb, cr, mk, tm, m))
-        rows.sort(key=lambda r: (-r[0], -r[1], r[3], r[4], r[5], r[6], r[7]))
+            m = metrics[(thr, tb, cr, mk, tm, sf)]
+            rows.append((acc_any if args.sort_by == "acc_any" else acc, acc, acc_any, thr, tb, cr, mk, tm, sf, m))
+        rows.sort(key=lambda r: (-r[0], -r[1], r[3], r[4], r[5], r[6], r[7], r[8]))
 
         print(f"Top {int(args.top_strategies)} strategies (sorted by {args.sort_by})")
         if fallback_desc:
             print(f"Note:{fallback_desc}")
-        for rank, (_, acc, acc_any, thr, tb, cr, mk, tm, m) in enumerate(rows[: int(args.top_strategies)], start=1):
+        for rank, (_, acc, acc_any, thr, tb, cr, mk, tm, sf, m) in enumerate(
+            rows[: int(args.top_strategies)], start=1
+        ):
+            support_desc = ""
+            if args.cluster_mode == "support" and len(support_fracs) > 1:
+                support_desc = f" support={sf}"
             print(
                 f"{rank:>2}. acc={100*acc:.1f}% acc|any={100*acc_any:.1f}% "
                 f"thr={thr} tie={tb} rank={cr} mk={mk} tri={tm} "
-                f"avg_comp={m.sum_component_size/max(1,m.problems):.2f}"
+                f"avg_comp={m.sum_component_size/max(1,m.problems):.2f}{support_desc}"
             )
         return
 
-    for thr, tb, cr, mk, tm in configs:
+    for thr, tb, cr, mk, tm, sf in configs:
+        support_desc = ""
+        if args.cluster_mode == "support":
+            support_desc = f" support={sf}"
         name = (
             f"Strategy: threshold={thr} tie_break={tb} cluster_rank={cr} "
-            f"symmetric={args.symmetric} mutual_k={mk} tri_margin={tm} mode={args.cluster_mode} support={args.support_frac}"
+            f"symmetric={args.symmetric} mutual_k={mk} tri_margin={tm} mode={args.cluster_mode}{support_desc}"
             f"{fallback_desc}"
         )
-        _report_with_ci(name, per_strategy_correct[(thr, tb, cr, mk, tm)], metrics[(thr, tb, cr, mk, tm)])
+        _report_with_ci(name, per_strategy_correct[(thr, tb, cr, mk, tm, sf)], metrics[(thr, tb, cr, mk, tm, sf)])
         if args.report_buckets and len_bounds:
-            _report_bucketed(name, per_strategy_correct[(thr, tb, cr, mk, tm)], lengths, len_bounds, args.length_key)
+            _report_bucketed(
+                name,
+                per_strategy_correct[(thr, tb, cr, mk, tm, sf)],
+                lengths,
+                len_bounds,
+                args.length_key,
+            )
         if args.report_cand_buckets and cand_bounds:
-            _report_bucketed(name, per_strategy_correct[(thr, tb, cr, mk, tm)], cand_counts, cand_bounds, "n_candidates")
+            _report_bucketed(
+                name,
+                per_strategy_correct[(thr, tb, cr, mk, tm, sf)],
+                cand_counts,
+                cand_bounds,
+                "n_candidates",
+            )
         if args.report_comp_buckets and comp_bounds:
             _report_bucketed(
                 name,
-                per_strategy_correct[(thr, tb, cr, mk, tm)],
-                per_strategy_comp_size[(thr, tb, cr, mk, tm)],
+                per_strategy_correct[(thr, tb, cr, mk, tm, sf)],
+                per_strategy_comp_size[(thr, tb, cr, mk, tm, sf)],
                 comp_bounds,
                 "selected_component_size",
             )

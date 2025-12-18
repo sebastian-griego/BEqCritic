@@ -17,6 +17,17 @@ from .textnorm import normalize_lean_statement
 from .features import extract_features
 from .modeling import BeqCritic
 
+@dataclass(frozen=True)
+class SelectionConfig:
+    threshold: float
+    tie_break: str = "medoid"
+    component_rank: str = "size_then_cohesion"
+    mutual_top_k: int = 0
+    triangle_prune_margin: float = 0.0
+    triangle_prune_keep_best_edge: bool = True
+    cluster_mode: str = "components"
+    support_frac: float = 0.7
+
 @dataclass
 class SelectionResult:
     chosen_index: int
@@ -142,6 +153,125 @@ def _medoid(comp: list[int], scores: list[list[float]], norm: list[str]) -> tupl
             elif len(norm[i]) == len(norm[best_idx]) and i < best_idx:
                 best_idx = i
     return best_idx, float(best_score)
+
+def global_medoid_index(norm: list[str], scores: list[list[float]]) -> tuple[int, float]:
+    """
+    Return the index of the global medoid under the score matrix.
+
+    The medoid is the candidate with the highest mean score to all other candidates
+    (ties broken by shorter normalized statement, then lower index).
+    """
+    n = len(norm)
+    if n == 0:
+        raise ValueError("No candidates")
+    comp = list(range(n))
+    return _medoid(comp, scores, norm)
+
+def knn_medoid_index(norm: list[str], scores: list[list[float]], k: int = 3) -> tuple[int, float]:
+    """
+    Return the index of the kNN-medoid under the score matrix.
+
+    This picks the candidate with the highest mean similarity to its top-k nearest
+    neighbors (ties broken by shorter normalized statement, then lower index).
+
+    Unlike the global medoid, this can be less sensitive to outliers / hubs when a
+    candidate set contains multiple weakly-related clusters.
+    """
+    n = len(norm)
+    if n == 0:
+        raise ValueError("No candidates")
+    if n == 1:
+        return 0, 1.0
+
+    kk = int(k)
+    kk = max(1, kk)
+    kk = min(kk, n - 1)
+
+    best_idx = 0
+    best_score = float("-inf")
+    for i in range(n):
+        vals = [scores[i][j] for j in range(n) if j != i]
+        vals.sort(reverse=True)
+        c = _mean(vals[:kk])
+        if c > best_score:
+            best_score = c
+            best_idx = i
+        elif c == best_score:
+            if len(norm[i]) < len(norm[best_idx]):
+                best_idx = i
+            elif len(norm[i]) == len(norm[best_idx]) and i < best_idx:
+                best_idx = i
+    return best_idx, float(best_score)
+
+def ensemble_vote(
+    results: list[SelectionResult],
+    norm: list[str],
+    vote: str = "weighted",
+) -> SelectionResult:
+    """
+    Combine multiple SelectionResults into one choice.
+
+    vote:
+      - "majority": unweighted vote count
+      - "weighted": vote weight = component_size * component_cohesion * chosen_centrality (when available)
+    """
+    if not results:
+        raise ValueError("No results to vote over")
+    if vote not in ["majority", "weighted"]:
+        raise ValueError(f"Unknown vote={vote!r}")
+
+    vote_counts: dict[int, int] = {}
+    vote_weights: dict[int, float] = {}
+    per_result_weight: list[float] = []
+
+    for r in results:
+        idx = int(r.chosen_index)
+        vote_counts[idx] = vote_counts.get(idx, 0) + 1
+        w = 1.0
+        if vote == "weighted":
+            w = float(max(1, int(r.component_size)))
+            if r.component_cohesion is not None:
+                w *= float(r.component_cohesion)
+            if r.chosen_centrality is not None:
+                w *= float(r.chosen_centrality)
+        per_result_weight.append(float(w))
+        vote_weights[idx] = vote_weights.get(idx, 0.0) + float(w)
+
+    best_idx = None
+    best_key = None
+    for idx in sorted(vote_counts.keys()):
+        key = (
+            float(vote_weights.get(idx, 0.0)),
+            int(vote_counts.get(idx, 0)),
+            -len(norm[idx]),
+            -idx,
+        )
+        if best_key is None or key > best_key:
+            best_key = key
+            best_idx = idx
+
+    assert best_idx is not None
+
+    # Return the "best" member result among those that voted for the winning index.
+    best_res = None
+    best_res_key = None
+    for r, w in zip(results, per_result_weight):
+        if int(r.chosen_index) != int(best_idx):
+            continue
+        key = (
+            float(w),
+            float(r.component_cohesion) if r.component_cohesion is not None else 0.0,
+            float(r.chosen_centrality) if r.chosen_centrality is not None else 0.0,
+            -len(norm[int(best_idx)]),
+        )
+        if best_res_key is None or key > best_res_key:
+            best_res_key = key
+            best_res = r
+
+    if best_res is None:
+        # Fallback (shouldn't happen): pick any result.
+        best_res = results[0]
+    return best_res
 
 
 def _triangle_prune(
@@ -281,31 +411,59 @@ def _support_cluster_from_seed(
     return sorted(cluster)
 
 
-def select_from_score_matrix(
-    candidates: list[str],
+def component_representative_index(
+    comp: list[int],
+    tie_break: str,
     norm: list[str],
     scores: list[list[float]],
-    threshold: float = 0.5,
-    tie_break: str = "medoid",
+) -> tuple[int, float | None]:
+    """
+    Pick a representative candidate index from a component.
+
+    Returns (index, centrality) where centrality is only defined for tie_break="medoid".
+    """
+    if not comp:
+        raise ValueError("Empty component")
+
+    if tie_break == "shortest":
+        chosen = min(comp, key=lambda k: (len(norm[k]), k))
+        return int(chosen), None
+    if tie_break == "first":
+        return int(comp[0]), None
+    if tie_break == "medoid":
+        chosen, chosen_cent = _medoid(comp, scores, norm)
+        return int(chosen), float(chosen_cent)
+    raise ValueError(f"Unknown tie_break={tie_break!r}")
+
+
+def ranked_components_from_scores(
+    scores: list[list[float]],
+    threshold: float,
     component_rank: str = "size_then_cohesion",
     mutual_top_k: int = 0,
     triangle_prune_margin: float = 0.0,
     triangle_prune_keep_best_edge: bool = True,
     cluster_mode: str = "components",
     support_frac: float = 0.7,
-) -> SelectionResult:
-    if not candidates:
-        raise ValueError("No candidates provided")
-    if len(candidates) != len(norm):
-        raise ValueError("Internal error: candidates/norm length mismatch")
-    if len(scores) != len(candidates) or any(len(r) != len(candidates) for r in scores):
+) -> tuple[list[tuple[list[int], float]], dict[str, int]]:
+    """
+    Build a thresholded graph and return ranked components.
+
+    Returns:
+      - comp_stats: list of (component_indices, component_cohesion), sorted best-first
+      - graph_stats: edges/components/isolates counters before/after pruning
+    """
+    n = len(scores)
+    if n == 0:
+        raise ValueError("Empty score matrix")
+
+    if any(len(r) != n for r in scores):
         raise ValueError("Internal error: score matrix shape mismatch")
 
-    n = len(candidates)
     adj = [set([i]) for i in range(n)]
 
     topk: list[set[int]] | None = None
-    if mutual_top_k and mutual_top_k > 0:
+    if mutual_top_k and mutual_top_k > 0 and n >= 2:
         k = min(int(mutual_top_k), n - 1)
         topk = []
         for i in range(n):
@@ -371,34 +529,101 @@ def select_from_score_matrix(
         raise ValueError(f"Unknown component_rank={component_rank!r}")
 
     comp_stats.sort(key=lambda x: _rank_key(x[0], x[1]))
+
+    graph_stats = {
+        "edges_before": int(edges_before),
+        "edges_after": int(edges_after),
+        "components_before": int(comps_before),
+        "components_after": int(comps_after),
+        "isolated_before": int(isolated_before),
+        "isolated_after": int(isolated_after),
+        "edges_readded": int(edges_readded),
+    }
+    return comp_stats, graph_stats
+
+
+def select_from_score_matrix(
+    candidates: list[str],
+    norm: list[str],
+    scores: list[list[float]],
+    threshold: float = 0.5,
+    tie_break: str = "medoid",
+    component_rank: str = "size_then_cohesion",
+    mutual_top_k: int = 0,
+    triangle_prune_margin: float = 0.0,
+    triangle_prune_keep_best_edge: bool = True,
+    cluster_mode: str = "components",
+    support_frac: float = 0.7,
+) -> SelectionResult:
+    if not candidates:
+        raise ValueError("No candidates provided")
+    if len(candidates) != len(norm):
+        raise ValueError("Internal error: candidates/norm length mismatch")
+    if len(scores) != len(candidates) or any(len(r) != len(candidates) for r in scores):
+        raise ValueError("Internal error: score matrix shape mismatch")
+
+    comp_stats, graph_stats = ranked_components_from_scores(
+        scores=scores,
+        threshold=float(threshold),
+        component_rank=str(component_rank),
+        mutual_top_k=int(mutual_top_k),
+        triangle_prune_margin=float(triangle_prune_margin),
+        triangle_prune_keep_best_edge=bool(triangle_prune_keep_best_edge),
+        cluster_mode=str(cluster_mode),
+        support_frac=float(support_frac),
+    )
     best_comp, best_coh = comp_stats[0]
 
-    if tie_break == "shortest":
-        chosen = min(best_comp, key=lambda k: (len(norm[k]), k))
-        chosen_cent = None
-    elif tie_break == "first":
-        chosen = best_comp[0]
-        chosen_cent = None
-    elif tie_break == "medoid":
-        chosen, chosen_cent = _medoid(best_comp, scores, norm)
-    else:
-        raise ValueError(f"Unknown tie_break={tie_break!r}")
+    chosen, chosen_cent = component_representative_index(
+        comp=best_comp,
+        tie_break=str(tie_break),
+        norm=norm,
+        scores=scores,
+    )
 
     return SelectionResult(
-        chosen_index=chosen,
-        chosen_statement=candidates[chosen],
-        component_indices=best_comp,
+        chosen_index=int(chosen),
+        chosen_statement=candidates[int(chosen)],
+        component_indices=list(best_comp),
         component_size=len(best_comp),
         component_cohesion=float(best_coh),
         chosen_centrality=float(chosen_cent) if chosen_cent is not None else None,
-        edges_before=int(edges_before),
-        edges_after=int(edges_after),
-        components_before=int(comps_before),
-        components_after=int(comps_after),
-        isolated_before=int(isolated_before),
-        isolated_after=int(isolated_after),
-        edges_readded=int(edges_readded),
+        edges_before=int(graph_stats["edges_before"]),
+        edges_after=int(graph_stats["edges_after"]),
+        components_before=int(graph_stats["components_before"]),
+        components_after=int(graph_stats["components_after"]),
+        isolated_before=int(graph_stats["isolated_before"]),
+        isolated_after=int(graph_stats["isolated_after"]),
+        edges_readded=int(graph_stats["edges_readded"]),
     )
+
+def select_ensemble_from_score_matrix(
+    candidates: list[str],
+    norm: list[str],
+    scores: list[list[float]],
+    configs: list[SelectionConfig],
+    vote: str = "weighted",
+) -> SelectionResult:
+    if not configs:
+        raise ValueError("No ensemble configs provided")
+    results: list[SelectionResult] = []
+    for cfg in configs:
+        results.append(
+            select_from_score_matrix(
+                candidates=candidates,
+                norm=norm,
+                scores=scores,
+                threshold=float(cfg.threshold),
+                tie_break=str(cfg.tie_break),
+                component_rank=str(cfg.component_rank),
+                mutual_top_k=int(cfg.mutual_top_k),
+                triangle_prune_margin=float(cfg.triangle_prune_margin),
+                triangle_prune_keep_best_edge=bool(cfg.triangle_prune_keep_best_edge),
+                cluster_mode=str(cfg.cluster_mode),
+                support_frac=float(cfg.support_frac),
+            )
+        )
+    return ensemble_vote(results=results, norm=norm, vote=vote)
 
 def select_by_equivalence_clustering(
     candidates: list[str],

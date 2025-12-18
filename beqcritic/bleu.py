@@ -54,40 +54,43 @@ def sym_bleu(a: str, b: str) -> float:
     return 0.5 * (_bleu_score(ta, tb) + _bleu_score(tb, ta))
 
 
+def bleu_centrality_ranking(candidates: list[str]) -> list[tuple[int, float]]:
+    """
+    Return candidates ranked by BLEU centrality.
+
+    Centrality is mean symmetric BLEU similarity to other candidates (roughly in [0,1]).
+    Ties are broken by shorter normalized statement, then lower index.
+    """
+    if not candidates:
+        raise ValueError("No candidates provided")
+    if len(candidates) == 1:
+        return [(0, 1.0)]
+
+    norm = [normalize_lean_statement(c) for c in candidates]
+    toks = [_tokenize(s) for s in norm]
+    n = len(candidates)
+
+    ranked: list[tuple[float, int, int]] = []
+    cents: list[float] = [0.0] * n
+    for i in range(n):
+        sims: list[float] = []
+        for j in range(n):
+            if j == i:
+                continue
+            sims.append(0.5 * (_bleu_score(toks[i], toks[j]) + _bleu_score(toks[j], toks[i])))
+        cent = sum(sims) / max(1, len(sims))
+        cents[i] = float(cent)
+        ranked.append((float(cent), len(norm[i]), i))
+
+    ranked.sort(key=lambda t: (-t[0], t[1], t[2]))
+    return [(int(i), float(cents[i])) for _, _, i in ranked]
+
+
 def bleu_medoid_index(candidates: list[str]) -> tuple[int, float]:
     """
     Return (medoid_index, centrality) under a symmetric BLEU similarity.
 
     Centrality is mean similarity to other candidates (in [0,1] approximately).
     """
-    if not candidates:
-        raise ValueError("No candidates provided")
-    if len(candidates) == 1:
-        return 0, 1.0
-
-    norm = [normalize_lean_statement(c) for c in candidates]
-    toks = [_tokenize(s) for s in norm]
-    n = len(candidates)
-
-    best_idx = 0
-    best_cent = float("-inf")
-    for i in range(n):
-        sims: list[float] = []
-        for j in range(n):
-            if j == i:
-                continue
-            sims.append(
-                0.5 * (_bleu_score(toks[i], toks[j]) + _bleu_score(toks[j], toks[i]))
-            )
-        cent = sum(sims) / max(1, len(sims))
-        if cent > best_cent:
-            best_cent = cent
-            best_idx = i
-        elif cent == best_cent:
-            if len(norm[i]) < len(norm[best_idx]):
-                best_idx = i
-            elif len(norm[i]) == len(norm[best_idx]) and i < best_idx:
-                best_idx = i
-
-    return int(best_idx), float(best_cent)
-
+    idx, cent = bleu_centrality_ranking(candidates)[0]
+    return int(idx), float(cent)

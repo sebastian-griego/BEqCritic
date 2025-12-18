@@ -31,6 +31,12 @@ def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--candidates", type=str, required=True)
     p.add_argument("--selections", type=str, required=True)
+    p.add_argument(
+        "--max-k",
+        type=int,
+        default=1,
+        help="If selections contain chosen_indices, also report top-k any-correct metrics up to this k.",
+    )
     args = p.parse_args()
 
     cand = _load_jsonl(args.candidates)
@@ -48,6 +54,9 @@ def main() -> None:
     n_any = 0
     n_sel_correct = 0
     n_sel_correct_any = 0
+    max_k = max(1, int(args.max_k))
+    topk_correct = [0 for _ in range(max_k)]
+    topk_correct_any = [0 for _ in range(max_k)]
     n_first_correct = 0
     n_shortest_correct = 0
     comp_sizes: list[int] = []
@@ -72,9 +81,20 @@ def main() -> None:
         if not candidates:
             continue
 
-        chosen_index = int(s.get("chosen_index"))
-        if chosen_index < 0 or chosen_index >= len(labels):
-            raise ValueError(f"chosen_index out of range for {pid}: {chosen_index} (n={len(labels)})")
+        chosen_indices_raw = s.get("chosen_indices", None)
+        if isinstance(chosen_indices_raw, list) and chosen_indices_raw:
+            chosen_indices = [int(x) for x in chosen_indices_raw]
+        else:
+            if "chosen_index" not in s:
+                raise ValueError(f"Missing chosen_index in selections for {pid}: {s}")
+            chosen_indices = [int(s.get("chosen_index"))]
+
+        bad = [i for i in chosen_indices if i < 0 or i >= len(labels)]
+        if bad:
+            bad.sort()
+            raise ValueError(f"chosen_indices out of range for {pid}: {bad[:5]} (n={len(labels)})")
+
+        chosen_index = int(chosen_indices[0])
 
         labels01 = [1 if int(x) else 0 for x in labels]
         any_correct = any(labels01)
@@ -84,6 +104,12 @@ def main() -> None:
         n_any += int(any_correct)
         n_sel_correct += int(sel_correct)
         n_sel_correct_any += int(sel_correct and any_correct)
+
+        for k in range(1, max_k + 1):
+            picked = chosen_indices[:k]
+            hit = any(bool(labels01[i]) for i in picked)
+            topk_correct[k - 1] += int(hit)
+            topk_correct_any[k - 1] += int(hit and any_correct)
         n_first_correct += int(bool(labels01[0]))
 
         norm = [normalize_lean_statement(x) for x in candidates]
@@ -122,6 +148,13 @@ def main() -> None:
     print(f"Selected correct: {n_sel_correct} ({_pct(n_sel_correct, n):.1f}%)")
     if n_any:
         print(f"Selected correct | any correct: {n_sel_correct_any} ({_pct(n_sel_correct_any, n_any):.1f}%)")
+    if max_k > 1:
+        for k in range(2, max_k + 1):
+            print(f"Top-{k} any correct: {topk_correct[k-1]} ({_pct(topk_correct[k-1], n):.1f}%)")
+            if n_any:
+                print(
+                    f"Top-{k} any correct | any correct: {topk_correct_any[k-1]} ({_pct(topk_correct_any[k-1], n_any):.1f}%)"
+                )
     print(f"Baseline first: {n_first_correct} ({_pct(n_first_correct, n):.1f}%)")
     print(f"Baseline shortest: {n_shortest_correct} ({_pct(n_shortest_correct, n):.1f}%)")
     if comp_sizes:

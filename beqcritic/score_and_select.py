@@ -12,9 +12,16 @@ from __future__ import annotations
 import argparse
 import json
 
-from .bleu import bleu_medoid_index
+from .bleu import bleu_medoid_index, bleu_centrality_ranking
 from .modeling import BeqCritic
-from .select import select_by_equivalence_clustering
+from .select import (
+    component_representative_index,
+    global_medoid_index,
+    knn_medoid_index,
+    ranked_components_from_scores,
+    score_candidate_matrix,
+    select_from_score_matrix,
+)
 
 def main():
     p = argparse.ArgumentParser()
@@ -52,7 +59,12 @@ def main():
         default=0.2,
         help="If >0, prune inconsistent triangles where AB and BC are strong but AC is weak.",
     )
-    p.add_argument("--fallback", type=str, default="none", choices=["none", "bleu_medoid"])
+    p.add_argument(
+        "--fallback",
+        type=str,
+        default="none",
+        choices=["none", "bleu_medoid", "critic_medoid", "critic_knn_medoid"],
+    )
     p.add_argument(
         "--fallback-min-component-size",
         type=int,
@@ -66,9 +78,26 @@ def main():
         help="If >0, use fallback when chosen component_cohesion < this value.",
     )
     p.add_argument(
+        "--fallback-knn-k",
+        type=int,
+        default=3,
+        help="k for --fallback=critic_knn_medoid (mean of top-k critic similarities).",
+    )
+    p.add_argument(
         "--emit-stats",
         action="store_true",
         help="Include graph statistics (edges/components/isolates) in output JSONL.",
+    )
+    p.add_argument(
+        "--top-k",
+        type=int,
+        default=1,
+        help="If >1, also emit a ranked list of top-k candidate indices (cluster representatives).",
+    )
+    p.add_argument(
+        "--emit-topk-text",
+        action="store_true",
+        help="When used with --top-k > 1, also include the selected top-k Lean strings in the output JSONL.",
     )
     args = p.parse_args()
 
@@ -81,18 +110,23 @@ def main():
                 continue
             obj = json.loads(line)
             candidates = obj.get("candidates", [])
-            res = select_by_equivalence_clustering(
+            norm_scored, scores = score_candidate_matrix(
                 candidates=candidates,
                 critic=critic,
-                threshold=args.threshold,
                 batch_size=args.batch_size,
-                tie_break=args.tie_break,
-                cluster_mode=args.cluster_mode,
-                support_frac=args.support_frac,
-                component_rank=args.cluster_rank,
                 symmetric=args.symmetric,
+            )
+            res = select_from_score_matrix(
+                candidates=candidates,
+                norm=norm_scored,
+                scores=scores,
+                threshold=args.threshold,
+                tie_break=args.tie_break,
+                component_rank=args.cluster_rank,
                 mutual_top_k=args.mutual_k,
                 triangle_prune_margin=args.triangle_prune_margin,
+                cluster_mode=args.cluster_mode,
+                support_frac=args.support_frac,
             )
 
             critic_chosen_index = int(res.chosen_index)
@@ -121,8 +155,72 @@ def main():
                         chosen_centrality = float(fb_cent)
                         selection_method = "bleu_medoid"
                         fallback_used = True
+                    elif args.fallback == "critic_medoid":
+                        fb_idx, fb_cent = global_medoid_index(norm_scored, scores)
+                        chosen_index = int(fb_idx)
+                        chosen_statement = str(candidates[chosen_index])
+                        chosen_centrality = float(fb_cent)
+                        selection_method = "critic_medoid"
+                        fallback_used = True
+                    elif args.fallback == "critic_knn_medoid":
+                        fb_idx, fb_cent = knn_medoid_index(norm_scored, scores, k=int(args.fallback_knn_k))
+                        chosen_index = int(fb_idx)
+                        chosen_statement = str(candidates[chosen_index])
+                        chosen_centrality = float(fb_cent)
+                        selection_method = "critic_knn_medoid"
+                        fallback_used = True
                     else:
                         raise ValueError(f"Unknown fallback={args.fallback!r}")
+
+            chosen_indices: list[int] | None = None
+            if int(args.top_k) > 1:
+                k = max(1, int(args.top_k))
+                k = min(k, len(candidates))
+
+                comp_stats, _ = ranked_components_from_scores(
+                    scores=scores,
+                    threshold=float(args.threshold),
+                    component_rank=str(args.cluster_rank),
+                    mutual_top_k=int(args.mutual_k),
+                    triangle_prune_margin=float(args.triangle_prune_margin),
+                    triangle_prune_keep_best_edge=True,
+                    cluster_mode=str(args.cluster_mode),
+                    support_frac=float(args.support_frac),
+                )
+
+                ranked_reps: list[int] = []
+                for comp, _coh in comp_stats:
+                    idx, _cent = component_representative_index(
+                        comp=comp,
+                        tie_break=str(args.tie_break),
+                        norm=norm_scored,
+                        scores=scores,
+                    )
+                    ranked_reps.append(int(idx))
+
+                fill_order = ranked_reps
+                if fallback_used and args.fallback == "bleu_medoid":
+                    fill_order = [i for i, _ in bleu_centrality_ranking(candidates)]
+
+                out_indices: list[int] = []
+                for idx in [int(chosen_index)] + list(fill_order):
+                    if idx < 0 or idx >= len(candidates):
+                        continue
+                    if idx in out_indices:
+                        continue
+                    out_indices.append(int(idx))
+                    if len(out_indices) >= k:
+                        break
+
+                if len(out_indices) < k:
+                    for idx in range(len(candidates)):
+                        if idx in out_indices:
+                            continue
+                        out_indices.append(int(idx))
+                        if len(out_indices) >= k:
+                            break
+
+                chosen_indices = out_indices[:k]
 
             out = {
                 "problem_id": obj.get("problem_id"),
@@ -136,6 +234,10 @@ def main():
                 out["component_cohesion"] = float(component_cohesion)
             if chosen_centrality is not None:
                 out["chosen_centrality"] = float(chosen_centrality)
+            if chosen_indices is not None:
+                out["chosen_indices"] = list(chosen_indices)
+                if args.emit_topk_text:
+                    out["chosen_topk"] = [str(candidates[int(i)]) for i in chosen_indices]
             if args.fallback != "none":
                 out["fallback_used"] = bool(fallback_used)
             if fallback_used:

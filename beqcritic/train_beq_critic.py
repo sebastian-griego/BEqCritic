@@ -25,6 +25,7 @@ import random
 from typing import Any
 from pathlib import Path
 from collections import Counter
+import os
 
 import numpy as np
 from datasets import Dataset
@@ -228,6 +229,11 @@ def main():
     p.add_argument("--eval-size", type=float, default=0.1, help="Fraction of problem IDs to use for eval (group split)")
     p.add_argument("--eval-split", type=str, default="", help="Optional separate eval split (disables --eval-size)")
     p.add_argument(
+        "--allow-problem-id-overlap",
+        action="store_true",
+        help="Allow train/eval overlap on --problem-id-key when using --eval-split (debug only; can cause leakage).",
+    )
+    p.add_argument(
         "--write-split-ids",
         action="store_true",
         help="Write train/eval problem_id lists into --output-dir for reproducibility.",
@@ -256,8 +262,29 @@ def main():
         if args.problem_id_key:
             train_pids = {str(r.get(args.problem_id_key)) for r in train_rows}
             eval_pids = {str(r.get(args.problem_id_key)) for r in eval_rows}
-            if train_pids & eval_pids:
-                raise RuntimeError("Train/eval splits overlap on problem IDs; choose a different --eval-split.")
+            overlap = sorted(train_pids & eval_pids)
+            if overlap and not args.allow_problem_id_overlap:
+                hint = ""
+                if len(overlap) == len(eval_pids):
+                    hint = (
+                        f" Note: every eval problem_id is also present in train. "
+                        f"This often happens when a local/offline dataset has a synthetic '{args.split}' split "
+                        f"(e.g., '{args.split}' == valid+test). "
+                        f"Use --split valid with --eval-size, or re-download a dataset with disjoint splits."
+                    )
+                example = ", ".join(overlap[:5])
+                raise RuntimeError(
+                    f"Train/eval splits overlap on problem IDs ({len(overlap)} overlapping).{hint} "
+                    f"Example overlapping IDs: {example}"
+                )
+            if overlap and args.allow_problem_id_overlap:
+                rank = os.environ.get("RANK", "0")
+                if rank == "0":
+                    example = ", ".join(overlap[:5])
+                    print(
+                        f"WARNING: train/eval overlap on problem IDs ({len(overlap)} overlapping); "
+                        f"--allow-problem-id-overlap enabled. Example IDs: {example}"
+                    )
             print(
                 f"Dataset split: {args.split} -> train ({len(train_rows)} rows, {len(train_pids)} problems), "
                 f"{args.eval_split} -> eval ({len(eval_rows)} rows, {len(eval_pids)} problems)"
@@ -357,6 +384,7 @@ def main():
         load_best_model_at_end=True,
         metric_for_best_model="f1",
         greater_is_better=True,
+        ddp_find_unused_parameters=False,
     )
 
     trainer = Trainer(
