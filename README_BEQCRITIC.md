@@ -10,6 +10,46 @@ Contents:
 - beqcritic/inspect_dataset.py: print dataset columns and sample rows
 - beqcritic/train_beq_critic.py: train the critic
 - beqcritic/score_and_select.py: apply clustering and selection
+- beqcritic/calibrate_temperature.py: fit temperature scaling and write `temperature.json` into a checkpoint dir
+- beqcritic/debug_selection.py: inspect one problem (clusters + top edges) for error analysis
+- beqcritic/group_candidates_jsonl.py: convert flat (row-level) JSONL into grouped candidates JSONL
+- beqcritic/self_bleu_select.py: Self-BLEU style medoid selection baseline (paper-style)
+
+Paper-style integration (swap selection only)
+--------------------------------------------
+
+If you already have *post-typecheck* candidates per problem from another pipeline (e.g. the paper’s),
+the clean substitution point is selection.
+
+1) Convert your filtered flat JSONL (one candidate per line) into grouped candidates JSONL:
+
+python -m beqcritic.group_candidates_jsonl \
+  --input filtered_candidates_flat.jsonl \
+  --output filtered_candidates_grouped.jsonl \
+  --problem-id-key problem_id \
+  --candidate-key candidate
+
+2) Run a Self-BLEU style baseline selector (global BLEU medoid):
+
+python -m beqcritic.self_bleu_select \
+  --input filtered_candidates_grouped.jsonl \
+  --output selfbleu_selection.jsonl
+
+3) Run BEqCritic selection (learned equivalence + clustering):
+
+python -m beqcritic.score_and_select \
+  --model checkpoints/beqcritic_deberta \
+  --input filtered_candidates_grouped.jsonl \
+  --output beqcritic_selection.jsonl \
+  --device cuda:0 \
+  --threshold 0.5 \
+  --tie-break medoid \
+  --cluster-rank size_then_cohesion \
+  --triangle-prune-margin 0.2
+
+Optional helpers (if you want this repo to do the paper’s clean/filter stages):
+- `python -m beqcritic.paper_pipeline.clean_candidates ...` turns raw model text into typecheckable decls (`:= by sorry`)
+- `python -m beqcritic.paper_pipeline.typecheck_filter ...` filters grouped candidates by invoking Lean (requires a Lean toolchain)
 
 Minimal training run:
 
@@ -49,6 +89,26 @@ python -m beqcritic.score_and_select \
   --cluster-rank size_then_cohesion \
   --triangle-prune-margin 0.2 \
   --emit-stats
+
+Optional: calibrate temperature scaling (improves threshold stability; auto-loaded when present):
+
+python -m beqcritic.calibrate_temperature \
+  --model checkpoints/beqcritic_deberta \
+  --input proofnetverif_valid_train_candidates_hard_v2.jsonl \
+  --device cuda:0
+
+Optional: reduce O(n^2) scoring cost for large candidate sets (score only kNN edges):
+
+python -m beqcritic.score_and_select \
+  --model checkpoints/beqcritic_deberta \
+  --input proofnetverif_test_candidates.jsonl \
+  --output proofnetverif_test_selection_knn.jsonl \
+  --device cuda:0 \
+  --similarity critic \
+  --critic-pair-mode knn \
+  --knn-k 10 \
+  --threshold 0.5 \
+  --tie-break medoid
 
 Alternative clustering mode (denser, bridge-resistant):
 

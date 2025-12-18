@@ -62,6 +62,7 @@ def main() -> None:
     comp_sizes: list[int] = []
     comp_cohesions: list[float] = []
     chosen_centralities: list[float] = []
+    chosen_centrality_gaps: list[float] = []
     edges_before: list[int] = []
     edges_after: list[int] = []
     components_before: list[int] = []
@@ -122,6 +123,8 @@ def main() -> None:
             comp_cohesions.append(float(s["component_cohesion"]))
         if "chosen_centrality" in s:
             chosen_centralities.append(float(s["chosen_centrality"]))
+        if "chosen_centrality_gap" in s:
+            chosen_centrality_gaps.append(float(s["chosen_centrality_gap"]))
         if "edges_before" in s:
             edges_before.append(int(s["edges_before"]))
         if "edges_after" in s:
@@ -166,6 +169,9 @@ def main() -> None:
     if chosen_centralities:
         avg_cent = sum(chosen_centralities) / len(chosen_centralities)
         print(f"Avg chosen_centrality: {avg_cent:.3f}")
+    if chosen_centrality_gaps:
+        avg_gap = sum(chosen_centrality_gaps) / len(chosen_centrality_gaps)
+        print(f"Avg chosen_centrality_gap: {avg_gap:.3f}")
     if edges_before and edges_after:
         print(f"Avg edges_before/after: {sum(edges_before)/len(edges_before):.1f} -> {sum(edges_after)/len(edges_after):.1f}")
     if components_before and components_after:

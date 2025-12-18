@@ -8,7 +8,10 @@ __all__ = [
     "score_and_select",
     "evaluate_selection",
     "benchmark_selection",
+    "calibrate_temperature",
+    "debug_selection",
     "select",
     "modeling",
+    "embedder",
 ]
 __version__ = '0.2.0'

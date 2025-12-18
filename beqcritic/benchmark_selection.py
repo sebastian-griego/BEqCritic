@@ -10,8 +10,10 @@ import argparse
 import json
 import random
 from dataclasses import dataclass
+from collections import defaultdict
 
 from .bleu import bleu_medoid_index
+from .embedder import TextEmbedder
 from .modeling import BeqCritic
 from .select import similarity_matrix, select_from_score_matrix, global_medoid_index, knn_medoid_index, ensemble_vote
 from .textnorm import normalize_lean_statement
@@ -117,10 +119,36 @@ def main() -> None:
 
     p.add_argument("--similarity", type=str, default="critic", choices=["critic", "bleu", "hybrid"])
     p.add_argument(
+        "--critic-pair-mode",
+        type=str,
+        default="all",
+        choices=["all", "knn"],
+        help="How to choose which candidate pairs are scored by the critic.",
+    )
+    p.add_argument("--knn-k", type=int, default=10, help="k for --critic-pair-mode=knn (kNN over embeddings).")
+    p.add_argument(
+        "--knn-embed-model",
+        type=str,
+        default="",
+        help="Embedding model for --critic-pair-mode=knn (default: same as --model).",
+    )
+    p.add_argument("--knn-embed-max-length", type=int, default=256)
+    p.add_argument("--knn-embed-batch-size", type=int, default=32)
+    p.add_argument(
+        "--knn-mutual",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="If true, keep only mutual kNN edges for --critic-pair-mode=knn.",
+    )
+    p.add_argument("--knn-chunk-size", type=int, default=1024, help="Chunk size for kNN similarity computation.")
+    p.add_argument(
         "--critic-temperature",
         type=float,
-        default=1.0,
-        help="Temperature scaling for critic probabilities (only for --similarity critic|hybrid).",
+        default=None,
+        help=(
+            "Temperature scaling for critic probabilities (only for --similarity critic|hybrid). "
+            "If unset, uses the calibrated value from the checkpoint (temperature.json) when available."
+        ),
     )
     p.add_argument(
         "--hybrid-alpha",
@@ -190,6 +218,7 @@ def main() -> None:
     p.add_argument("--report-cand-buckets", action="store_true")
     p.add_argument("--comp-buckets", type=str, default="", help="Comma-separated bucket upper bounds (selected component size)")
     p.add_argument("--report-comp-buckets", action="store_true")
+    p.add_argument("--mbr-knn-k", type=int, default=3, help="k for the Baseline MBR-kNN medoid.")
     p.add_argument("--random-seed", type=int, default=0)
     p.add_argument("--top-strategies", type=int, default=0, help="If >0, print only the top-N strategies")
     p.add_argument("--sort-by", type=str, default="acc_any", choices=["acc", "acc_any"])
@@ -209,20 +238,36 @@ def main() -> None:
             f" min_comp={args.fallback_min_component_size} min_coh={args.fallback_min_cohesion}"
         )
 
-    sim_desc = f" similarity={args.similarity}"
-    if args.similarity in ["critic", "hybrid"] and float(args.critic_temperature) != 1.0:
-        sim_desc += f" temp={float(args.critic_temperature)}"
-    if args.similarity == "hybrid":
-        sim_desc += f" alpha={float(args.hybrid_alpha)}"
-    if args.similarity in ["bleu", "hybrid"] and (int(args.bleu_max_n) != 4 or float(args.bleu_smooth) != 1.0):
-        sim_desc += f" bleu_n={int(args.bleu_max_n)} bleu_smooth={float(args.bleu_smooth)}"
-
     critic = None
+    used_critic_temperature = None
+    knn_embedder = None
     if args.similarity in ["critic", "hybrid"]:
         if not args.model:
             raise ValueError("--model is required when --similarity is critic or hybrid")
         device = args.device.strip() or None
         critic = BeqCritic(model_name_or_path=args.model, max_length=args.max_length, device=device)
+        used_critic_temperature = (
+            float(args.critic_temperature) if args.critic_temperature is not None else float(critic.temperature)
+        )
+        if args.critic_pair_mode == "knn":
+            embed_model = args.knn_embed_model.strip() or args.model
+            knn_embedder = TextEmbedder(
+                model_name_or_path=embed_model,
+                max_length=int(args.knn_embed_max_length),
+                device=str(critic.device) if critic.device is not None else None,
+            )
+
+    sim_desc = f" similarity={args.similarity}"
+    if args.similarity in ["critic", "hybrid"] and used_critic_temperature is not None and float(used_critic_temperature) != 1.0:
+        sim_desc += f" temp={float(used_critic_temperature)}"
+    if args.similarity == "hybrid":
+        sim_desc += f" alpha={float(args.hybrid_alpha)}"
+    if args.similarity in ["bleu", "hybrid"] and (int(args.bleu_max_n) != 4 or float(args.bleu_smooth) != 1.0):
+        sim_desc += f" bleu_n={int(args.bleu_max_n)} bleu_smooth={float(args.bleu_smooth)}"
+    if args.similarity in ["critic", "hybrid"] and str(args.critic_pair_mode) != "all":
+        sim_desc += f" pairs={str(args.critic_pair_mode)}"
+        if str(args.critic_pair_mode) == "knn":
+            sim_desc += f" knn_k={int(args.knn_k)}"
 
     if args.mutual_ks:
         mutual_ks = [int(x) for x in _parse_csv(args.mutual_ks)]
@@ -253,8 +298,11 @@ def main() -> None:
     metrics = {cfg: Metrics() for cfg in configs}
     baseline_first = Metrics()
     baseline_shortest = Metrics()
+    baseline_majority = Metrics()
     baseline_random = Metrics()
     baseline_bleu_medoid = Metrics()
+    baseline_mbr_global = Metrics()
+    baseline_mbr_knn = Metrics()
     ensemble_metrics = Metrics()
 
     n_seen = 0
@@ -265,8 +313,11 @@ def main() -> None:
     per_strategy_comp_size: dict[tuple[float, str, str, int, float, float], list[int]] = {cfg: [] for cfg in configs}
     first_correct: list[int] = []
     shortest_correct: list[int] = []
+    majority_correct: list[int] = []
     random_correct: list[int] = []
     bleu_medoid_correct: list[int] = []
+    mbr_global_correct: list[int] = []
+    mbr_knn_correct: list[int] = []
     ensemble_correct: list[int] = []
     ensemble_comp_size: list[int] = []
 
@@ -277,6 +328,7 @@ def main() -> None:
             raise ValueError("--ensemble is not supported together with --fallback (run ensemble standalone).")
 
     rnd = random.Random(int(args.random_seed))
+    mbr_knn_k = max(1, int(args.mbr_knn_k))
 
     for obj in _load_lines(args.input):
         if args.max_problems and n_seen >= int(args.max_problems):
@@ -307,25 +359,38 @@ def main() -> None:
 
         first_is_correct = int(bool(labels01[0]))
         shortest_is_correct = int(bool(labels01[shortest_idx]))
+        # Majority vote over normalized statements (paper-style baseline).
+        groups: dict[str, list[int]] = defaultdict(list)
+        for i, s in enumerate(norm):
+            groups[str(s)].append(int(i))
+        # Pick the most frequent normalized statement; ties -> shorter statement, then earliest occurrence.
+        best_stmt, best_idxs = min(
+            groups.items(),
+            key=lambda kv: (-len(kv[1]), len(kv[0]), min(kv[1])),
+        )
+        majority_idx = min(best_idxs, key=lambda i: (len(norm[i]), i))
+        majority_is_correct = int(bool(labels01[int(majority_idx)]))
         rand_idx = rnd.randrange(len(labels01))
         random_is_correct = int(bool(labels01[rand_idx]))
 
-        bleu_idx, _ = bleu_medoid_index(candidates)
+        bleu_idx, bleu_cent = bleu_medoid_index(candidates)
         bleu_is_correct = int(bool(labels01[int(bleu_idx)]))
 
         baseline_first.add(any_correct, bool(first_is_correct), component_size=1, cohesion=None, centrality=None)
         baseline_shortest.add(any_correct, bool(shortest_is_correct), component_size=1, cohesion=None, centrality=None)
+        baseline_majority.add(any_correct, bool(majority_is_correct), component_size=1, cohesion=None, centrality=None)
         baseline_random.add(any_correct, bool(random_is_correct), component_size=1, cohesion=None, centrality=None)
         baseline_bleu_medoid.add(
             any_correct,
             bool(bleu_is_correct),
             component_size=1,
             cohesion=None,
-            centrality=None,
+            centrality=float(bleu_cent),
         )
 
         first_correct.append(first_is_correct)
         shortest_correct.append(shortest_is_correct)
+        majority_correct.append(majority_is_correct)
         random_correct.append(random_is_correct)
         bleu_medoid_correct.append(bleu_is_correct)
 
@@ -336,10 +401,38 @@ def main() -> None:
             symmetric=args.symmetric,
             similarity=args.similarity,
             critic_temperature=args.critic_temperature,
+            critic_pair_mode=str(args.critic_pair_mode),
+            knn_embedder=knn_embedder,
+            knn_k=int(args.knn_k),
+            knn_mutual=bool(args.knn_mutual),
+            knn_chunk_size=int(args.knn_chunk_size),
+            knn_embed_batch_size=int(args.knn_embed_batch_size),
             hybrid_alpha=args.hybrid_alpha,
             bleu_max_n=args.bleu_max_n,
             bleu_smooth=args.bleu_smooth,
         )
+
+        mbr_global_idx, mbr_global_cent = global_medoid_index(norm_scored, scores)
+        mbr_knn_idx, mbr_knn_cent = knn_medoid_index(norm_scored, scores, k=int(mbr_knn_k))
+        mbr_global_is_correct = int(bool(labels01[int(mbr_global_idx)]))
+        mbr_knn_is_correct = int(bool(labels01[int(mbr_knn_idx)]))
+
+        baseline_mbr_global.add(
+            any_correct=any_correct,
+            selected_correct=bool(mbr_global_is_correct),
+            component_size=1,
+            cohesion=None,
+            centrality=float(mbr_global_cent),
+        )
+        baseline_mbr_knn.add(
+            any_correct=any_correct,
+            selected_correct=bool(mbr_knn_is_correct),
+            component_size=1,
+            cohesion=None,
+            centrality=float(mbr_knn_cent),
+        )
+        mbr_global_correct.append(int(mbr_global_is_correct))
+        mbr_knn_correct.append(int(mbr_knn_is_correct))
 
         per_problem_results = []
         for thr, tb, cr, mk, tm, sf in configs:
@@ -425,8 +518,11 @@ def main() -> None:
 
     _report_with_ci("Baseline first", first_correct, baseline_first)
     _report_with_ci("Baseline shortest", shortest_correct, baseline_shortest)
+    _report_with_ci("Baseline majority", majority_correct, baseline_majority)
     _report_with_ci("Baseline random", random_correct, baseline_random)
     _report_with_ci("Baseline BLEU-medoid", bleu_medoid_correct, baseline_bleu_medoid)
+    _report_with_ci(f"Baseline MBR-global{sim_desc}", mbr_global_correct, baseline_mbr_global)
+    _report_with_ci(f"Baseline MBR-kNN(k={mbr_knn_k}){sim_desc}", mbr_knn_correct, baseline_mbr_knn)
     if args.ensemble:
         _report_with_ci(
             f"Ensemble ({args.ensemble_vote} vote over {len(configs)} configs)",
@@ -501,8 +597,13 @@ def main() -> None:
     if args.report_buckets and len_bounds:
         _report_bucketed("Baseline first", first_correct, lengths, len_bounds, args.length_key)
         _report_bucketed("Baseline shortest", shortest_correct, lengths, len_bounds, args.length_key)
+        _report_bucketed("Baseline majority", majority_correct, lengths, len_bounds, args.length_key)
         _report_bucketed("Baseline random", random_correct, lengths, len_bounds, args.length_key)
         _report_bucketed("Baseline BLEU-medoid", bleu_medoid_correct, lengths, len_bounds, args.length_key)
+        _report_bucketed(f"Baseline MBR-global{sim_desc}", mbr_global_correct, lengths, len_bounds, args.length_key)
+        _report_bucketed(
+            f"Baseline MBR-kNN(k={mbr_knn_k}){sim_desc}", mbr_knn_correct, lengths, len_bounds, args.length_key
+        )
         if args.ensemble:
             _report_bucketed(
                 f"Ensemble ({args.ensemble_vote})",
@@ -515,8 +616,13 @@ def main() -> None:
     if args.report_cand_buckets and cand_bounds:
         _report_bucketed("Baseline first", first_correct, cand_counts, cand_bounds, "n_candidates")
         _report_bucketed("Baseline shortest", shortest_correct, cand_counts, cand_bounds, "n_candidates")
+        _report_bucketed("Baseline majority", majority_correct, cand_counts, cand_bounds, "n_candidates")
         _report_bucketed("Baseline random", random_correct, cand_counts, cand_bounds, "n_candidates")
         _report_bucketed("Baseline BLEU-medoid", bleu_medoid_correct, cand_counts, cand_bounds, "n_candidates")
+        _report_bucketed(f"Baseline MBR-global{sim_desc}", mbr_global_correct, cand_counts, cand_bounds, "n_candidates")
+        _report_bucketed(
+            f"Baseline MBR-kNN(k={mbr_knn_k}){sim_desc}", mbr_knn_correct, cand_counts, cand_bounds, "n_candidates"
+        )
         if args.ensemble:
             _report_bucketed(
                 f"Ensemble ({args.ensemble_vote})",
@@ -530,8 +636,13 @@ def main() -> None:
         ones = [1] * len(first_correct)
         _report_bucketed("Baseline first", first_correct, ones, comp_bounds, "selected_component_size")
         _report_bucketed("Baseline shortest", shortest_correct, ones, comp_bounds, "selected_component_size")
+        _report_bucketed("Baseline majority", majority_correct, ones, comp_bounds, "selected_component_size")
         _report_bucketed("Baseline random", random_correct, ones, comp_bounds, "selected_component_size")
         _report_bucketed("Baseline BLEU-medoid", bleu_medoid_correct, ones, comp_bounds, "selected_component_size")
+        _report_bucketed(f"Baseline MBR-global{sim_desc}", mbr_global_correct, ones, comp_bounds, "selected_component_size")
+        _report_bucketed(
+            f"Baseline MBR-kNN(k={mbr_knn_k}){sim_desc}", mbr_knn_correct, ones, comp_bounds, "selected_component_size"
+        )
         if args.ensemble:
             _report_bucketed(
                 f"Ensemble ({args.ensemble_vote})",

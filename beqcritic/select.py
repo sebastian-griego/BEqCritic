@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .bleu import bleu_score_matrix
+from .embedder import TextEmbedder
 from .textnorm import normalize_lean_statement
 from .features import extract_features
 from .modeling import BeqCritic
@@ -37,6 +38,7 @@ class SelectionResult:
     component_size: int
     component_cohesion: float | None = None
     chosen_centrality: float | None = None
+    chosen_centrality_gap: float | None = None
     edges_before: int | None = None
     edges_after: int | None = None
     components_before: int | None = None
@@ -48,13 +50,66 @@ class SelectionResult:
 def _mean(xs: list[float]) -> float:
     return sum(xs) / max(1, len(xs))
 
+def _knn_pairs_from_embeddings(
+    emb: "object",
+    k: int,
+    mutual: bool = True,
+    chunk_size: int = 1024,
+) -> list[tuple[int, int]]:
+    """
+    Build candidate index pairs from a kNN graph over cosine similarity.
+
+    emb: torch.Tensor [n, d] on CPU or GPU, assumed L2-normalized.
+    Returns undirected unique pairs (i<j).
+    """
+    import torch
+
+    if not hasattr(emb, "shape"):
+        raise TypeError("emb must be a torch.Tensor-like object")
+    n = int(emb.shape[0])
+    if n <= 1:
+        return []
+
+    kk = max(1, int(k))
+    kk = min(kk, n - 1)
+    cs = max(1, int(chunk_size))
+
+    device = emb.device
+    emb_d = emb.to(device)
+
+    topk_idx = torch.empty((n, kk), dtype=torch.int64, device="cpu")
+    for start in range(0, n, cs):
+        end = min(n, start + cs)
+        sims = emb_d[start:end] @ emb_d.T  # [chunk, n]
+        rows = end - start
+        # Exclude self.
+        for r in range(rows):
+            sims[r, start + r] = -1e9
+        top = sims.topk(kk, dim=-1).indices.detach().cpu()
+        topk_idx[start:end] = top
+
+    neigh_sets = [set(int(x) for x in topk_idx[i].tolist()) for i in range(n)]
+    pairs: set[tuple[int, int]] = set()
+    if mutual:
+        for i in range(n):
+            for j in neigh_sets[i]:
+                if i in neigh_sets[j]:
+                    a, b = (i, j) if i < j else (j, i)
+                    pairs.add((a, b))
+    else:
+        for i in range(n):
+            for j in neigh_sets[i]:
+                a, b = (i, j) if i < j else (j, i)
+                pairs.add((a, b))
+    return sorted(pairs)
+
 
 def _score_matrix(
     candidates: list[str],
     critic: BeqCritic,
     batch_size: int,
     symmetric: bool,
-    temperature: float = 1.0,
+    temperature: float | None = None,
 ) -> tuple[list[str], list[list[float]]]:
     norm = [normalize_lean_statement(c) for c in candidates]
     prefixes = [extract_features(s).to_prefix() for s in norm]
@@ -64,15 +119,13 @@ def _score_matrix(
     pair_texts = [(prefixed[i], prefixed[j]) for i, j in idx_pairs]
     if symmetric and pair_texts:
         pair_texts = pair_texts + [(prefixed[j], prefixed[i]) for i, j in idx_pairs]
-        scores_all = critic.score_pairs(pair_texts, batch_size=batch_size, temperature=float(temperature))
+        scores_all = critic.score_pairs(pair_texts, batch_size=batch_size, temperature=temperature)
         half = len(idx_pairs)
         scores_fwd = scores_all[:half]
         scores_rev = scores_all[half:]
         scores = [(a + b) / 2.0 for a, b in zip(scores_fwd, scores_rev)]
     else:
-        scores = (
-            critic.score_pairs(pair_texts, batch_size=batch_size, temperature=float(temperature)) if pair_texts else []
-        )
+        scores = critic.score_pairs(pair_texts, batch_size=batch_size, temperature=temperature) if pair_texts else []
 
     n = len(norm)
     mat = [[0.0] * n for _ in range(n)]
@@ -90,7 +143,7 @@ def score_candidate_matrix(
     critic: BeqCritic,
     batch_size: int = 16,
     symmetric: bool = False,
-    temperature: float = 1.0,
+    temperature: float | None = None,
 ) -> tuple[list[str], list[list[float]]]:
     """
     Compute a symmetric NxN score matrix for candidates, where score[i][j] ~= P(equivalent).
@@ -100,8 +153,66 @@ def score_candidate_matrix(
         critic=critic,
         batch_size=batch_size,
         symmetric=bool(symmetric),
-        temperature=float(temperature),
+        temperature=temperature,
     )
+
+def score_candidate_matrix_knn(
+    candidates: list[str],
+    critic: BeqCritic,
+    embedder: TextEmbedder,
+    knn_k: int = 10,
+    knn_mutual: bool = True,
+    knn_chunk_size: int = 1024,
+    embed_batch_size: int = 32,
+    batch_size: int = 16,
+    symmetric: bool = False,
+    temperature: float | None = None,
+) -> tuple[list[str], list[list[float]]]:
+    """
+    Approximate scoring: use a kNN graph to choose which candidate pairs to score with the critic.
+
+    Missing (unscored) pairs are left as 0.0 in the returned matrix.
+    """
+    if not candidates:
+        raise ValueError("No candidates provided")
+
+    norm = [normalize_lean_statement(c) for c in candidates]
+    emb = embedder.embed_statements(
+        norm,
+        batch_size=int(embed_batch_size),
+        normalize_statements=False,
+        return_cpu=False,
+    )
+    pairs = _knn_pairs_from_embeddings(
+        emb=emb,
+        k=int(knn_k),
+        mutual=bool(knn_mutual),
+        chunk_size=int(knn_chunk_size),
+    )
+
+    prefixes = [extract_features(s).to_prefix() for s in norm]
+    prefixed = [f"{p} {s}" for p, s in zip(prefixes, norm)]
+    pair_texts = [(prefixed[i], prefixed[j]) for i, j in pairs]
+
+    if symmetric and pair_texts:
+        pair_texts = pair_texts + [(b, a) for (a, b) in pair_texts]
+        scores_all = critic.score_pairs(pair_texts, batch_size=int(batch_size), temperature=temperature)
+        half = len(pairs)
+        scores_fwd = scores_all[:half]
+        scores_rev = scores_all[half:]
+        scores = [(float(a) + float(b)) / 2.0 for a, b in zip(scores_fwd, scores_rev)]
+    else:
+        scores = critic.score_pairs(pair_texts, batch_size=int(batch_size), temperature=temperature) if pair_texts else []
+
+    n = len(norm)
+    mat = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        mat[i][i] = 1.0
+    for (i, j), sc in zip(pairs, scores):
+        s = float(sc)
+        mat[i][j] = s
+        mat[j][i] = s
+    return norm, mat
 
 def similarity_matrix(
     candidates: list[str],
@@ -109,7 +220,13 @@ def similarity_matrix(
     critic: BeqCritic | None = None,
     batch_size: int = 16,
     symmetric: bool = False,
-    critic_temperature: float = 1.0,
+    critic_temperature: float | None = None,
+    critic_pair_mode: str = "all",
+    knn_embedder: TextEmbedder | None = None,
+    knn_k: int = 10,
+    knn_mutual: bool = True,
+    knn_chunk_size: int = 1024,
+    knn_embed_batch_size: int = 32,
     hybrid_alpha: float = 0.5,
     bleu_max_n: int = 4,
     bleu_smooth: float = 1.0,
@@ -126,13 +243,31 @@ def similarity_matrix(
     if sim == "critic":
         if critic is None:
             raise ValueError("critic is required for similarity='critic'")
-        return score_candidate_matrix(
-            candidates=candidates,
-            critic=critic,
-            batch_size=batch_size,
-            symmetric=symmetric,
-            temperature=float(critic_temperature),
-        )
+        pair_mode = str(critic_pair_mode).strip().lower()
+        if pair_mode == "all":
+            return score_candidate_matrix(
+                candidates=candidates,
+                critic=critic,
+                batch_size=batch_size,
+                symmetric=symmetric,
+                temperature=critic_temperature,
+            )
+        if pair_mode == "knn":
+            if knn_embedder is None:
+                raise ValueError("knn_embedder is required for critic_pair_mode='knn'")
+            return score_candidate_matrix_knn(
+                candidates=candidates,
+                critic=critic,
+                embedder=knn_embedder,
+                knn_k=int(knn_k),
+                knn_mutual=bool(knn_mutual),
+                knn_chunk_size=int(knn_chunk_size),
+                embed_batch_size=int(knn_embed_batch_size),
+                batch_size=batch_size,
+                symmetric=symmetric,
+                temperature=critic_temperature,
+            )
+        raise ValueError(f"Unknown critic_pair_mode={critic_pair_mode!r}")
     if sim == "bleu":
         return bleu_score_matrix(candidates=candidates, max_n=int(bleu_max_n), smooth=float(bleu_smooth))
     if sim == "hybrid":
@@ -141,12 +276,19 @@ def similarity_matrix(
         a = float(hybrid_alpha)
         if not (0.0 <= a <= 1.0):
             raise ValueError(f"hybrid_alpha must be in [0,1], got {hybrid_alpha!r}")
-        norm, critic_scores = score_candidate_matrix(
+        norm, critic_scores = similarity_matrix(
             candidates=candidates,
+            similarity="critic",
             critic=critic,
             batch_size=batch_size,
             symmetric=symmetric,
-            temperature=float(critic_temperature),
+            critic_temperature=critic_temperature,
+            critic_pair_mode=str(critic_pair_mode),
+            knn_embedder=knn_embedder,
+            knn_k=int(knn_k),
+            knn_mutual=bool(knn_mutual),
+            knn_chunk_size=int(knn_chunk_size),
+            knn_embed_batch_size=int(knn_embed_batch_size),
         )
         _norm_bleu, bleu_scores = bleu_score_matrix(
             candidates=candidates,
@@ -204,15 +346,17 @@ def _component_cohesion(comp: list[int], scores: list[list[float]]) -> float:
     return _mean(vals)
 
 
-def _medoid(comp: list[int], scores: list[list[float]], norm: list[str]) -> tuple[int, float]:
+def _medoid(comp: list[int], scores: list[list[float]], norm: list[str]) -> tuple[int, float, float | None]:
     if len(comp) == 1:
-        return comp[0], 1.0
+        return comp[0], 1.0, None
 
     best_idx = comp[0]
     best_score = float("-inf")
+    cents: list[float] = []
     for i in comp:
         vals = [scores[i][j] for j in comp if j != i]
         c = _mean(vals)
+        cents.append(float(c))
         if c > best_score:
             best_score = c
             best_idx = i
@@ -221,7 +365,9 @@ def _medoid(comp: list[int], scores: list[list[float]], norm: list[str]) -> tupl
                 best_idx = i
             elif len(norm[i]) == len(norm[best_idx]) and i < best_idx:
                 best_idx = i
-    return best_idx, float(best_score)
+    cents.sort(reverse=True)
+    second = float(cents[1]) if len(cents) >= 2 else None
+    return best_idx, float(best_score), second
 
 def global_medoid_index(norm: list[str], scores: list[list[float]]) -> tuple[int, float]:
     """
@@ -234,7 +380,8 @@ def global_medoid_index(norm: list[str], scores: list[list[float]]) -> tuple[int
     if n == 0:
         raise ValueError("No candidates")
     comp = list(range(n))
-    return _medoid(comp, scores, norm)
+    idx, cent, _second = _medoid(comp, scores, norm)
+    return int(idx), float(cent)
 
 def knn_medoid_index(norm: list[str], scores: list[list[float]], k: int = 3) -> tuple[int, float]:
     """
@@ -485,23 +632,26 @@ def component_representative_index(
     tie_break: str,
     norm: list[str],
     scores: list[list[float]],
-) -> tuple[int, float | None]:
+) -> tuple[int, float | None, float | None]:
     """
     Pick a representative candidate index from a component.
 
-    Returns (index, centrality) where centrality is only defined for tie_break="medoid".
+    Returns (index, centrality, centrality_gap) where:
+      - centrality is only defined for tie_break="medoid"
+      - centrality_gap = best_centrality - second_best_centrality within the component
     """
     if not comp:
         raise ValueError("Empty component")
 
     if tie_break == "shortest":
         chosen = min(comp, key=lambda k: (len(norm[k]), k))
-        return int(chosen), None
+        return int(chosen), None, None
     if tie_break == "first":
-        return int(comp[0]), None
+        return int(comp[0]), None, None
     if tie_break == "medoid":
-        chosen, chosen_cent = _medoid(comp, scores, norm)
-        return int(chosen), float(chosen_cent)
+        chosen, chosen_cent, second_cent = _medoid(comp, scores, norm)
+        gap = float(chosen_cent) - float(second_cent) if second_cent is not None else None
+        return int(chosen), float(chosen_cent), gap
     raise ValueError(f"Unknown tie_break={tie_break!r}")
 
 
@@ -643,7 +793,7 @@ def select_from_score_matrix(
     )
     best_comp, best_coh = comp_stats[0]
 
-    chosen, chosen_cent = component_representative_index(
+    chosen, chosen_cent, chosen_gap = component_representative_index(
         comp=best_comp,
         tie_break=str(tie_break),
         norm=norm,
@@ -657,6 +807,7 @@ def select_from_score_matrix(
         component_size=len(best_comp),
         component_cohesion=float(best_coh),
         chosen_centrality=float(chosen_cent) if chosen_cent is not None else None,
+        chosen_centrality_gap=float(chosen_gap) if chosen_gap is not None else None,
         edges_before=int(graph_stats["edges_before"]),
         edges_after=int(graph_stats["edges_after"]),
         components_before=int(graph_stats["components_before"]),
@@ -702,7 +853,7 @@ def select_by_equivalence_clustering(
     tie_break: str = "medoid",
     component_rank: str = "size_then_cohesion",
     symmetric: bool = False,
-    temperature: float = 1.0,
+    temperature: float | None = None,
     mutual_top_k: int = 0,
     triangle_prune_margin: float = 0.0,
     triangle_prune_keep_best_edge: bool = True,
@@ -714,7 +865,7 @@ def select_by_equivalence_clustering(
         critic=critic,
         batch_size=batch_size,
         symmetric=bool(symmetric),
-        temperature=float(temperature),
+        temperature=temperature,
     )
     return select_from_score_matrix(
         candidates=candidates,

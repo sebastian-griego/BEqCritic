@@ -13,6 +13,7 @@ import argparse
 import json
 
 from .bleu import bleu_medoid_index, bleu_centrality_ranking
+from .embedder import TextEmbedder
 from .modeling import BeqCritic
 from .select import (
     component_representative_index,
@@ -34,10 +35,36 @@ def main():
     p.add_argument("--max-length", type=int, default=512)
     p.add_argument("--similarity", type=str, default="critic", choices=["critic", "bleu", "hybrid"])
     p.add_argument(
+        "--critic-pair-mode",
+        type=str,
+        default="all",
+        choices=["all", "knn"],
+        help="How to choose which candidate pairs are scored by the critic.",
+    )
+    p.add_argument("--knn-k", type=int, default=10, help="k for --critic-pair-mode=knn (kNN over embeddings).")
+    p.add_argument(
+        "--knn-embed-model",
+        type=str,
+        default="",
+        help="Embedding model for --critic-pair-mode=knn (default: same as --model).",
+    )
+    p.add_argument("--knn-embed-max-length", type=int, default=256)
+    p.add_argument("--knn-embed-batch-size", type=int, default=32)
+    p.add_argument(
+        "--knn-mutual",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="If true, keep only mutual kNN edges for --critic-pair-mode=knn.",
+    )
+    p.add_argument("--knn-chunk-size", type=int, default=1024, help="Chunk size for kNN similarity computation.")
+    p.add_argument(
         "--critic-temperature",
         type=float,
-        default=1.0,
-        help="Temperature scaling for critic probabilities (only for --similarity critic|hybrid).",
+        default=None,
+        help=(
+            "Temperature scaling for critic probabilities (only for --similarity critic|hybrid). "
+            "If unset, uses the calibrated value from the checkpoint (temperature.json) when available."
+        ),
     )
     p.add_argument(
         "--hybrid-alpha",
@@ -117,11 +144,23 @@ def main():
     args = p.parse_args()
 
     critic = None
+    used_critic_temperature = None
+    knn_embedder = None
     if args.similarity in ["critic", "hybrid"]:
         if not args.model:
             raise ValueError("--model is required when --similarity is critic or hybrid")
         device = args.device.strip() or None
         critic = BeqCritic(model_name_or_path=args.model, max_length=args.max_length, device=device)
+        used_critic_temperature = (
+            float(args.critic_temperature) if args.critic_temperature is not None else float(critic.temperature)
+        )
+        if args.critic_pair_mode == "knn":
+            embed_model = args.knn_embed_model.strip() or args.model
+            knn_embedder = TextEmbedder(
+                model_name_or_path=embed_model,
+                max_length=int(args.knn_embed_max_length),
+                device=str(critic.device) if critic.device is not None else None,
+            )
 
     with open(args.input, "r", encoding="utf-8") as fin, open(args.output, "w", encoding="utf-8") as fout:
         for line in fin:
@@ -136,6 +175,12 @@ def main():
                 symmetric=args.symmetric,
                 similarity=args.similarity,
                 critic_temperature=args.critic_temperature,
+                critic_pair_mode=str(args.critic_pair_mode),
+                knn_embedder=knn_embedder,
+                knn_k=int(args.knn_k),
+                knn_mutual=bool(args.knn_mutual),
+                knn_chunk_size=int(args.knn_chunk_size),
+                knn_embed_batch_size=int(args.knn_embed_batch_size),
                 hybrid_alpha=args.hybrid_alpha,
                 bleu_max_n=args.bleu_max_n,
                 bleu_smooth=args.bleu_smooth,
@@ -159,6 +204,7 @@ def main():
             component_size = int(res.component_size)
             component_cohesion = res.component_cohesion
             chosen_centrality = res.chosen_centrality
+            chosen_centrality_gap = res.chosen_centrality_gap
 
             chosen_index = critic_chosen_index
             chosen_statement = critic_chosen_statement
@@ -177,6 +223,7 @@ def main():
                         chosen_index = int(fb_idx)
                         chosen_statement = str(candidates[chosen_index])
                         chosen_centrality = float(fb_cent)
+                        chosen_centrality_gap = None
                         selection_method = "bleu_medoid"
                         fallback_used = True
                     elif args.fallback == "critic_medoid":
@@ -184,6 +231,7 @@ def main():
                         chosen_index = int(fb_idx)
                         chosen_statement = str(candidates[chosen_index])
                         chosen_centrality = float(fb_cent)
+                        chosen_centrality_gap = None
                         selection_method = "critic_medoid"
                         fallback_used = True
                     elif args.fallback == "critic_knn_medoid":
@@ -191,6 +239,7 @@ def main():
                         chosen_index = int(fb_idx)
                         chosen_statement = str(candidates[chosen_index])
                         chosen_centrality = float(fb_cent)
+                        chosen_centrality_gap = None
                         selection_method = "critic_knn_medoid"
                         fallback_used = True
                     else:
@@ -214,7 +263,7 @@ def main():
 
                 ranked_reps: list[int] = []
                 for comp, _coh in comp_stats:
-                    idx, _cent = component_representative_index(
+                    idx, _cent, _gap = component_representative_index(
                         comp=comp,
                         tie_break=str(args.tie_break),
                         norm=norm_scored,
@@ -255,8 +304,12 @@ def main():
                 "selection_method": selection_method,
                 "similarity": str(args.similarity),
             }
-            if args.similarity in ["critic", "hybrid"] and float(args.critic_temperature) != 1.0:
-                out["critic_temperature"] = float(args.critic_temperature)
+            if args.similarity in ["critic", "hybrid"] and used_critic_temperature is not None:
+                out["critic_temperature"] = float(used_critic_temperature)
+                out["critic_pair_mode"] = str(args.critic_pair_mode)
+                if args.critic_pair_mode == "knn":
+                    out["knn_k"] = int(args.knn_k)
+                    out["knn_mutual"] = bool(args.knn_mutual)
             if args.similarity == "hybrid":
                 out["hybrid_alpha"] = float(args.hybrid_alpha)
             if args.similarity in ["bleu", "hybrid"] and (
@@ -268,6 +321,8 @@ def main():
                 out["component_cohesion"] = float(component_cohesion)
             if chosen_centrality is not None:
                 out["chosen_centrality"] = float(chosen_centrality)
+            if chosen_centrality_gap is not None:
+                out["chosen_centrality_gap"] = float(chosen_centrality_gap)
             if chosen_indices is not None:
                 out["chosen_indices"] = list(chosen_indices)
                 if args.emit_topk_text:

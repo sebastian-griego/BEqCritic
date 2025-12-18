@@ -72,6 +72,7 @@ python -m beqcritic.benchmark_selection \
   --input proofnetverif_test_candidates.jsonl \
   --device cuda:0 \
   --similarity critic \
+  --critic-pair-mode all \
   --thresholds 0.3,0.4,0.5,0.6 \
   --tie-breaks medoid,shortest,first \
   --cluster-ranks size_then_cohesion,size \
@@ -85,6 +86,21 @@ python -m beqcritic.benchmark_selection \
   --report-comp-buckets
 ```
 
+Optional:
+
+- Calibrate temperature scaling (writes `temperature.json` into the checkpoint dir):
+  `python -m beqcritic.calibrate_temperature --model checkpoints/beqcritic_deberta --input proofnetverif_valid_train_candidates_hard_v2.jsonl --device cuda:0`
+- Reduce scoring cost for large candidate sets (score only kNN edges):
+  `python -m beqcritic.score_and_select --model checkpoints/beqcritic_deberta --similarity critic --critic-pair-mode knn --knn-k 10 ...`
+- Debug one problem (inspect clusters + top edges):
+  `python -m beqcritic.debug_selection --input proofnetverif_test_candidates.jsonl --problem-id <id> --model checkpoints/beqcritic_deberta --similarity critic --device cuda:0`
+
 ## More
 
 See `README_BEQCRITIC.md` for a fuller walkthrough, tuning notes, and additional CLI examples.
+
+If you have candidates from another pipeline (e.g. the paper’s) and just want to swap the selection stage:
+
+- Convert flat JSONL to grouped: `python -m beqcritic.group_candidates_jsonl --input filtered_flat.jsonl --output filtered_grouped.jsonl`
+- Self-BLEU baseline: `python -m beqcritic.self_bleu_select --input filtered_grouped.jsonl --output selfbleu_selection.jsonl`
+- BEqCritic selection: `python -m beqcritic.score_and_select --model <ckpt> --input filtered_grouped.jsonl --output beqcritic_selection.jsonl ...`
