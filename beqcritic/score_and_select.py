@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 
+from .bleu import bleu_medoid_index
 from .modeling import BeqCritic
 from .select import select_by_equivalence_clustering
 
@@ -51,6 +52,19 @@ def main():
         default=0.2,
         help="If >0, prune inconsistent triangles where AB and BC are strong but AC is weak.",
     )
+    p.add_argument("--fallback", type=str, default="none", choices=["none", "bleu_medoid"])
+    p.add_argument(
+        "--fallback-min-component-size",
+        type=int,
+        default=0,
+        help="If >0, use fallback when chosen component_size < this value.",
+    )
+    p.add_argument(
+        "--fallback-min-cohesion",
+        type=float,
+        default=0.0,
+        help="If >0, use fallback when chosen component_cohesion < this value.",
+    )
     p.add_argument(
         "--emit-stats",
         action="store_true",
@@ -80,17 +94,53 @@ def main():
                 mutual_top_k=args.mutual_k,
                 triangle_prune_margin=args.triangle_prune_margin,
             )
+
+            critic_chosen_index = int(res.chosen_index)
+            critic_chosen_statement = str(res.chosen_statement)
+            component_indices = list(res.component_indices)
+            component_size = int(res.component_size)
+            component_cohesion = res.component_cohesion
+            chosen_centrality = res.chosen_centrality
+
+            chosen_index = critic_chosen_index
+            chosen_statement = critic_chosen_statement
+            selection_method = "critic"
+            fallback_used = False
+
+            if args.fallback != "none":
+                need = False
+                if args.fallback_min_component_size and component_size < int(args.fallback_min_component_size):
+                    need = True
+                if args.fallback_min_cohesion and component_cohesion is not None and float(component_cohesion) < float(args.fallback_min_cohesion):
+                    need = True
+                if need:
+                    if args.fallback == "bleu_medoid":
+                        fb_idx, fb_cent = bleu_medoid_index(candidates)
+                        chosen_index = int(fb_idx)
+                        chosen_statement = str(candidates[chosen_index])
+                        chosen_centrality = float(fb_cent)
+                        selection_method = "bleu_medoid"
+                        fallback_used = True
+                    else:
+                        raise ValueError(f"Unknown fallback={args.fallback!r}")
+
             out = {
                 "problem_id": obj.get("problem_id"),
-                "chosen": res.chosen_statement,
-                "chosen_index": res.chosen_index,
-                "component_size": res.component_size,
-                "component_indices": res.component_indices,
+                "chosen": chosen_statement,
+                "chosen_index": chosen_index,
+                "component_size": component_size,
+                "component_indices": component_indices,
+                "selection_method": selection_method,
             }
-            if res.component_cohesion is not None:
-                out["component_cohesion"] = res.component_cohesion
-            if res.chosen_centrality is not None:
-                out["chosen_centrality"] = res.chosen_centrality
+            if component_cohesion is not None:
+                out["component_cohesion"] = float(component_cohesion)
+            if chosen_centrality is not None:
+                out["chosen_centrality"] = float(chosen_centrality)
+            if args.fallback != "none":
+                out["fallback_used"] = bool(fallback_used)
+            if fallback_used:
+                out["critic_chosen_index"] = int(critic_chosen_index)
+                out["critic_chosen"] = str(critic_chosen_statement)
             if args.emit_stats:
                 out.update(
                     {

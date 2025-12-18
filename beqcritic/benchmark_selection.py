@@ -8,11 +8,10 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import random
-import re
 from dataclasses import dataclass
 
+from .bleu import bleu_medoid_index
 from .modeling import BeqCritic
 from .select import score_candidate_matrix, select_from_score_matrix
 from .textnorm import normalize_lean_statement
@@ -28,8 +27,17 @@ class Metrics:
     sum_component_cohesion: float = 0.0
     sum_chosen_centrality: float = 0.0
     n_component_stats: int = 0
+    fallback_used: int = 0
 
-    def add(self, any_correct: bool, selected_correct: bool, component_size: int, cohesion: float | None, centrality: float | None) -> None:
+    def add(
+        self,
+        any_correct: bool,
+        selected_correct: bool,
+        component_size: int,
+        cohesion: float | None,
+        centrality: float | None,
+        fallback_used: bool = False,
+    ) -> None:
         self.problems += 1
         self.has_any_correct += int(any_correct)
         self.selected_correct += int(selected_correct)
@@ -40,6 +48,7 @@ class Metrics:
             self.n_component_stats += 1
         if centrality is not None:
             self.sum_chosen_centrality += float(centrality)
+        self.fallback_used += int(bool(fallback_used))
 
     def report(self) -> str:
         def pct(x: int, d: int) -> float:
@@ -61,6 +70,8 @@ class Metrics:
             lines.append(f"Avg component_cohesion: {self.sum_component_cohesion / self.n_component_stats:.3f}")
         if self.problems:
             lines.append(f"Avg chosen_centrality: {self.sum_chosen_centrality / self.problems:.3f}")
+        if self.problems and self.fallback_used:
+            lines.append(f"Fallback used: {self.fallback_used} ({pct(self.fallback_used, self.problems):.1f}%)")
         return "\n".join(lines)
 
 
@@ -88,68 +99,6 @@ def _bootstrap_ci(values: list[float], n_boot: int, seed: int) -> tuple[float, f
     return float(lo), float(hi)
 
 
-_TOK_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_'.]*|[0-9]+|[^\s]")
-
-
-def _tokenize(text: str) -> list[str]:
-    return _TOK_RE.findall(text)
-
-
-def _ngrams(tokens: list[str], n: int) -> dict[tuple[str, ...], int]:
-    out: dict[tuple[str, ...], int] = {}
-    if n <= 0:
-        return out
-    for i in range(0, max(0, len(tokens) - n + 1)):
-        g = tuple(tokens[i : i + n])
-        out[g] = out.get(g, 0) + 1
-    return out
-
-
-def _bleu_score(hyp: list[str], ref: list[str], max_n: int = 4, smooth: float = 1.0) -> float:
-    if not hyp and not ref:
-        return 1.0
-    if not hyp:
-        return 0.0
-
-    log_p_sum = 0.0
-    for n in range(1, max_n + 1):
-        hyp_ngrams = _ngrams(hyp, n)
-        ref_ngrams = _ngrams(ref, n)
-        overlap = 0
-        total = 0
-        for g, c in hyp_ngrams.items():
-            total += c
-            overlap += min(c, ref_ngrams.get(g, 0))
-        p_n = (overlap + smooth) / (total + smooth) if total > 0 else 0.0
-        log_p_sum += (1.0 / max_n) * math.log(max(1e-12, p_n))
-
-    bp = 1.0
-    if len(hyp) < len(ref) and len(hyp) > 0:
-        bp = math.exp(1.0 - (len(ref) / len(hyp)))
-
-    return float(bp * math.exp(log_p_sum))
-
-
-def _sym_bleu(a: str, b: str) -> float:
-    ta = _tokenize(normalize_lean_statement(a))
-    tb = _tokenize(normalize_lean_statement(b))
-    return 0.5 * (_bleu_score(ta, tb) + _bleu_score(tb, ta))
-
-
-def _bleu_matrix(candidates: list[str]) -> tuple[list[str], list[list[float]]]:
-    norm = [normalize_lean_statement(c) for c in candidates]
-    n = len(norm)
-    mat = [[0.0] * n for _ in range(n)]
-    for i in range(n):
-        mat[i][i] = 1.0
-    for i in range(n):
-        for j in range(i + 1, n):
-            s = _sym_bleu(norm[i], norm[j])
-            mat[i][j] = s
-            mat[j][i] = s
-    return norm, mat
-
-
 def _load_lines(path: str):
     with open(path, "r", encoding="utf-8") as f:
         for line in f:
@@ -168,6 +117,20 @@ def main() -> None:
 
     p.add_argument("--cluster-mode", type=str, default="components", choices=["components", "support"])
     p.add_argument("--support-frac", type=float, default=0.7, help="Used when --cluster-mode=support")
+
+    p.add_argument("--fallback", type=str, default="none", choices=["none", "bleu_medoid"])
+    p.add_argument(
+        "--fallback-min-component-size",
+        type=int,
+        default=0,
+        help="If >0, use fallback when chosen component_size < this value.",
+    )
+    p.add_argument(
+        "--fallback-min-cohesion",
+        type=float,
+        default=0.0,
+        help="If >0, use fallback when chosen component_cohesion < this value.",
+    )
 
     p.add_argument("--thresholds", type=str, default="0.5", help="Comma-separated thresholds, e.g. 0.3,0.4,0.5")
     p.add_argument("--tie-breaks", type=str, default="medoid,shortest,first")
@@ -204,6 +167,10 @@ def main() -> None:
     thresholds = [float(x) for x in _parse_csv(args.thresholds)]
     tie_breaks = _parse_csv(args.tie_breaks)
     cluster_ranks = _parse_csv(args.cluster_ranks)
+
+    fallback_desc = ""
+    if args.fallback != "none":
+        fallback_desc = f" fallback={args.fallback} min_comp={args.fallback_min_component_size} min_coh={args.fallback_min_cohesion}"
 
     device = args.device.strip() or None
     critic = BeqCritic(model_name_or_path=args.model, max_length=args.max_length, device=device)
@@ -277,17 +244,8 @@ def main() -> None:
         rand_idx = rnd.randrange(len(labels01))
         random_is_correct = int(bool(labels01[rand_idx]))
 
-        norm_bleu, bleu_scores = _bleu_matrix(candidates)
-        bleu_res = select_from_score_matrix(
-            candidates=candidates,
-            norm=norm_bleu,
-            scores=bleu_scores,
-            threshold=0.0,
-            tie_break="medoid",
-            component_rank="size",
-            mutual_top_k=0,
-        )
-        bleu_is_correct = int(bool(labels01[int(bleu_res.chosen_index)]))
+        bleu_idx, _ = bleu_medoid_index(candidates)
+        bleu_is_correct = int(bool(labels01[int(bleu_idx)]))
 
         baseline_first.add(any_correct, bool(first_is_correct), component_size=1, cohesion=None, centrality=None)
         baseline_shortest.add(any_correct, bool(shortest_is_correct), component_size=1, cohesion=None, centrality=None)
@@ -325,7 +283,22 @@ def main() -> None:
                 cluster_mode=args.cluster_mode,
                 support_frac=args.support_frac,
             )
-            is_correct = int(bool(labels01[int(res.chosen_index)]))
+            chosen_index = int(res.chosen_index)
+            used_fallback = False
+            if args.fallback != "none":
+                need = False
+                if args.fallback_min_component_size and int(res.component_size) < int(args.fallback_min_component_size):
+                    need = True
+                if args.fallback_min_cohesion and res.component_cohesion is not None and float(res.component_cohesion) < float(args.fallback_min_cohesion):
+                    need = True
+                if need:
+                    used_fallback = True
+                    if args.fallback == "bleu_medoid":
+                        chosen_index = int(bleu_idx)
+                    else:
+                        raise ValueError(f"Unknown fallback={args.fallback!r}")
+
+            is_correct = int(bool(labels01[int(chosen_index)]))
             per_strategy_correct[(thr, tb, cr, mk, tm)].append(is_correct)
             per_strategy_comp_size[(thr, tb, cr, mk, tm)].append(int(res.component_size))
             metrics[(thr, tb, cr, mk, tm)].add(
@@ -334,6 +307,7 @@ def main() -> None:
                 component_size=int(res.component_size),
                 cohesion=res.component_cohesion,
                 centrality=res.chosen_centrality,
+                fallback_used=bool(used_fallback),
             )
 
         n_seen += 1
@@ -456,6 +430,8 @@ def main() -> None:
         rows.sort(key=lambda r: (-r[0], -r[1], r[3], r[4], r[5], r[6], r[7]))
 
         print(f"Top {int(args.top_strategies)} strategies (sorted by {args.sort_by})")
+        if fallback_desc:
+            print(f"Note:{fallback_desc}")
         for rank, (_, acc, acc_any, thr, tb, cr, mk, tm, m) in enumerate(rows[: int(args.top_strategies)], start=1):
             print(
                 f"{rank:>2}. acc={100*acc:.1f}% acc|any={100*acc_any:.1f}% "
@@ -468,6 +444,7 @@ def main() -> None:
         name = (
             f"Strategy: threshold={thr} tie_break={tb} cluster_rank={cr} "
             f"symmetric={args.symmetric} mutual_k={mk} tri_margin={tm} mode={args.cluster_mode} support={args.support_frac}"
+            f"{fallback_desc}"
         )
         _report_with_ci(name, per_strategy_correct[(thr, tb, cr, mk, tm)], metrics[(thr, tb, cr, mk, tm)])
         if args.report_buckets and len_bounds:

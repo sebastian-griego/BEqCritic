@@ -20,6 +20,8 @@ from dataclasses import dataclass
 from typing import Iterable, Iterator, Any
 import random
 
+from .bleu import sym_bleu
+
 @dataclass
 class PairExample:
     a: str
@@ -56,6 +58,8 @@ def make_cand_vs_cand_pairs(
     max_pos_per_problem: int = 16,
     max_neg_per_problem: int = 32,
     seed: int = 0,
+    pos_sampling: str = "random",
+    neg_sampling: str = "random",
 ) -> Iterator[PairExample]:
     rnd = random.Random(seed)
     by_pid: dict[str, list[dict]] = {}
@@ -68,12 +72,25 @@ def make_cand_vs_cand_pairs(
         incorrect = [g for g in group if int(g.get(label_key)) == 0]
 
         if len(correct) >= 2:
-            pairs = []
+            pairs: list[tuple[dict, dict]] = []
             for i in range(len(correct)):
                 for j in range(i + 1, len(correct)):
                     pairs.append((correct[i], correct[j]))
-            rnd.shuffle(pairs)
-            for a, b in pairs[:max_pos_per_problem]:
+            if pos_sampling == "random":
+                rnd.shuffle(pairs)
+            elif pos_sampling == "hard":
+                scored = []
+                for a, b in pairs:
+                    sa = _as_str(a.get(pred_key))
+                    sb = _as_str(b.get(pred_key))
+                    scored.append((sym_bleu(sa, sb), rnd.random(), a, b))
+                # Hard positives: low BLEU (push beyond surface similarity).
+                scored.sort(key=lambda t: (t[0], t[1]))
+                pairs = [(a, b) for _, _, a, b in scored]
+            else:
+                raise ValueError(f"Unknown pos_sampling={pos_sampling!r}")
+
+            for a, b in pairs[: int(max_pos_per_problem)]:
                 yield PairExample(
                     a=_as_str(a.get(pred_key)),
                     b=_as_str(b.get(pred_key)),
@@ -83,12 +100,25 @@ def make_cand_vs_cand_pairs(
                 )
 
         if len(correct) >= 1 and len(incorrect) >= 1:
-            pairs = []
+            pairs: list[tuple[dict, dict]] = []
             for a in correct:
                 for b in incorrect:
                     pairs.append((a, b))
-            rnd.shuffle(pairs)
-            for a, b in pairs[:max_neg_per_problem]:
+            if neg_sampling == "random":
+                rnd.shuffle(pairs)
+            elif neg_sampling == "hard":
+                scored = []
+                for a, b in pairs:
+                    sa = _as_str(a.get(pred_key))
+                    sb = _as_str(b.get(pred_key))
+                    scored.append((sym_bleu(sa, sb), rnd.random(), a, b))
+                # Hard negatives: high BLEU (similar surface but wrong).
+                scored.sort(key=lambda t: (-t[0], t[1]))
+                pairs = [(a, b) for _, _, a, b in scored]
+            else:
+                raise ValueError(f"Unknown neg_sampling={neg_sampling!r}")
+
+            for a, b in pairs[: int(max_neg_per_problem)]:
                 yield PairExample(
                     a=_as_str(a.get(pred_key)),
                     b=_as_str(b.get(pred_key)),

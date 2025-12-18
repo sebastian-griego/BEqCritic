@@ -24,6 +24,7 @@ import argparse
 import random
 from typing import Any
 from pathlib import Path
+from collections import Counter
 
 import numpy as np
 from datasets import Dataset
@@ -152,6 +153,8 @@ def _build_examples(rows: list[dict], args) -> list[PairExample]:
             max_pos_per_problem=args.max_pos_per_problem,
             max_neg_per_problem=args.max_neg_per_problem,
             seed=args.seed,
+            pos_sampling=args.cand_pos_sampling,
+            neg_sampling=args.cand_neg_sampling,
         )))
 
     if getattr(args, "symmetrize", False):
@@ -207,9 +210,28 @@ def main():
 
     p.add_argument("--max-pos-per-problem", type=int, default=16)
     p.add_argument("--max-neg-per-problem", type=int, default=32)
+    p.add_argument(
+        "--cand-pos-sampling",
+        type=str,
+        default="random",
+        choices=["random", "hard"],
+        help="cand_vs_cand positives: random pairs or hard (low BLEU) pairs.",
+    )
+    p.add_argument(
+        "--cand-neg-sampling",
+        type=str,
+        default="random",
+        choices=["random", "hard"],
+        help="cand_vs_cand negatives: random pairs or hard (high BLEU) pairs.",
+    )
 
     p.add_argument("--eval-size", type=float, default=0.1, help="Fraction of problem IDs to use for eval (group split)")
     p.add_argument("--eval-split", type=str, default="", help="Optional separate eval split (disables --eval-size)")
+    p.add_argument(
+        "--write-split-ids",
+        action="store_true",
+        help="Write train/eval problem_id lists into --output-dir for reproducibility.",
+    )
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--symmetrize", action="store_true", help="Train on both (A,B) and (B,A) for every pair")
 
@@ -222,6 +244,8 @@ def main():
     args = p.parse_args()
 
     set_seed(args.seed)
+    out_dir = Path(args.output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     if args.eval_split:
         train_raw = load_dataset_split(args.dataset, args.split)
@@ -238,6 +262,9 @@ def main():
                 f"Dataset split: {args.split} -> train ({len(train_rows)} rows, {len(train_pids)} problems), "
                 f"{args.eval_split} -> eval ({len(eval_rows)} rows, {len(eval_pids)} problems)"
             )
+            if args.write_split_ids:
+                (out_dir / "train_problem_ids.txt").write_text("\n".join(sorted(train_pids)) + "\n", encoding="utf-8")
+                (out_dir / "eval_problem_ids.txt").write_text("\n".join(sorted(eval_pids)) + "\n", encoding="utf-8")
     else:
         raw = load_dataset_split(args.dataset, args.split)
         rows = _rows_from_hf(raw)
@@ -258,9 +285,24 @@ def main():
                 f"{len(train_rows)} train rows ({len(train_pids)} problems), "
                 f"{len(eval_rows)} eval rows ({len(eval_pids)} problems)"
             )
+            if args.write_split_ids:
+                (out_dir / "train_problem_ids.txt").write_text("\n".join(sorted(train_pids)) + "\n", encoding="utf-8")
+                (out_dir / "eval_problem_ids.txt").write_text("\n".join(sorted(eval_pids)) + "\n", encoding="utf-8")
 
     train_examples = _build_examples(train_rows, args)
     eval_examples = _build_examples(eval_rows, args)
+
+    def _print_example_stats(name: str, examples: list[PairExample]) -> None:
+        tasks = Counter(e.task for e in examples)
+        labels = Counter(int(e.label) for e in examples)
+        print(
+            f"{name} examples: {len(examples)} "
+            f"(pos={labels.get(1, 0)}, neg={labels.get(0, 0)}) "
+            f"by_task={dict(tasks)}"
+        )
+
+    _print_example_stats("Train", train_examples)
+    _print_example_stats("Eval", eval_examples)
     train_ds = _to_hf_dataset(train_examples)
     eval_ds = _to_hf_dataset(eval_examples)
 
