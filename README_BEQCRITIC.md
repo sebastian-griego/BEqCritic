@@ -124,6 +124,32 @@ python -m beqcritic.score_and_select \
   --cluster-rank size_then_cohesion \
   --triangle-prune-margin 0.2
 
+BEq+-friendlier representative selection (pick the simplest member among the top-k by medoid centrality):
+
+python -m beqcritic.score_and_select \
+  --model checkpoints/beqcritic_deberta \
+  --input proofnetverif_test_candidates.jsonl \
+  --output proofnetverif_test_selection_support_simple.jsonl \
+  --threshold 0.5 \
+  --cluster-mode support \
+  --support-frac 0.7 \
+  --tie-break medoid \
+  --medoid-simple-top-k 3 \
+  --simple-weight-chars 1.0 \
+  --simple-weight-binders 0.5 \
+  --simple-weight-prop-assumptions 0.25 \
+  --triangle-prune-margin 0.2
+
+Self-BLEU-like consensus selection (global medoid over critic similarities; no threshold graph):
+
+python -m beqcritic.score_and_select \
+  --model checkpoints/beqcritic_deberta \
+  --input proofnetverif_test_candidates.jsonl \
+  --output proofnetverif_test_selection_mbr.jsonl \
+  --select-mode global_medoid \
+  --medoid-objective mean \
+  --device cuda:0
+
 python -m beqcritic.evaluate_selection \
   --candidates proofnetverif_test_candidates.jsonl \
   --selections proofnetverif_test_selection.jsonl

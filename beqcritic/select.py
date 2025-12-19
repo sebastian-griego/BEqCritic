@@ -12,6 +12,7 @@ With n=50, the number of unique pairs is 1225, which is practical for a GPU cros
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 
 from .bleu import bleu_score_matrix
 from .embedder import TextEmbedder
@@ -383,6 +384,55 @@ def global_medoid_index(norm: list[str], scores: list[list[float]]) -> tuple[int
     idx, cent, _second = _medoid(comp, scores, norm)
     return int(idx), float(cent)
 
+def global_geometric_medoid_index(
+    norm: list[str],
+    scores: list[list[float]],
+    *,
+    eps: float = 1e-6,
+) -> tuple[int, float]:
+    """
+    Return the index of the global geometric medoid under the score matrix.
+
+    This is the candidate with the highest geometric mean similarity to all others:
+      gmean_i = exp(mean_{j!=i} log(clamp(score[i][j], eps, 1)))
+
+    This tends to penalize "almost-disconnected" candidates more sharply than the
+    arithmetic-mean medoid.
+    """
+    n = len(norm)
+    if n == 0:
+        raise ValueError("No candidates")
+    if n == 1:
+        return 0, 1.0
+
+    e = float(eps)
+    if e <= 0:
+        raise ValueError(f"eps must be > 0, got {eps!r}")
+
+    best_idx = 0
+    best_score = float("-inf")
+    for i in range(n):
+        s = 0.0
+        for j in range(n):
+            if j == i:
+                continue
+            x = float(scores[i][j])
+            if x < e:
+                x = e
+            elif x > 1.0:
+                x = 1.0
+            s += math.log(x)
+        g = math.exp(s / max(1, n - 1))
+        if g > best_score:
+            best_score = g
+            best_idx = i
+        elif g == best_score:
+            if len(norm[i]) < len(norm[best_idx]):
+                best_idx = i
+            elif len(norm[i]) == len(norm[best_idx]) and i < best_idx:
+                best_idx = i
+    return int(best_idx), float(best_score)
+
 def knn_medoid_index(norm: list[str], scores: list[list[float]], k: int = 3) -> tuple[int, float]:
     """
     Return the index of the kNN-medoid under the score matrix.
@@ -632,6 +682,13 @@ def component_representative_index(
     tie_break: str,
     norm: list[str],
     scores: list[list[float]],
+    *,
+    medoid_simple_top_k: int = 0,
+    medoid_simple_max_drop: float = -1.0,
+    simple_weight_chars: float = 1.0,
+    simple_weight_binders: float = 0.5,
+    simple_weight_prop_assumptions: float = 0.25,
+    simple_chars_scale: float = 100.0,
 ) -> tuple[int, float | None, float | None]:
     """
     Pick a representative candidate index from a component.
@@ -649,9 +706,51 @@ def component_representative_index(
     if tie_break == "first":
         return int(comp[0]), None, None
     if tie_break == "medoid":
-        chosen, chosen_cent, second_cent = _medoid(comp, scores, norm)
-        gap = float(chosen_cent) - float(second_cent) if second_cent is not None else None
-        return int(chosen), float(chosen_cent), gap
+        if len(comp) == 1:
+            return int(comp[0]), 1.0, None
+
+        cents: dict[int, float] = {}
+        for i in comp:
+            vals = [scores[i][j] for j in comp if j != i]
+            cents[int(i)] = float(_mean(vals))
+
+        ranked = sorted(comp, key=lambda i: (-float(cents[int(i)]), len(norm[int(i)]), int(i)))
+        best_cent = float(cents[int(ranked[0])])
+        second_cent = float(cents[int(ranked[1])]) if len(ranked) >= 2 else None
+        gap = float(best_cent) - float(second_cent) if second_cent is not None else None
+
+        chosen = int(ranked[0])
+        if int(medoid_simple_top_k) > 0:
+            k = min(int(medoid_simple_top_k), len(ranked))
+            top = [int(i) for i in ranked[:k]]
+            if float(medoid_simple_max_drop) >= 0:
+                md = float(medoid_simple_max_drop)
+                filt = [i for i in top if best_cent - float(cents[int(i)]) <= md]
+                if filt:
+                    top = filt
+
+            if float(simple_chars_scale) <= 0:
+                raise ValueError(f"simple_chars_scale must be > 0, got {simple_chars_scale!r}")
+
+            def _penalty(i: int) -> float:
+                f = extract_features(norm[int(i)])
+                return (
+                    float(simple_weight_chars) * (float(f.n_chars) / float(simple_chars_scale))
+                    + float(simple_weight_binders) * float(f.n_binders)
+                    + float(simple_weight_prop_assumptions) * float(f.n_prop_assumptions)
+                )
+
+            chosen = min(
+                top,
+                key=lambda i: (
+                    float(_penalty(int(i))),
+                    -float(cents[int(i)]),
+                    len(norm[int(i)]),
+                    int(i),
+                ),
+            )
+
+        return int(chosen), float(cents[int(chosen)]), gap
     raise ValueError(f"Unknown tie_break={tie_break!r}")
 
 
@@ -773,6 +872,13 @@ def select_from_score_matrix(
     triangle_prune_keep_best_edge: bool = True,
     cluster_mode: str = "components",
     support_frac: float = 0.7,
+    *,
+    medoid_simple_top_k: int = 0,
+    medoid_simple_max_drop: float = -1.0,
+    simple_weight_chars: float = 1.0,
+    simple_weight_binders: float = 0.5,
+    simple_weight_prop_assumptions: float = 0.25,
+    simple_chars_scale: float = 100.0,
 ) -> SelectionResult:
     if not candidates:
         raise ValueError("No candidates provided")
@@ -798,6 +904,12 @@ def select_from_score_matrix(
         tie_break=str(tie_break),
         norm=norm,
         scores=scores,
+        medoid_simple_top_k=int(medoid_simple_top_k),
+        medoid_simple_max_drop=float(medoid_simple_max_drop),
+        simple_weight_chars=float(simple_weight_chars),
+        simple_weight_binders=float(simple_weight_binders),
+        simple_weight_prop_assumptions=float(simple_weight_prop_assumptions),
+        simple_chars_scale=float(simple_chars_scale),
     )
 
     return SelectionResult(

@@ -11,18 +11,76 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 
 from .bleu import bleu_medoid_index, bleu_centrality_ranking
 from .embedder import TextEmbedder
+from .features import extract_features
 from .modeling import BeqCritic
 from .select import (
     component_representative_index,
     global_medoid_index,
+    global_geometric_medoid_index,
     knn_medoid_index,
     ranked_components_from_scores,
     similarity_matrix,
     select_from_score_matrix,
 )
+
+def _centralities_from_scores(
+    scores: list[list[float]],
+    *,
+    objective: str,
+    eps: float = 1e-6,
+) -> list[float]:
+    n = len(scores)
+    if n == 0:
+        return []
+    if n == 1:
+        return [1.0]
+    obj = str(objective).strip().lower()
+    if obj not in ["mean", "gmean"]:
+        raise ValueError(f"Unknown medoid objective={objective!r}")
+    if obj == "mean":
+        cents: list[float] = []
+        for i in range(n):
+            s = 0.0
+            for j in range(n):
+                if j == i:
+                    continue
+                s += float(scores[i][j])
+            cents.append(s / max(1, n - 1))
+        return cents
+
+    e = float(eps)
+    if e <= 0:
+        raise ValueError(f"eps must be > 0, got {eps!r}")
+    cents = []
+    for i in range(n):
+        s = 0.0
+        for j in range(n):
+            if j == i:
+                continue
+            x = float(scores[i][j])
+            if x < e:
+                x = e
+            elif x > 1.0:
+                x = 1.0
+            s += math.log(x)
+        cents.append(math.exp(s / max(1, n - 1)))
+    return cents
+
+def _global_cohesion(scores: list[list[float]]) -> float | None:
+    n = len(scores)
+    if n <= 1:
+        return 1.0
+    s = 0.0
+    m = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            s += float(scores[i][j])
+            m += 1
+    return s / max(1, m)
 
 def main():
     p = argparse.ArgumentParser()
@@ -34,6 +92,20 @@ def main():
     p.add_argument("--batch-size", type=int, default=16)
     p.add_argument("--max-length", type=int, default=512)
     p.add_argument("--similarity", type=str, default="critic", choices=["critic", "bleu", "hybrid"])
+    p.add_argument(
+        "--select-mode",
+        type=str,
+        default="cluster",
+        choices=["cluster", "global_medoid"],
+        help="Selection rule: cluster (thresholded graph + component rep) or global_medoid (Self-BLEU-like consensus).",
+    )
+    p.add_argument(
+        "--medoid-objective",
+        type=str,
+        default="mean",
+        choices=["mean", "gmean"],
+        help="Objective for --select-mode=global_medoid (mean or geometric-mean centrality).",
+    )
     p.add_argument(
         "--critic-pair-mode",
         type=str,
@@ -75,6 +147,35 @@ def main():
     p.add_argument("--bleu-max-n", type=int, default=4, help="Used for --similarity bleu|hybrid.")
     p.add_argument("--bleu-smooth", type=float, default=1.0, help="Used for --similarity bleu|hybrid.")
     p.add_argument("--tie-break", type=str, default="medoid", choices=["medoid", "shortest", "first"])
+    p.add_argument(
+        "--medoid-simple-top-k",
+        type=int,
+        default=0,
+        help=(
+            "When >0 and medoid selection is used, pick the simplest candidate among the top-k by centrality "
+            "(penalizes length/binders/Prop assumptions)."
+        ),
+    )
+    p.add_argument(
+        "--medoid-simple-max-drop",
+        type=float,
+        default=-1.0,
+        help="If >=0, only consider candidates with centrality >= (best - max_drop) within the top-k set.",
+    )
+    p.add_argument("--simple-weight-chars", type=float, default=1.0, help="Penalty weight for chars/--simple-chars-scale.")
+    p.add_argument("--simple-weight-binders", type=float, default=0.5, help="Penalty weight for binder count.")
+    p.add_argument(
+        "--simple-weight-prop-assumptions",
+        type=float,
+        default=0.25,
+        help="Penalty weight for Prop-assumption count (heuristic).",
+    )
+    p.add_argument(
+        "--simple-chars-scale",
+        type=float,
+        default=100.0,
+        help="Scale factor for char length in the simplicity penalty (penalty uses chars/scale).",
+    )
     p.add_argument("--cluster-mode", type=str, default="components", choices=["components", "support"])
     p.add_argument("--support-frac", type=float, default=0.7, help="Used when --cluster-mode=support")
     p.add_argument(
@@ -185,30 +286,98 @@ def main():
                 bleu_max_n=args.bleu_max_n,
                 bleu_smooth=args.bleu_smooth,
             )
-            res = select_from_score_matrix(
-                candidates=candidates,
-                norm=norm_scored,
-                scores=scores,
-                threshold=args.threshold,
-                tie_break=args.tie_break,
-                component_rank=args.cluster_rank,
-                mutual_top_k=args.mutual_k,
-                triangle_prune_margin=args.triangle_prune_margin,
-                cluster_mode=args.cluster_mode,
-                support_frac=args.support_frac,
-            )
+            if str(args.select_mode) == "cluster":
+                res = select_from_score_matrix(
+                    candidates=candidates,
+                    norm=norm_scored,
+                    scores=scores,
+                    threshold=args.threshold,
+                    tie_break=args.tie_break,
+                    component_rank=args.cluster_rank,
+                    mutual_top_k=args.mutual_k,
+                    triangle_prune_margin=args.triangle_prune_margin,
+                    cluster_mode=args.cluster_mode,
+                    support_frac=args.support_frac,
+                    medoid_simple_top_k=int(args.medoid_simple_top_k),
+                    medoid_simple_max_drop=float(args.medoid_simple_max_drop),
+                    simple_weight_chars=float(args.simple_weight_chars),
+                    simple_weight_binders=float(args.simple_weight_binders),
+                    simple_weight_prop_assumptions=float(args.simple_weight_prop_assumptions),
+                    simple_chars_scale=float(args.simple_chars_scale),
+                )
 
-            critic_chosen_index = int(res.chosen_index)
-            critic_chosen_statement = str(res.chosen_statement)
-            component_indices = list(res.component_indices)
-            component_size = int(res.component_size)
-            component_cohesion = res.component_cohesion
-            chosen_centrality = res.chosen_centrality
-            chosen_centrality_gap = res.chosen_centrality_gap
+                primary_chosen_index = int(res.chosen_index)
+                primary_chosen_statement = str(res.chosen_statement)
+                component_indices = list(res.component_indices)
+                component_size = int(res.component_size)
+                component_cohesion = res.component_cohesion
+                chosen_centrality = res.chosen_centrality
+                chosen_centrality_gap = res.chosen_centrality_gap
+                stats = res
+            else:
+                if str(args.similarity) in ["critic", "hybrid"] and str(args.critic_pair_mode) != "all":
+                    raise ValueError("--select-mode=global_medoid currently requires --critic-pair-mode=all")
 
-            chosen_index = critic_chosen_index
-            chosen_statement = critic_chosen_statement
-            selection_method = str(args.similarity)
+                cents = _centralities_from_scores(scores, objective=str(args.medoid_objective))
+                ranked = sorted(
+                    range(len(candidates)),
+                    key=lambda i: (-float(cents[i]), len(norm_scored[i]), int(i)),
+                )
+                primary_chosen_index = int(ranked[0]) if ranked else 0
+                if int(args.medoid_simple_top_k) > 0 and ranked:
+                    k = min(int(args.medoid_simple_top_k), len(ranked))
+                    top = ranked[:k]
+                    if float(args.medoid_simple_max_drop) >= 0 and top:
+                        md = float(args.medoid_simple_max_drop)
+                        best = float(cents[int(top[0])])
+                        filt = [i for i in top if best - float(cents[int(i)]) <= md]
+                        if filt:
+                            top = filt
+                    if float(args.simple_chars_scale) <= 0:
+                        raise ValueError(f"--simple-chars-scale must be > 0, got {args.simple_chars_scale!r}")
+
+                    def _penalty(i: int) -> float:
+                        f = extract_features(norm_scored[int(i)])
+                        return (
+                            float(args.simple_weight_chars) * (float(f.n_chars) / float(args.simple_chars_scale))
+                            + float(args.simple_weight_binders) * float(f.n_binders)
+                            + float(args.simple_weight_prop_assumptions) * float(f.n_prop_assumptions)
+                        )
+
+                    primary_chosen_index = int(
+                        min(
+                            top,
+                            key=lambda i: (
+                                float(_penalty(int(i))),
+                                -float(cents[int(i)]),
+                                len(norm_scored[int(i)]),
+                                int(i),
+                            ),
+                        )
+                    )
+
+                chosen_centrality = float(cents[int(primary_chosen_index)]) if cents else None
+                primary_chosen_statement = str(candidates[primary_chosen_index])
+                component_indices = list(range(len(candidates)))
+                component_size = int(len(candidates))
+                component_cohesion = _global_cohesion(scores)
+
+                cents_sorted = sorted((float(x) for x in cents), reverse=True)
+                if len(cents_sorted) >= 2:
+                    chosen_centrality_gap = float(cents_sorted[0]) - float(cents_sorted[1])
+                else:
+                    chosen_centrality_gap = None
+                stats = None
+
+            primary_chosen_index = int(primary_chosen_index)
+            chosen_index = int(primary_chosen_index)
+            chosen_statement = str(primary_chosen_statement)
+
+            if str(args.select_mode) == "global_medoid":
+                suffix = "_gmean" if str(args.medoid_objective) == "gmean" else ""
+                selection_method = f"{str(args.similarity)}_medoid{suffix}"
+            else:
+                selection_method = str(args.similarity)
             fallback_used = False
 
             if args.fallback != "none":
@@ -250,50 +419,64 @@ def main():
                 k = max(1, int(args.top_k))
                 k = min(k, len(candidates))
 
-                comp_stats, _ = ranked_components_from_scores(
-                    scores=scores,
-                    threshold=float(args.threshold),
-                    component_rank=str(args.cluster_rank),
-                    mutual_top_k=int(args.mutual_k),
-                    triangle_prune_margin=float(args.triangle_prune_margin),
-                    triangle_prune_keep_best_edge=True,
-                    cluster_mode=str(args.cluster_mode),
-                    support_frac=float(args.support_frac),
-                )
-
-                ranked_reps: list[int] = []
-                for comp, _coh in comp_stats:
-                    idx, _cent, _gap = component_representative_index(
-                        comp=comp,
-                        tie_break=str(args.tie_break),
-                        norm=norm_scored,
-                        scores=scores,
+                if str(args.select_mode) == "global_medoid":
+                    cents = _centralities_from_scores(scores, objective=str(args.medoid_objective))
+                    ranked = sorted(
+                        range(len(candidates)),
+                        key=lambda i: (-float(cents[i]), len(norm_scored[i]), i),
                     )
-                    ranked_reps.append(int(idx))
+                    chosen_indices = ranked[:k]
+                else:
+                    comp_stats, _ = ranked_components_from_scores(
+                        scores=scores,
+                        threshold=float(args.threshold),
+                        component_rank=str(args.cluster_rank),
+                        mutual_top_k=int(args.mutual_k),
+                        triangle_prune_margin=float(args.triangle_prune_margin),
+                        triangle_prune_keep_best_edge=True,
+                        cluster_mode=str(args.cluster_mode),
+                        support_frac=float(args.support_frac),
+                    )
 
-                fill_order = ranked_reps
-                if fallback_used and args.fallback == "bleu_medoid":
-                    fill_order = [i for i, _ in bleu_centrality_ranking(candidates)]
+                    ranked_reps: list[int] = []
+                    for comp, _coh in comp_stats:
+                        idx, _cent, _gap = component_representative_index(
+                            comp=comp,
+                            tie_break=str(args.tie_break),
+                            norm=norm_scored,
+                            scores=scores,
+                            medoid_simple_top_k=int(args.medoid_simple_top_k),
+                            medoid_simple_max_drop=float(args.medoid_simple_max_drop),
+                            simple_weight_chars=float(args.simple_weight_chars),
+                            simple_weight_binders=float(args.simple_weight_binders),
+                            simple_weight_prop_assumptions=float(args.simple_weight_prop_assumptions),
+                            simple_chars_scale=float(args.simple_chars_scale),
+                        )
+                        ranked_reps.append(int(idx))
 
-                out_indices: list[int] = []
-                for idx in [int(chosen_index)] + list(fill_order):
-                    if idx < 0 or idx >= len(candidates):
-                        continue
-                    if idx in out_indices:
-                        continue
-                    out_indices.append(int(idx))
-                    if len(out_indices) >= k:
-                        break
+                    fill_order = ranked_reps
+                    if fallback_used and args.fallback == "bleu_medoid":
+                        fill_order = [i for i, _ in bleu_centrality_ranking(candidates)]
 
-                if len(out_indices) < k:
-                    for idx in range(len(candidates)):
+                    out_indices: list[int] = []
+                    for idx in [int(chosen_index)] + list(fill_order):
+                        if idx < 0 or idx >= len(candidates):
+                            continue
                         if idx in out_indices:
                             continue
                         out_indices.append(int(idx))
                         if len(out_indices) >= k:
                             break
 
-                chosen_indices = out_indices[:k]
+                    if len(out_indices) < k:
+                        for idx in range(len(candidates)):
+                            if idx in out_indices:
+                                continue
+                            out_indices.append(int(idx))
+                            if len(out_indices) >= k:
+                                break
+
+                    chosen_indices = out_indices[:k]
 
             out = {
                 "problem_id": obj.get("problem_id"),
@@ -303,7 +486,21 @@ def main():
                 "component_indices": component_indices,
                 "selection_method": selection_method,
                 "similarity": str(args.similarity),
+                "select_mode": str(args.select_mode),
             }
+            if str(args.select_mode) == "global_medoid":
+                out["medoid_objective"] = str(args.medoid_objective)
+            if int(args.medoid_simple_top_k) > 0:
+                out.update(
+                    {
+                        "medoid_simple_top_k": int(args.medoid_simple_top_k),
+                        "medoid_simple_max_drop": float(args.medoid_simple_max_drop),
+                        "simple_weight_chars": float(args.simple_weight_chars),
+                        "simple_weight_binders": float(args.simple_weight_binders),
+                        "simple_weight_prop_assumptions": float(args.simple_weight_prop_assumptions),
+                        "simple_chars_scale": float(args.simple_chars_scale),
+                    }
+                )
             if args.similarity in ["critic", "hybrid"] and used_critic_temperature is not None:
                 out["critic_temperature"] = float(used_critic_temperature)
                 out["critic_pair_mode"] = str(args.critic_pair_mode)
@@ -330,20 +527,21 @@ def main():
             if args.fallback != "none":
                 out["fallback_used"] = bool(fallback_used)
             if fallback_used:
-                out["critic_chosen_index"] = int(critic_chosen_index)
-                out["critic_chosen"] = str(critic_chosen_statement)
+                out["critic_chosen_index"] = int(primary_chosen_index)
+                out["critic_chosen"] = str(primary_chosen_statement)
             if args.emit_stats:
-                out.update(
-                    {
-                        "edges_before": res.edges_before,
-                        "edges_after": res.edges_after,
-                        "components_before": res.components_before,
-                        "components_after": res.components_after,
-                        "isolated_before": res.isolated_before,
-                        "isolated_after": res.isolated_after,
-                        "edges_readded": res.edges_readded,
-                    }
-                )
+                if stats is not None:
+                    out.update(
+                        {
+                            "edges_before": stats.edges_before,
+                            "edges_after": stats.edges_after,
+                            "components_before": stats.components_before,
+                            "components_after": stats.components_after,
+                            "isolated_before": stats.isolated_before,
+                            "isolated_after": stats.isolated_after,
+                            "edges_readded": stats.edges_readded,
+                        }
+                    )
             fout.write(json.dumps(out, ensure_ascii=False) + "\n")
 
 if __name__ == "__main__":

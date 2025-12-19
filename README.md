@@ -90,6 +90,10 @@ Optional:
 
 - Calibrate temperature scaling (writes `temperature.json` into the checkpoint dir):
   `python -m beqcritic.calibrate_temperature --model checkpoints/beqcritic_deberta --input proofnetverif_valid_train_candidates_hard_v2.jsonl --device cuda:0`
+- Self-BLEU-like consensus selection with critic similarities (global medoid, no thresholding):
+  `python -m beqcritic.score_and_select --model checkpoints/beqcritic_deberta --input proofnetverif_test_candidates.jsonl --output proofnetverif_test_selection_mbr.jsonl --select-mode global_medoid --medoid-objective mean --device cuda:0`
+- BEq+-friendlier representative selection (pick simplest among top-k medoid candidates):
+  `python -m beqcritic.score_and_select --model checkpoints/beqcritic_deberta --input proofnetverif_test_candidates.jsonl --output proofnetverif_test_selection_simple.jsonl --medoid-simple-top-k 3 --simple-weight-chars 1.0 --simple-weight-binders 0.5 --simple-weight-prop-assumptions 0.25 --device cuda:0`
 - Reduce scoring cost for large candidate sets (score only kNN edges):
   `python -m beqcritic.score_and_select --model checkpoints/beqcritic_deberta --similarity critic --critic-pair-mode knn --knn-k 10 ...`
 - Debug one problem (inspect clusters + top edges):

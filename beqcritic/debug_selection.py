@@ -65,6 +65,22 @@ def main() -> None:
     p.add_argument("--threshold", type=float, default=0.5)
     p.add_argument("--tie-break", type=str, default="medoid", choices=["medoid", "shortest", "first"])
     p.add_argument(
+        "--medoid-simple-top-k",
+        type=int,
+        default=0,
+        help="When >0 and tie-break=medoid, pick the simplest candidate among the top-k by centrality.",
+    )
+    p.add_argument(
+        "--medoid-simple-max-drop",
+        type=float,
+        default=-1.0,
+        help="If >=0, only consider candidates with centrality >= (best - max_drop) within the top-k set.",
+    )
+    p.add_argument("--simple-weight-chars", type=float, default=1.0)
+    p.add_argument("--simple-weight-binders", type=float, default=0.5)
+    p.add_argument("--simple-weight-prop-assumptions", type=float, default=0.25)
+    p.add_argument("--simple-chars-scale", type=float, default=100.0)
+    p.add_argument(
         "--cluster-rank",
         type=str,
         default="size_then_cohesion",
@@ -156,6 +172,12 @@ def main() -> None:
         triangle_prune_margin=float(args.triangle_prune_margin),
         cluster_mode=str(args.cluster_mode),
         support_frac=float(args.support_frac),
+        medoid_simple_top_k=int(args.medoid_simple_top_k),
+        medoid_simple_max_drop=float(args.medoid_simple_max_drop),
+        simple_weight_chars=float(args.simple_weight_chars),
+        simple_weight_binders=float(args.simple_weight_binders),
+        simple_weight_prop_assumptions=float(args.simple_weight_prop_assumptions),
+        simple_chars_scale=float(args.simple_chars_scale),
     )
 
     chosen_idx = int(res.chosen_index)
@@ -202,6 +224,12 @@ def main() -> None:
             tie_break=str(args.tie_break),
             norm=norm,
             scores=scores,
+            medoid_simple_top_k=int(args.medoid_simple_top_k),
+            medoid_simple_max_drop=float(args.medoid_simple_max_drop),
+            simple_weight_chars=float(args.simple_weight_chars),
+            simple_weight_binders=float(args.simple_weight_binders),
+            simple_weight_prop_assumptions=float(args.simple_weight_prop_assumptions),
+            simple_chars_scale=float(args.simple_chars_scale),
         )
         extra = ""
         if rep_cent is not None:
