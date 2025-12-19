@@ -104,3 +104,4 @@ If you have candidates from another pipeline (e.g. the paper’s) and just want 
 - Convert flat JSONL to grouped: `python -m beqcritic.group_candidates_jsonl --input filtered_flat.jsonl --output filtered_grouped.jsonl`
 - Self-BLEU baseline: `python -m beqcritic.self_bleu_select --input filtered_grouped.jsonl --output selfbleu_selection.jsonl`
 - BEqCritic selection: `python -m beqcritic.score_and_select --model <ckpt> --input filtered_grouped.jsonl --output beqcritic_selection.jsonl ...`
+- BEq+ evaluation (paper metric): `python -m beqcritic.paper_pipeline.beq_plus_eval --dataset <hf_dataset> --split <split> --selections-a selfbleu_selection.jsonl --selections-b beqcritic_selection.jsonl ...` (requires `pip install lean-interact`)

@@ -44,6 +44,7 @@ def _lean_header(imports: list[str], extra_header: str) -> str:
 
 def _check_one(
     lean_cmd: list[str],
+    lean_workdir: str | None,
     header: str,
     decl: str,
     tmp_dir: str,
@@ -58,6 +59,7 @@ def _check_one(
             f.write("\n")
         proc = subprocess.run(
             lean_cmd + [path],
+            cwd=lean_workdir,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
             text=True,
@@ -107,6 +109,18 @@ def main() -> None:
         default="",
         help="Extra Lean header text prepended verbatim after imports (optional).",
     )
+    p.add_argument(
+        "--header-key",
+        type=str,
+        default="",
+        help="If set, also prepend per-problem header read from this JSON field (e.g. 'lean4_src_header').",
+    )
+    p.add_argument(
+        "--lean-workdir",
+        type=str,
+        default="",
+        help="Working directory for the Lean command (useful for `lake env lean` in a Mathlib project).",
+    )
     p.add_argument("--jobs", type=int, default=4, help="Number of concurrent typechecks")
     p.add_argument("--timeout-s", type=float, default=30.0, help="Per-candidate timeout (0 = no timeout)")
     p.add_argument("--keep-temp", action="store_true", help="Keep temporary .lean files (for debugging)")
@@ -130,7 +144,8 @@ def main() -> None:
         )
 
     imports = [s.strip() for s in str(args.imports).split(",") if s.strip()]
-    header = _lean_header(imports=imports, extra_header=str(args.header))
+    global_header = _lean_header(imports=imports, extra_header=str(args.header))
+    lean_workdir = str(args.lean_workdir).strip() or None
 
     errors_out = open(args.errors_jsonl, "w", encoding="utf-8") if args.errors_jsonl else None
     tmp_dir_obj = None
@@ -156,6 +171,13 @@ def main() -> None:
                         fout.write(json.dumps(obj, ensure_ascii=False) + "\n")
                     continue
 
+                header = global_header
+                if args.header_key:
+                    if args.header_key not in obj:
+                        raise ValueError(f"Missing {args.header_key!r} in input row for problem_id={pid!r}")
+                    per_header = "" if obj.get(args.header_key) is None else str(obj.get(args.header_key))
+                    header = per_header.rstrip() + "\n\n" + global_header
+
                 keep_mask = [False] * len(cands)
 
                 with ThreadPoolExecutor(max_workers=max(1, int(args.jobs))) as ex:
@@ -164,6 +186,7 @@ def main() -> None:
                         fut = ex.submit(
                             _check_one,
                             lean_cmd,
+                            lean_workdir,
                             header,
                             str(decl),
                             str(tmp_dir),

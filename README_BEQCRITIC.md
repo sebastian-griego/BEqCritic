@@ -50,6 +50,7 @@ python -m beqcritic.score_and_select \
 Optional helpers (if you want this repo to do the paper’s clean/filter stages):
 - `python -m beqcritic.paper_pipeline.clean_candidates ...` turns raw model text into typecheckable decls (`:= by sorry`)
 - `python -m beqcritic.paper_pipeline.typecheck_filter ...` filters grouped candidates by invoking Lean (requires a Lean toolchain)
+- `python -m beqcritic.paper_pipeline.beq_plus_eval ...` evaluates selector outputs vs a dataset reference using BEq+ (requires `pip install lean-interact`)
 
 Minimal training run:
 
