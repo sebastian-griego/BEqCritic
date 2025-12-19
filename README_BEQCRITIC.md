@@ -51,6 +51,20 @@ Optional helpers (if you want this repo to do the paper’s clean/filter stages)
 - `python -m beqcritic.paper_pipeline.clean_candidates ...` turns raw model text into typecheckable decls (`:= by sorry`)
 - `python -m beqcritic.paper_pipeline.typecheck_filter ...` filters grouped candidates by invoking Lean (requires a Lean toolchain)
 - `python -m beqcritic.paper_pipeline.beq_plus_eval ...` evaluates selector outputs vs a dataset reference using BEq+ (requires `pip install lean-interact`)
+- `python -m beqcritic.paper_pipeline.sweep_beqplus_ab ...` runs a small grid sweep (selection + BEq+ A/B) without bash loops
+
+Example BEq+ sweep (A fixed, B swept over alpha/threshold):
+
+python -m beqcritic.paper_pipeline.sweep_beqplus_ab \
+  --dataset PAug/ProofNetVerif --split valid \
+  --candidates proofnetverif_valid_candidates_typechecked.jsonl \
+  --selections-a selections_selfbleu_valid_typechecked.jsonl --a-name selfbleu \
+  --model checkpoints/beqcritic_deberta_groupsplit \
+  --out-dir sweeps_valid \
+  --alphas 0.5,0.6,0.7,0.8,0.9 \
+  --thresholds 0.1,0.2,0.3,0.4 \
+  --device cuda:0 \
+  --timeout-s 60 --bootstrap 2000
 
 Minimal training run:
 
