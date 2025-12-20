@@ -23,11 +23,10 @@ eval:
 	  --candidates runs/quickstart/proofnetverif_test_candidates.jsonl \
 	  --selections-a runs/quickstart/proofnetverif_test_selection_selfbleu.jsonl --a-name selfbleu \
 	  --selections-b runs/quickstart/proofnetverif_test_selection_beqcritic.jsonl --b-name beqcritic \
-	  --bootstrap 5000 --seed 0 \
 	  --timing runs/quickstart/timing.txt
 
 results: quickstart
-	$(PY) scripts/generate_results.py --run-dir runs/quickstart --output results/results.md --bootstrap 2000 --seed 0
+	$(PY) scripts/generate_results.py --run-dir runs/quickstart --output results/results.md
 
 test: dev
 	$(PY) -m pytest -q

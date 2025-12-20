@@ -20,8 +20,6 @@ def _run_summarize_selection(
     candidates: Path,
     selections: Path,
     name: str,
-    bootstrap: int,
-    seed: int,
 ) -> dict:
     scripts_dir = Path(__file__).resolve().parent
     cmd = [
@@ -35,32 +33,15 @@ def _run_summarize_selection(
         str(name),
         "--max-k",
         "1",
-        "--bootstrap",
-        str(int(bootstrap)),
-        "--seed",
-        str(int(seed)),
     ]
     out = subprocess.check_output(cmd, text=True)
     return json.loads(out)
-
-
-def _fmt_ci(ci: object) -> str:
-    if not isinstance(ci, list) or len(ci) != 2:
-        return "-"
-    try:
-        lo = float(ci[0])
-        hi = float(ci[1])
-    except Exception:
-        return "-"
-    return f"[{lo:.1f}, {hi:.1f}]"
 
 
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--run-dir", default="runs/quickstart", help="Directory produced by scripts/run_quickstart.sh")
     p.add_argument("--output", default="results/results.md")
-    p.add_argument("--bootstrap", type=int, default=2000)
-    p.add_argument("--seed", type=int, default=0)
     args = p.parse_args()
 
     run_dir = Path(str(args.run_dir))
@@ -82,8 +63,6 @@ def main() -> None:
             candidates=cand,
             selections=selfbleu,
             name="selfbleu",
-            bootstrap=int(args.bootstrap),
-            seed=int(args.seed),
         )
     )
     metrics.append(
@@ -91,8 +70,6 @@ def main() -> None:
             candidates=cand,
             selections=beqcritic,
             name="beqcritic",
-            bootstrap=int(args.bootstrap),
-            seed=int(args.seed) + 1,
         )
     )
 
@@ -109,16 +86,14 @@ def main() -> None:
     lines.append("")
     lines.append(f"Inputs: `{cand}`")
     lines.append("")
-    lines.append("| method | selected correct (%) | 95% CI | selected correct \\| any correct (%) | 95% CI | problems |")
-    lines.append("|---|---:|---:|---:|---:|---:|")
+    lines.append("| method | selected correct (%) | selected correct \\| any correct (%) | problems |")
+    lines.append("|---|---:|---:|---:|")
     for m in metrics:
         name = m.get("name") or "-"
         sc = float(m.get("selected_correct_pct") or 0.0)
-        sc_ci = _fmt_ci(m.get("selected_correct_ci_pct"))
         sc_any = float(m.get("selected_correct_given_any_pct") or 0.0)
-        sc_any_ci = _fmt_ci(m.get("selected_correct_given_any_ci_pct"))
         n = int(m.get("problems") or 0)
-        lines.append(f"| {name} | {sc:.1f} | {sc_ci} | {sc_any:.1f} | {sc_any_ci} | {n} |")
+        lines.append(f"| {name} | {sc:.1f} | {sc_any:.1f} | {n} |")
     lines.append("")
 
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")

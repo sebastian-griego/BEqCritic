@@ -17,7 +17,6 @@ BASE_MODEL="${BEQCRITIC_BASE_MODEL:-microsoft/deberta-v3-small}"
 TRAIN_MAX_ROWS="${TRAIN_MAX_ROWS:-0}"
 TRAIN_MAX_PROBLEMS="${TRAIN_MAX_PROBLEMS:-0}"
 TEST_MAX_PROBLEMS="${TEST_MAX_PROBLEMS:-0}"
-AB_BOOTSTRAP="${AB_BOOTSTRAP:-2000}"
 
 if [[ "$RUN_DIR" != /* ]]; then
   RUN_DIR="$ROOT/$RUN_DIR"
@@ -114,8 +113,6 @@ run_step ab_compare \
   --candidates "$CAND" \
   --selections-a "$SEL_SELF" --a-name selfbleu \
   --selections-b "$SEL_BEQ" --b-name beqcritic \
-  --bootstrap "$AB_BOOTSTRAP" \
-  --seed "$SEED" \
   --timing "$RUN_DIR/timing.txt" \
   --output-json "$RUN_DIR/ab_metrics.json" \
   --output-md "$RUN_DIR/ab_metrics.md"

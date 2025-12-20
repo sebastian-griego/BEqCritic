@@ -64,7 +64,7 @@ python -m beqcritic.paper_pipeline.sweep_beqplus_ab \
   --alphas 0.5,0.6,0.7,0.8,0.9 \
   --thresholds 0.1,0.2,0.3,0.4 \
   --device cuda:0 \
-  --timeout-s 60 --bootstrap 2000
+  --timeout-s 60
 
 Minimal training run:
 
@@ -204,7 +204,6 @@ python -m beqcritic.benchmark_selection \
   --mutual-ks 0,3 \
   --triangle-prune-margins 0.0,0.2 \
   --cluster-mode support --support-frac 0.7 \
-  --bootstrap 1000 \
   --report-buckets \
   --report-cand-buckets \
   --report-comp-buckets

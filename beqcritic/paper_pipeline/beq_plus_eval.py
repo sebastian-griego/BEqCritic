@@ -45,21 +45,6 @@ def _load_jsonl_map(path: str, key: str, value: str) -> dict[str, str]:
     return out
 
 
-def _quantile(xs: list[float], q: float) -> float:
-    if not xs:
-        raise ValueError("Empty list")
-    if q <= 0:
-        return float(min(xs))
-    if q >= 1:
-        return float(max(xs))
-    ys = sorted(float(x) for x in xs)
-    i = (len(ys) - 1) * float(q)
-    lo = int(i)
-    hi = min(len(ys) - 1, lo + 1)
-    t = i - lo
-    return float((1.0 - t) * ys[lo] + t * ys[hi])
-
-
 @dataclass(frozen=True)
 class _DatasetRow:
     ref: str
@@ -262,7 +247,6 @@ def main() -> None:
     p.add_argument("--timeout-s", type=int, default=60)
     p.add_argument("--max-problems", type=int, default=0)
     p.add_argument("--shuffle-seed", type=int, default=0, help="If non-zero, shuffle problem order for sampling.")
-    p.add_argument("--bootstrap", type=int, default=0, help="If >0 and B is provided, bootstrap CI over paired diff.")
     p.add_argument("--output-jsonl", type=str, default="", help="Optional per-problem results JSONL.")
     args = p.parse_args()
 
@@ -345,19 +329,6 @@ def main() -> None:
             print(f"{args.a_name} only: {a_only}")
             print(f"{args.b_name} only: {b_only}")
             print(f"Neither: {neither}")
-
-            if int(args.bootstrap) > 0:
-                n = len(a_hits)
-                rnd = random.Random(0)
-                diffs: list[float] = []
-                for _ in range(int(args.bootstrap)):
-                    idxs = [rnd.randrange(n) for _ in range(n)]
-                    da = sum(a_hits[i] for i in idxs) / n
-                    db = sum(b_hits[i] for i in idxs) / n
-                    diffs.append(db - da)
-                lo = _quantile(diffs, 0.025)
-                hi = _quantile(diffs, 0.975)
-                print(f"Paired diff ({args.b_name}-{args.a_name}) 95% CI: [{lo:.4f}, {hi:.4f}]")
     finally:
         if out_f is not None:
             out_f.close()
@@ -365,4 +336,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

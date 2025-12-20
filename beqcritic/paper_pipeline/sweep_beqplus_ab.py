@@ -73,7 +73,6 @@ def main() -> None:
     p.add_argument("--timeout-s", type=int, default=60)
     p.add_argument("--max-problems", type=int, default=0)
     p.add_argument("--shuffle-seed", type=int, default=0)
-    p.add_argument("--bootstrap", type=int, default=2000)
 
     p.add_argument("--dataset-id-key", type=str, default="id")
     p.add_argument("--dataset-ref-key", type=str, default="lean4_formalization")
@@ -192,8 +191,6 @@ def main() -> None:
             str(int(args.max_problems)),
             "--shuffle-seed",
             str(int(args.shuffle_seed)),
-            "--bootstrap",
-            str(int(args.bootstrap)),
             "--output-jsonl",
             str(ab_out),
         ]
@@ -225,4 +222,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

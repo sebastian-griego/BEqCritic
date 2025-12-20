@@ -2,14 +2,13 @@
 CLI: compare two selection outputs on the same grouped-candidates file.
 
 This is a lightweight A/B evaluator for the "selected correct" metric used by
-`beqcritic.evaluate_selection`, with optional bootstrap confidence intervals.
+`beqcritic.evaluate_selection`.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import random
 from dataclasses import dataclass
 
 
@@ -52,37 +51,6 @@ def _parse_timing(path: str) -> dict[str, float]:
     return out
 
 
-def _quantile(xs: list[float], q: float) -> float:
-    if not xs:
-        raise ValueError("Empty list")
-    if q <= 0:
-        return float(min(xs))
-    if q >= 1:
-        return float(max(xs))
-    ys = sorted(float(x) for x in xs)
-    i = (len(ys) - 1) * float(q)
-    lo = int(i)
-    hi = min(len(ys) - 1, lo + 1)
-    t = i - lo
-    return float((1.0 - t) * ys[lo] + t * ys[hi])
-
-
-def _bootstrap_ci(values: list[float], n_boot: int, seed: int) -> tuple[float, float]:
-    if n_boot <= 0:
-        raise ValueError("n_boot must be > 0")
-    if not values:
-        raise ValueError("Cannot bootstrap empty list")
-    rnd = random.Random(int(seed))
-    n = len(values)
-    stats: list[float] = []
-    for _ in range(int(n_boot)):
-        s = 0.0
-        for _ in range(n):
-            s += float(values[rnd.randrange(n)])
-        stats.append(s / n)
-    return _quantile(stats, 0.025), _quantile(stats, 0.975)
-
-
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--candidates", type=str, required=True)
@@ -90,8 +58,6 @@ def main() -> None:
     p.add_argument("--selections-b", type=str, required=True)
     p.add_argument("--a-name", type=str, default="A")
     p.add_argument("--b-name", type=str, default="B")
-    p.add_argument("--bootstrap", type=int, default=1000)
-    p.add_argument("--seed", type=int, default=0)
     p.add_argument("--max-problems", type=int, default=0, help="Limit number of problems (0 = no limit).")
     p.add_argument(
         "--timing",
@@ -163,17 +129,10 @@ def main() -> None:
     b_mean = sum(b_vals) / n
     diff_mean = sum(diff_vals) / n
 
-    n_boot = int(args.bootstrap)
-    a_ci = _bootstrap_ci(a_vals, n_boot=n_boot, seed=int(args.seed))
-    b_ci = _bootstrap_ci(b_vals, n_boot=n_boot, seed=int(args.seed) + 1)
-    diff_ci = _bootstrap_ci(diff_vals, n_boot=n_boot, seed=int(args.seed) + 2)
-
     a_any_vals = [1.0 if p.a_correct else 0.0 for p in probs if p.any_correct]
     b_any_vals = [1.0 if p.b_correct else 0.0 for p in probs if p.any_correct]
     a_any_mean = (sum(a_any_vals) / max(1, len(a_any_vals))) if a_any_vals else 0.0
     b_any_mean = (sum(b_any_vals) / max(1, len(b_any_vals))) if b_any_vals else 0.0
-    a_any_ci = _bootstrap_ci(a_any_vals, n_boot=n_boot, seed=int(args.seed) + 3) if a_any_vals else (0.0, 0.0)
-    b_any_ci = _bootstrap_ci(b_any_vals, n_boot=n_boot, seed=int(args.seed) + 4) if b_any_vals else (0.0, 0.0)
 
     timing = _parse_timing(args.timing) if str(args.timing).strip() else {}
     a_time_s = timing.get("select_selfbleu_seconds") if str(args.a_name).lower() == "selfbleu" else None
@@ -192,26 +151,20 @@ def main() -> None:
             "avg_candidates_per_problem": float(total_candidates) / float(max(1, n)),
             "total_candidate_pairs": int(total_pairs),
         },
-        "bootstrap": {"n": int(n_boot), "seed": int(args.seed)},
         "a": {
             "name": str(args.a_name),
             "selected_correct_pct": 100.0 * float(a_mean),
-            "selected_correct_ci_pct": [100.0 * float(a_ci[0]), 100.0 * float(a_ci[1])],
             "selected_correct_given_any_pct": 100.0 * float(a_any_mean),
-            "selected_correct_given_any_ci_pct": [100.0 * float(a_any_ci[0]), 100.0 * float(a_any_ci[1])],
             "selection_time_seconds": float(a_time_s) if a_time_s is not None else None,
         },
         "b": {
             "name": str(args.b_name),
             "selected_correct_pct": 100.0 * float(b_mean),
-            "selected_correct_ci_pct": [100.0 * float(b_ci[0]), 100.0 * float(b_ci[1])],
             "selected_correct_given_any_pct": 100.0 * float(b_any_mean),
-            "selected_correct_given_any_ci_pct": [100.0 * float(b_any_ci[0]), 100.0 * float(b_any_ci[1])],
             "selection_time_seconds": float(b_time_s) if b_time_s is not None else None,
         },
         "b_minus_a": {
             "selected_correct_pct": 100.0 * float(diff_mean),
-            "selected_correct_ci_pct": [100.0 * float(diff_ci[0]), 100.0 * float(diff_ci[1])],
         },
         "timing_seconds": timing,
     }
@@ -223,21 +176,18 @@ def main() -> None:
     md.append(f"- Avg candidates/problem: {float(total_candidates)/float(max(1,n)):.2f}")
     md.append(f"- Total candidate pairs (n(n-1)/2 summed): {total_pairs}")
     md.append("")
-    md.append("| method | selected correct (%) | 95% CI | selected correct | any correct (%) | 95% CI | selection time (s) | pairwise comps |")
-    md.append("|---|---:|---:|---:|---:|---:|---:|")
+    md.append("| method | selected correct (%) | selected correct \\| any correct (%) | selection time (s) | pairwise comps |")
+    md.append("|---|---:|---:|---:|---:|")
     a_time_str = f"{float(a_time_s):.0f}" if a_time_s is not None else "-"
     b_time_str = f"{float(b_time_s):.0f}" if b_time_s is not None else "-"
     md.append(
-        f"| {args.a_name} | {100.0*a_mean:.1f} | [{100.0*a_ci[0]:.1f}, {100.0*a_ci[1]:.1f}] | "
-        f"{100.0*a_any_mean:.1f} | [{100.0*a_any_ci[0]:.1f}, {100.0*a_any_ci[1]:.1f}] | {a_time_str} | {total_pairs} |"
+        f"| {args.a_name} | {100.0*a_mean:.1f} | {100.0*a_any_mean:.1f} | {a_time_str} | {total_pairs} |"
     )
     md.append(
-        f"| {args.b_name} | {100.0*b_mean:.1f} | [{100.0*b_ci[0]:.1f}, {100.0*b_ci[1]:.1f}] | "
-        f"{100.0*b_any_mean:.1f} | [{100.0*b_any_ci[0]:.1f}, {100.0*b_any_ci[1]:.1f}] | {b_time_str} | {total_pairs} |"
+        f"| {args.b_name} | {100.0*b_mean:.1f} | {100.0*b_any_mean:.1f} | {b_time_str} | {total_pairs} |"
     )
     md.append(
-        f"| {args.b_name} - {args.a_name} | {100.0*diff_mean:+.1f} | "
-        f"[{100.0*diff_ci[0]:+.1f}, {100.0*diff_ci[1]:+.1f}] | - | - | - | - |"
+        f"| {args.b_name} - {args.a_name} | {100.0*diff_mean:+.1f} | - | - | - |"
     )
     md.append("")
     md_text = "\n".join(md) + "\n"

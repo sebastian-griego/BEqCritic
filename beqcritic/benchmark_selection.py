@@ -81,26 +81,6 @@ def _parse_csv(s: str) -> list[str]:
     return [x.strip() for x in s.split(",") if x.strip()]
 
 
-def _bootstrap_ci(values: list[float], n_boot: int, seed: int) -> tuple[float, float]:
-    if n_boot <= 0:
-        raise ValueError("n_boot must be > 0")
-    if not values:
-        raise ValueError("Cannot bootstrap empty list")
-
-    rnd = random.Random(seed)
-    n = len(values)
-    stats: list[float] = []
-    for _ in range(int(n_boot)):
-        s = 0.0
-        for _ in range(n):
-            s += float(values[rnd.randrange(n)])
-        stats.append(s / n)
-    stats.sort()
-    lo = stats[int(0.025 * (n_boot - 1))]
-    hi = stats[int(0.975 * (n_boot - 1))]
-    return float(lo), float(hi)
-
-
 def _load_lines(path: str):
     with open(path, "r", encoding="utf-8") as f:
         for line in f:
@@ -225,8 +205,6 @@ def main() -> None:
     p.add_argument("--mutual-ks", type=str, default="", help="Optional comma-separated mutual-k values")
     p.add_argument("--triangle-prune-margin", type=float, default=0.0)
     p.add_argument("--triangle-prune-margins", type=str, default="", help="Optional comma-separated triangle prune margins")
-    p.add_argument("--bootstrap", type=int, default=0, help="If >0, compute 95%% CIs with bootstrap resampling")
-    p.add_argument("--bootstrap-seed", type=int, default=0)
     p.add_argument("--length-key", type=str, default="ref_len_chars", help="Optional per-problem length field to bucket by")
     p.add_argument("--length-buckets", type=str, default="", help="Comma-separated bucket upper bounds (chars)")
     p.add_argument("--report-buckets", action="store_true")
@@ -520,35 +498,21 @@ def main() -> None:
 
         n_seen += 1
 
-    def _report_with_ci(name: str, correct_flags: list[int], m: Metrics) -> None:
+    def _report(name: str, m: Metrics) -> None:
         print(name)
         print(m.report())
-        if args.bootstrap and args.bootstrap > 0:
-            n_boot = int(args.bootstrap)
-            seed = int(args.bootstrap_seed)
-
-            overall = [float(x) for x in correct_flags]
-            lo, hi = _bootstrap_ci(overall, n_boot=n_boot, seed=seed)
-            print(f"Selected correct 95% CI: [{100*lo:.1f}%, {100*hi:.1f}%]")
-
-            any_idx = [i for i, a in enumerate(any_correct_flags) if a == 1]
-            if any_idx:
-                subset = [float(correct_flags[i]) for i in any_idx]
-                lo2, hi2 = _bootstrap_ci(subset, n_boot=n_boot, seed=seed + 1)
-                print(f"Selected correct | any correct 95% CI: [{100*lo2:.1f}%, {100*hi2:.1f}%]")
         print()
 
-    _report_with_ci("Baseline first", first_correct, baseline_first)
-    _report_with_ci("Baseline shortest", shortest_correct, baseline_shortest)
-    _report_with_ci("Baseline majority", majority_correct, baseline_majority)
-    _report_with_ci("Baseline random", random_correct, baseline_random)
-    _report_with_ci("Baseline BLEU-medoid", bleu_medoid_correct, baseline_bleu_medoid)
-    _report_with_ci(f"Baseline MBR-global{sim_desc}", mbr_global_correct, baseline_mbr_global)
-    _report_with_ci(f"Baseline MBR-kNN(k={mbr_knn_k}){sim_desc}", mbr_knn_correct, baseline_mbr_knn)
+    _report("Baseline first", baseline_first)
+    _report("Baseline shortest", baseline_shortest)
+    _report("Baseline majority", baseline_majority)
+    _report("Baseline random", baseline_random)
+    _report("Baseline BLEU-medoid", baseline_bleu_medoid)
+    _report(f"Baseline MBR-global{sim_desc}", baseline_mbr_global)
+    _report(f"Baseline MBR-kNN(k={mbr_knn_k}){sim_desc}", baseline_mbr_knn)
     if args.ensemble:
-        _report_with_ci(
+        _report(
             f"Ensemble ({args.ensemble_vote} vote over {len(configs)} configs)",
-            ensemble_correct,
             ensemble_metrics,
         )
 
@@ -711,7 +675,7 @@ def main() -> None:
             f"symmetric={args.symmetric} mutual_k={mk} tri_margin={tm} mode={args.cluster_mode}{support_desc}"
             f"{fallback_desc}"
         )
-        _report_with_ci(name, per_strategy_correct[(thr, tb, cr, mk, tm, sf)], metrics[(thr, tb, cr, mk, tm, sf)])
+        _report(name, metrics[(thr, tb, cr, mk, tm, sf)])
         if args.report_buckets and len_bounds:
             _report_bucketed(
                 name,

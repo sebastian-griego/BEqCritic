@@ -22,7 +22,7 @@ of autoformalization candidates.
 Core idea:
 - score candidate–candidate equivalence with a fast cross-encoder (`BeqCritic`)
 - build a similarity graph, cluster, and pick a representative (e.g. medoid of the largest/cohesive cluster)
-- benchmark selection strategies with uncertainty + bucketed slice reports
+- benchmark selection strategies with bucketed slice reports
 
 ## Installation
 
@@ -127,7 +127,6 @@ python -m beqcritic.benchmark_selection \
   --triangle-prune-margins 0.0,0.2 \
   --cluster-mode support \
   --support-frac 0.7 \
-  --bootstrap 1000 \
   --report-buckets \
   --report-cand-buckets \
   --report-comp-buckets

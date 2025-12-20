@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import random
 
 
 def _load_jsonl_map(path: str) -> dict[str, dict]:
@@ -30,37 +29,6 @@ def _load_jsonl_map(path: str) -> dict[str, dict]:
     return out
 
 
-def _quantile(xs: list[float], q: float) -> float:
-    if not xs:
-        raise ValueError("Empty list")
-    if q <= 0:
-        return float(min(xs))
-    if q >= 1:
-        return float(max(xs))
-    ys = sorted(float(x) for x in xs)
-    i = (len(ys) - 1) * float(q)
-    lo = int(i)
-    hi = min(len(ys) - 1, lo + 1)
-    t = i - lo
-    return float((1.0 - t) * ys[lo] + t * ys[hi])
-
-
-def _bootstrap_ci(values: list[float], n_boot: int, seed: int) -> tuple[float, float]:
-    if n_boot <= 0:
-        raise ValueError("n_boot must be > 0")
-    if not values:
-        raise ValueError("Cannot bootstrap empty list")
-    rnd = random.Random(int(seed))
-    n = len(values)
-    stats: list[float] = []
-    for _ in range(int(n_boot)):
-        s = 0.0
-        for _ in range(n):
-            s += float(values[rnd.randrange(n)])
-        stats.append(s / n)
-    return _quantile(stats, 0.025), _quantile(stats, 0.975)
-
-
 def _normalize_lean_statement(s: str) -> str:
     # Import lazily so this script works even when run without an editable install.
     from beqcritic.textnorm import normalize_lean_statement
@@ -74,8 +42,6 @@ def main() -> None:
     p.add_argument("--selections", required=True)
     p.add_argument("--name", default="")
     p.add_argument("--max-k", type=int, default=1)
-    p.add_argument("--bootstrap", type=int, default=0, help="If >0, compute 95% bootstrap CIs for rates.")
-    p.add_argument("--seed", type=int, default=0)
     p.add_argument("--output-json", default="")
     args = p.parse_args()
 
@@ -165,15 +131,6 @@ def main() -> None:
         "topk_any_correct_given_any_pct": [100.0 * (_mean(xs) if xs else 0.0) for xs in topk_hits_any],
     }
 
-    if int(args.bootstrap) > 0:
-        n_boot = int(args.bootstrap)
-        out["bootstrap"] = {"n": int(n_boot), "seed": int(args.seed)}
-        lo, hi = _bootstrap_ci(selected_hits, n_boot=n_boot, seed=int(args.seed))
-        out["selected_correct_ci_pct"] = [100.0 * float(lo), 100.0 * float(hi)]
-        if selected_hits_any:
-            lo2, hi2 = _bootstrap_ci(selected_hits_any, n_boot=n_boot, seed=int(args.seed) + 1)
-            out["selected_correct_given_any_ci_pct"] = [100.0 * float(lo2), 100.0 * float(hi2)]
-
     print(json.dumps(out, indent=2, sort_keys=True))
 
     if str(args.output_json).strip():
@@ -184,4 +141,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
