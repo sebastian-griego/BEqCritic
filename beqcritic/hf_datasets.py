@@ -38,9 +38,23 @@ def load_dataset_split(dataset: str, split: str) -> Dataset:
     try:
         return load_dataset(dataset, split=split)
     except Exception as original_exc:  # pragma: no cover (varies by environment)
+        # Some Hub datasets (including PAug/ProofNetVerif) are published with only
+        # valid/test splits. For quickstart-style runs, treat "train" as "valid"
+        # when no explicit train split exists, rather than failing.
+        if str(split) == "train":
+            try:
+                return _load_hub_train_fallback(dataset)
+            except Exception:
+                pass
+
         try:
             return _load_cached_arrow_split(dataset, split)
-        except CachedDatasetNotFound:
+        except Exception:
+            if str(split) == "train":
+                try:
+                    return _load_cached_train_fallback(dataset)
+                except Exception:
+                    pass
             raise original_exc
 
 
@@ -124,8 +138,6 @@ def _load_parquet_splits(dataset_path: Path) -> Optional[dict[str, Dataset]]:
 
 
 def _make_train_fallback(splits: dict[str, Dataset], dataset_path: Path) -> Dataset:
-    if "valid" in splits and "test" in splits:
-        return concatenate_datasets([splits["valid"], splits["test"]])
     if "valid" in splits:
         return splits["valid"]
     if "test" in splits:
@@ -134,6 +146,35 @@ def _make_train_fallback(splits: dict[str, Dataset], dataset_path: Path) -> Data
         f"Cannot synthesize 'train' split from {dataset_path}; "
         f"available splits: {sorted(splits.keys())}"
     )
+
+
+def _load_hub_train_fallback(dataset_id: str) -> Dataset:
+    """
+    Best-effort mapping for Hub datasets without an explicit train split.
+
+    Preference order:
+      - valid
+      - validation
+      - test
+    """
+    for candidate in ["valid", "validation", "test"]:
+        try:
+            return load_dataset(dataset_id, split=candidate)
+        except Exception:
+            continue
+    raise ValueError(f"Cannot load a train fallback split for {dataset_id!r}")
+
+
+def _load_cached_train_fallback(dataset_id: str) -> Dataset:
+    """
+    Same as `_load_hub_train_fallback`, but using the local HF datasets cache.
+    """
+    for candidate in ["valid", "validation", "test"]:
+        try:
+            return _load_cached_arrow_split(dataset_id, candidate)
+        except Exception:
+            continue
+    raise CachedDatasetNotFound(f"No cached valid/validation/test split found for {dataset_id!r}")
 
 
 def _load_cached_arrow_split(dataset_id: str, split: str) -> Dataset:

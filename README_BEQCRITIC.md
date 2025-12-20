@@ -68,15 +68,17 @@ python -m beqcritic.paper_pipeline.sweep_beqplus_ab \
 
 Minimal training run:
 
-python -m beqcritic.inspect_dataset --dataset PAug/ProofNetVerif --split train
+ProofNetVerif on the Hub (`PAug/ProofNetVerif`) is published with `valid` and `test` splits (no `train`).
+
+python -m beqcritic.inspect_dataset --dataset PAug/ProofNetVerif --split valid
 
 python -m beqcritic.train_beq_critic \
   --dataset PAug/ProofNetVerif \
-  --split train \
-  --pred-key prediction \
-  --ref-key reference \
-  --label-key label \
-  --problem-id-key problem_id \
+  --split valid \
+  --pred-key lean4_prediction \
+  --ref-key lean4_formalization \
+  --label-key correct \
+  --problem-id-key id \
   --base-model microsoft/deberta-v3-base \
   --output-dir checkpoints/beqcritic_deberta \
   --task-mix pred_vs_ref,cand_vs_cand \
@@ -243,17 +245,16 @@ python -m beqcritic.benchmark_selection \
 
 Clean train/dev/test on ProofNetVerif (avoid test leakage):
 
-Preferred setup (uses the dataset's official splits):
+Preferred setup (Hub dataset has `valid` + `test` only):
 
-If your local/offline copy has `train` synthesized as `valid+test`, this will fail with an overlap error.
-In that case, use the alternative setup below (train on `valid` with `--eval-size`).
+Train on `valid` (with a held-out `--eval-size` group split), then report selection quality on `test`.
 
-1) Train on `train` and evaluate on `valid` (no overlap on `id`), and write the split ids:
+1) Train on `valid` and write the split ids:
 
-CUDA_VISIBLE_DEVICES=0,1,2 python -m torch.distributed.run --nproc_per_node 3 -m beqcritic.train_beq_critic \
+python -m beqcritic.train_beq_critic \
   --dataset PAug/ProofNetVerif \
-  --split train \
-  --eval-split valid \
+  --split valid \
+  --eval-size 0.1 \
   --pred-key lean4_prediction \
   --ref-key lean4_formalization \
   --label-key correct \
@@ -273,6 +274,9 @@ CUDA_VISIBLE_DEVICES=0,1,2 python -m torch.distributed.run --nproc_per_node 3 -m
   --write-split-ids
 
 2) Tune selection hyperparameters on `proofnetverif_valid_candidates.jsonl`, then report on `proofnetverif_test_candidates.jsonl`.
+
+If you have an offline dataset with an explicit `train` split, you can instead pass `--split train --eval-split valid`
+to avoid using `--eval-size`.
 
 Alternative setup (when you only have a single split available locally):
 

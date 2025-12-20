@@ -15,7 +15,7 @@ Train a critic:
 ```bash
 python -m beqcritic.train_beq_critic \
   --dataset PAug/ProofNetVerif \
-  --split train \
+  --split valid \
   --pred-key lean4_prediction \
   --ref-key lean4_formalization \
   --label-key correct \
