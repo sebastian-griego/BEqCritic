@@ -14,3 +14,4 @@ results/results.json
 *_candidates*.jsonl
 *_selection*.jsonl
 selection_results*.jsonl
+*.egg-info/
