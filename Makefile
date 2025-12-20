@@ -1,18 +1,22 @@
-.PHONY: setup smoke quickstart eval test
+.PHONY: setup dev smoke quickstart eval results test
 
 VENV ?= .venv
+PYTHON ?= python
 PY := $(VENV)/bin/python
 
 setup:
-	python -m venv $(VENV)
+	$(PYTHON) -m venv $(VENV)
 	$(PY) -m pip install -U pip
 	$(PY) -m pip install -e .
+
+dev: setup
+	$(PY) -m pip install -e '.[dev]'
 
 smoke:
 	$(PY) -m beqcritic.smoke
 
 quickstart:
-	bash scripts/run_quickstart.sh
+	PYTHON=$(PY) bash scripts/run_quickstart.sh
 
 eval:
 	$(PY) -m beqcritic.evaluate_ab \
@@ -22,5 +26,8 @@ eval:
 	  --bootstrap 5000 --seed 0 \
 	  --timing runs/quickstart/timing.txt
 
-test:
-	$(PY) -m unittest discover -s tests -q
+results: quickstart
+	$(PY) scripts/generate_results.py --run-dir runs/quickstart --output results/results.md --bootstrap 2000 --seed 0
+
+test: dev
+	$(PY) -m pytest -q

@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+PYTHON_BIN="${PYTHON:-python}"
+
 RUN_DIR="${RUN_DIR:-runs/quickstart}"
 DATASET="${DATASET:-PAug/ProofNetVerif}"
 SEED="${SEED:-0}"
@@ -11,6 +13,11 @@ SEED="${SEED:-0}"
 TRAIN_SPLIT="${TRAIN_SPLIT:-valid}"
 TEST_SPLIT="${TEST_SPLIT:-test}"
 DEVICE="${BEQCRITIC_DEVICE:-}"
+BASE_MODEL="${BEQCRITIC_BASE_MODEL:-microsoft/deberta-v3-small}"
+TRAIN_MAX_ROWS="${TRAIN_MAX_ROWS:-0}"
+TRAIN_MAX_PROBLEMS="${TRAIN_MAX_PROBLEMS:-0}"
+TEST_MAX_PROBLEMS="${TEST_MAX_PROBLEMS:-0}"
+AB_BOOTSTRAP="${AB_BOOTSTRAP:-2000}"
 
 if [[ "$RUN_DIR" != /* ]]; then
   RUN_DIR="$ROOT/$RUN_DIR"
@@ -38,7 +45,7 @@ run_step() {
   echo "${name}_seconds=$((t1 - t0))" >>"$RUN_DIR/timing.txt"
 }
 
-python -m beqcritic.smoke >"$RUN_DIR/smoke.json"
+"$PYTHON_BIN" -m beqcritic.smoke >"$RUN_DIR/smoke.json"
 
 CKPT_DIR="$RUN_DIR/checkpoints/beqcritic_deberta"
 CAND="$RUN_DIR/proofnetverif_${TEST_SPLIT}_candidates.jsonl"
@@ -46,14 +53,16 @@ SEL_BEQ="$RUN_DIR/proofnetverif_${TEST_SPLIT}_selection_beqcritic.jsonl"
 SEL_SELF="$RUN_DIR/proofnetverif_${TEST_SPLIT}_selection_selfbleu.jsonl"
 
 run_step train_beqcritic \
-  python -m beqcritic.train_beq_critic \
+  "$PYTHON_BIN" -m beqcritic.train_beq_critic \
   --dataset "$DATASET" \
   --split "$TRAIN_SPLIT" \
   --pred-key lean4_prediction \
   --ref-key lean4_formalization \
   --label-key correct \
   --problem-id-key id \
-  --base-model microsoft/deberta-v3-base \
+  --base-model "$BASE_MODEL" \
+  --max-rows "$TRAIN_MAX_ROWS" \
+  --max-problems "$TRAIN_MAX_PROBLEMS" \
   --output-dir "$CKPT_DIR" \
   --task-mix pred_vs_ref,cand_vs_cand \
   --epochs 1 \
@@ -62,17 +71,18 @@ run_step train_beqcritic \
   --write-split-ids
 
 run_step make_grouped_candidates \
-  python -m beqcritic.make_grouped_candidates \
+  "$PYTHON_BIN" -m beqcritic.make_grouped_candidates \
   --dataset "$DATASET" \
   --split "$TEST_SPLIT" \
   --pred-key lean4_prediction \
   --ref-key lean4_formalization \
   --label-key correct \
   --problem-id-key id \
+  --max-problems "$TEST_MAX_PROBLEMS" \
   --output "$CAND"
 
 run_step select_beqcritic \
-  python -m beqcritic.score_and_select \
+  "$PYTHON_BIN" -m beqcritic.score_and_select \
   --model "$CKPT_DIR" \
   --input "$CAND" \
   --output "$SEL_BEQ" \
@@ -85,26 +95,26 @@ run_step select_beqcritic \
   --emit-stats
 
 run_step eval_beqcritic \
-  python -m beqcritic.evaluate_selection \
+  "$PYTHON_BIN" -m beqcritic.evaluate_selection \
   --candidates "$CAND" \
   --selections "$SEL_BEQ"
 
 run_step select_selfbleu \
-  python -m beqcritic.self_bleu_select \
+  "$PYTHON_BIN" -m beqcritic.self_bleu_select \
   --input "$CAND" \
   --output "$SEL_SELF"
 
 run_step eval_selfbleu \
-  python -m beqcritic.evaluate_selection \
+  "$PYTHON_BIN" -m beqcritic.evaluate_selection \
   --candidates "$CAND" \
   --selections "$SEL_SELF"
 
 run_step ab_compare \
-  python -m beqcritic.evaluate_ab \
+  "$PYTHON_BIN" -m beqcritic.evaluate_ab \
   --candidates "$CAND" \
   --selections-a "$SEL_SELF" --a-name selfbleu \
   --selections-b "$SEL_BEQ" --b-name beqcritic \
-  --bootstrap 5000 \
+  --bootstrap "$AB_BOOTSTRAP" \
   --seed "$SEED" \
   --timing "$RUN_DIR/timing.txt" \
   --output-json "$RUN_DIR/ab_metrics.json" \

@@ -1,6 +1,6 @@
 # Setup (reproducible)
 
-Tested with Python `>=3.9` (see `pyproject.toml`).
+Tested with Python `>=3.10` (see `pyproject.toml`).
 
 ## 1) Create a virtualenv and install
 

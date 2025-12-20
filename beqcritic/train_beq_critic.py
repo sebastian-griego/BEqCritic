@@ -122,8 +122,33 @@ def _guess_bool_label(x: Any) -> int:
             return 0
     raise ValueError(f"Cannot interpret label value: {x!r}")
 
-def _rows_from_hf(ds) -> list[dict]:
-    return [dict(r) for r in ds]
+def _rows_from_hf(
+    ds: "object",
+    *,
+    max_rows: int = 0,
+    max_problems: int = 0,
+    problem_id_key: str | None = None,
+) -> list[dict]:
+    """
+    Materialize a HF dataset split into a list of dicts, with optional size limits.
+
+    max_problems limits the number of unique problem IDs observed, when problem_id_key is provided.
+    """
+    rows: list[dict] = []
+    allowed_pids: set[str] = set()
+    for r in ds:
+        if max_rows and len(rows) >= int(max_rows):
+            break
+
+        if max_problems and problem_id_key:
+            pid = str(r.get(problem_id_key))
+            if pid not in allowed_pids:
+                if len(allowed_pids) >= int(max_problems):
+                    continue
+                allowed_pids.add(pid)
+
+        rows.append(dict(r))
+    return rows
 
 def _build_examples(rows: list[dict], args) -> list[PairExample]:
     for r in rows:
@@ -199,6 +224,13 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--dataset", type=str, required=True)
     p.add_argument("--split", type=str, default="train")
+    p.add_argument("--max-rows", type=int, default=0, help="Limit number of dataset rows loaded (0 = no limit).")
+    p.add_argument(
+        "--max-problems",
+        type=int,
+        default=0,
+        help="Limit number of unique problems loaded (0 = no limit; requires --problem-id-key).",
+    )
     p.add_argument("--pred-key", type=str, default="prediction")
     p.add_argument("--ref-key", type=str, default="reference")
     p.add_argument("--label-key", type=str, default="label")
@@ -256,8 +288,18 @@ def main():
     if args.eval_split:
         train_raw = load_dataset_split(args.dataset, args.split)
         eval_raw = load_dataset_split(args.dataset, args.eval_split)
-        train_rows = _rows_from_hf(train_raw)
-        eval_rows = _rows_from_hf(eval_raw)
+        train_rows = _rows_from_hf(
+            train_raw,
+            max_rows=int(args.max_rows),
+            max_problems=int(args.max_problems),
+            problem_id_key=str(args.problem_id_key) if args.problem_id_key else None,
+        )
+        eval_rows = _rows_from_hf(
+            eval_raw,
+            max_rows=int(args.max_rows),
+            max_problems=int(args.max_problems),
+            problem_id_key=str(args.problem_id_key) if args.problem_id_key else None,
+        )
 
         if args.problem_id_key:
             train_pids = {str(r.get(args.problem_id_key)) for r in train_rows}
@@ -294,7 +336,12 @@ def main():
                 (out_dir / "eval_problem_ids.txt").write_text("\n".join(sorted(eval_pids)) + "\n", encoding="utf-8")
     else:
         raw = load_dataset_split(args.dataset, args.split)
-        rows = _rows_from_hf(raw)
+        rows = _rows_from_hf(
+            raw,
+            max_rows=int(args.max_rows),
+            max_problems=int(args.max_problems),
+            problem_id_key=str(args.problem_id_key) if args.problem_id_key else None,
+        )
         train_rows, eval_rows = _split_rows_by_problem_id(
             rows,
             args.problem_id_key if args.problem_id_key else None,

@@ -1,3 +1,19 @@
+Metadata-Version: 2.4
+Name: beq-critic
+Version: 0.2.0
+Summary: Learned equivalence scorer for Lean autoformalization candidates
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: datasets
+Requires-Dist: transformers
+Requires-Dist: torch
+Requires-Dist: numpy
+Requires-Dist: accelerate
+Provides-Extra: beqplus
+Requires-Dist: lean-interact; extra == "beqplus"
+Provides-Extra: dev
+Requires-Dist: pytest>=7; extra == "dev"
+
 # BEqCritic
 
 BEqCritic is a learned alternative to surface-overlap (e.g. Self-BLEU) for selecting a single Lean statement from a set

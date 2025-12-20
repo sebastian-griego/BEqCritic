@@ -1,6 +1,7 @@
 .venv/
 __pycache__/
 *.py[cod]
+.pytest_cache/
 checkpoints/
 local_models/
 hf_datasets/
@@ -8,6 +9,8 @@ hf_models/
 beqcritic_offline_bundle.zip
 .hf_cache/
 runs/
+results/results.md
+results/results.json
 *_candidates*.jsonl
 *_selection*.jsonl
 selection_results*.jsonl

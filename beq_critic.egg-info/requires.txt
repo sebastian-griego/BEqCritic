@@ -1,0 +1,11 @@
+datasets
+transformers
+torch
+numpy
+accelerate
+
+[beqplus]
+lean-interact
+
+[dev]
+pytest>=7
