@@ -80,6 +80,42 @@ python -m beqcritic.score_and_select \
   --cluster-mode support --support-frac 0.7 --triangle-prune-margin 0.2
 ```
 
+## BEq+ A/B (paper metric)
+
+Clean A/B: fixed candidate pool, swap selector, score with BEq+.
+
+Results (test, `runs/beqplus_ab_v1/ab_metrics_beqplus.md`):
+- selfbleu: 45/178 (25.3%)
+- beqcritic: 48/178 (27.0%) (+1.7)
+
+Repro (from repo root):
+
+```bash
+python -m beqcritic.make_grouped_candidates \
+  --dataset PAug/ProofNetVerif --split test \
+  --pred-key lean4_prediction --ref-key lean4_formalization --label-key correct --problem-id-key id \
+  --output runs/beqplus_ab_v1/proofnetverif_test_candidates.jsonl
+
+python -m beqcritic.self_bleu_select \
+  --input runs/beqplus_ab_v1/proofnetverif_test_candidates.jsonl \
+  --output runs/beqplus_ab_v1/proofnetverif_test_selection_selfbleu.jsonl
+
+python -m beqcritic.score_and_select \
+  --model runs/l40_v2/checkpoints/beqcritic_deberta_v3_base \
+  --input runs/beqplus_ab_v1/proofnetverif_test_candidates.jsonl \
+  --output runs/beqplus_ab_v1/proofnetverif_test_selection_beqcritic.jsonl \
+  --device cuda:0 --similarity critic \
+  --threshold 0.5 --tie-break medoid --cluster-rank size_then_cohesion \
+  --triangle-prune-margin 0.2
+
+python -m beqcritic.paper_pipeline.beq_plus_eval \
+  --dataset PAug/ProofNetVerif --split test \
+  --selections-a runs/beqplus_ab_v1/proofnetverif_test_selection_selfbleu.jsonl --a-name selfbleu \
+  --selections-b runs/beqplus_ab_v1/proofnetverif_test_selection_beqcritic.jsonl --b-name beqcritic \
+  --lean-version v4.8.0 --timeout-s 60 \
+  --output-jsonl runs/beqplus_ab_v1/beqplus_results.jsonl
+```
+
 Cost drivers:
 - Both methods score all candidate pairs on this split: `∑_problems n(n-1)/2 = 6638`.
 - BEqCritic’s per-pair cost is dominated by cross-encoder inference; Self-BLEU is dominated by tokenization + n-gram overlap.
