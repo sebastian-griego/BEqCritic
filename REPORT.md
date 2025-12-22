@@ -116,6 +116,50 @@ python -m beqcritic.paper_pipeline.beq_plus_eval \
   --output-jsonl runs/beqplus_ab_v1/beqplus_results.jsonl
 ```
 
+## BEq+ oracle headroom
+
+Oracle@pool (test candidates, `runs/beqplus_ab_v1/oracle_metrics.md`):
+- oracle: 70/178 (39.3%)
+- selfbleu: 45/178 (25.3%), gap 25
+- beqcritic: 48/178 (27.0%), gap 22
+
+This shows 22–25 problems where the pool contains a BEq+-correct candidate but consensus selection misses it.
+
+## Reference-free verifier reranker (NL -> Lean)
+
+Train a verifier on `(nl_statement, lean4_prediction)` with a pairwise ranking loss per problem id,
+then select the max-scoring candidate per problem.
+
+Results (test, BEq+, `runs/verifier_v1/ab_metrics_beqplus.md`):
+- verifier: 59/178 (33.1%), +7.8 vs selfbleu, +6.1 vs beqcritic
+- oracle gap for verifier: 11
+
+Repro (from repo root; uses 2 GPUs because GPU1 was occupied):
+
+```bash
+TOKENIZERS_PARALLELISM=false CUDA_VISIBLE_DEVICES=0,2 torchrun --nproc_per_node=2 -m beqcritic.train_verifier \
+  --dataset hf_datasets/ProofNetVerif --split train --eval-size 0.1 \
+  --nl-key nl_statement --pred-key lean4_prediction --label-key correct --problem-id-key id \
+  --base-model microsoft/deberta-v3-base \
+  --output-dir runs/verifier_v1/checkpoints/nl_verifier_deberta_v3_base \
+  --max-pairs-per-problem 64 --neg-sampling hard \
+  --epochs 3 --batch-size 8 --bf16 --seed 0
+
+python -m beqcritic.verifier_select \
+  --model runs/verifier_v1/checkpoints/nl_verifier_deberta_v3_base \
+  --dataset PAug/ProofNetVerif --split test \
+  --input runs/beqplus_ab_v1/proofnetverif_test_candidates.jsonl \
+  --output runs/verifier_v1/proofnetverif_test_selection_verifier.jsonl \
+  --device cuda:0 --batch-size 64
+
+python -m beqcritic.paper_pipeline.beq_plus_eval \
+  --dataset PAug/ProofNetVerif --split test \
+  --selections-a runs/beqplus_ab_v1/proofnetverif_test_selection_selfbleu.jsonl --a-name selfbleu \
+  --selections-b runs/verifier_v1/proofnetverif_test_selection_verifier.jsonl --b-name verifier \
+  --lean-version v4.8.0 --timeout-s 60 \
+  --output-jsonl runs/verifier_v1/beqplus_results.jsonl
+```
+
 Cost drivers:
 - Both methods score all candidate pairs on this split: `∑_problems n(n-1)/2 = 6638`.
 - BEqCritic’s per-pair cost is dominated by cross-encoder inference; Self-BLEU is dominated by tokenization + n-gram overlap.

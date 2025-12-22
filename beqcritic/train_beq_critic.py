@@ -419,7 +419,7 @@ def main():
         per_device_train_batch_size=int(args.batch_size),
         per_device_eval_batch_size=int(args.batch_size),
         gradient_accumulation_steps=int(args.grad_accum),
-        evaluation_strategy="steps",
+        eval_strategy="steps",
         eval_steps=200,
         save_steps=200,
         logging_steps=50,
