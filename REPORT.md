@@ -160,6 +160,16 @@ python -m beqcritic.paper_pipeline.beq_plus_eval \
   --output-jsonl runs/verifier_v1/beqplus_results.jsonl
 ```
 
+Verifier oracle-miss diagnostic (`runs/verifier_v1/oracle_miss_analysis.md`):
+- 11 oracle-true / verifier-wrong problems
+- best-correct rank under verifier: 8/11 within top-2, 9/11 within top-5, 11/11 within top-10
+- mean score gap top1 vs best-correct: 2.72 (median 1.65)
+
+This suggests a better decision rule on the top-k (e.g., cluster aggregation) should recover several misses.
+
+Cluster-aggregate selector (top-M + BEqCritic clustering + mean(top2) score) did not change BEq+ accuracy:
+- selfbleu vs clusteragg: `runs/verifier_v1/ab_metrics_beqplus_selfbleu_vs_clusteragg.md` (clusteragg 33.1%)
+
 ## Typecheck filtering before selection
 
 Typecheck pre-pass using the same BEq+ wrapping logic (lean-interact + dataset headers) showed

@@ -1,8 +1,10 @@
 """
 Train a reference-free verifier: score (nl_statement, lean_statement) pairs.
 
-Uses a pairwise ranking loss per problem id:
-  score(nl, pos) > score(nl, neg)
+Supports:
+  - Pairwise ranking loss per problem id (score(pos) > score(neg))
+  - Listwise softmax loss per problem id (optimize top-1 selection)
+  - Optional hard-negative mining rounds
 """
 
 from __future__ import annotations
@@ -137,12 +139,46 @@ def _rows_from_hf(
     return rows
 
 
+def _prepare_text_pairs(
+    nl_list: list[str],
+    lean_list: list[str],
+    use_features: bool,
+) -> tuple[list[str], list[str]]:
+    nl_clean = [normalize_whitespace(x) for x in nl_list]
+    lean_clean = [normalize_lean_statement(x) for x in lean_list]
+    if use_features:
+        lean_clean = [f"{extract_features(s).to_prefix()} {s}" for s in lean_clean]
+    return nl_clean, lean_clean
+
+
+def _maybe_sample_indices(indices: list[int], max_count: int, rnd: random.Random) -> list[int]:
+    if max_count <= 0 or len(indices) <= max_count:
+        return list(indices)
+    return rnd.sample(indices, int(max_count))
+
+
 @dataclass(frozen=True)
 class PairwiseExample:
     nl: str
     pos: str
     neg: str
     problem_id: str | None = None
+
+
+@dataclass(frozen=True)
+class ListwiseExample:
+    nl: str
+    candidates: list[str]
+    labels: list[int]
+    problem_id: str | None = None
+
+
+@dataclass(frozen=True)
+class ProblemGroup:
+    problem_id: str
+    nl: str
+    candidates: list[str]
+    labels: list[int]
 
 
 def _build_pairwise_examples(rows: list[dict], args) -> list[PairwiseExample]:
@@ -201,12 +237,263 @@ def _build_pairwise_examples(rows: list[dict], args) -> list[PairwiseExample]:
     return examples
 
 
+def _build_groups(rows: list[dict], args) -> list[ProblemGroup]:
+    for r in rows:
+        r[args.label_key] = _guess_bool_label(r.get(args.label_key))
+
+    if not args.problem_id_key:
+        raise ValueError("--problem-id-key is required for listwise ranking")
+
+    grouped: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        pid = str(r.get(args.problem_id_key))
+        if pid not in grouped:
+            grouped[pid] = {"nl": "", "candidates": [], "labels": []}
+        entry = grouped[pid]
+        if not entry["nl"]:
+            nl_val = r.get(args.nl_key)
+            if nl_val:
+                entry["nl"] = str(nl_val)
+        cand = "" if r.get(args.pred_key) is None else str(r.get(args.pred_key))
+        entry["candidates"].append(cand)
+        entry["labels"].append(int(r.get(args.label_key)))
+
+    groups: list[ProblemGroup] = []
+    for pid, entry in grouped.items():
+        nl = entry["nl"]
+        if not nl:
+            continue
+        groups.append(
+            ProblemGroup(
+                problem_id=pid,
+                nl=nl,
+                candidates=entry["candidates"],
+                labels=entry["labels"],
+            )
+        )
+    return groups
+
+
+def _build_listwise_examples(
+    groups: list[ProblemGroup],
+    *,
+    rnd: random.Random,
+    negatives_per_group: int,
+    max_positives: int,
+) -> list[ListwiseExample]:
+    examples: list[ListwiseExample] = []
+    for g in groups:
+        pos_idx = [i for i, lab in enumerate(g.labels) if int(lab) == 1]
+        neg_idx = [i for i, lab in enumerate(g.labels) if int(lab) == 0]
+        if not pos_idx or not neg_idx:
+            continue
+
+        pos_idx = _maybe_sample_indices(pos_idx, max_positives, rnd)
+        neg_idx = _maybe_sample_indices(neg_idx, negatives_per_group, rnd)
+
+        pairs: list[tuple[str, int]] = []
+        pairs.extend([(g.candidates[i], 1) for i in pos_idx])
+        pairs.extend([(g.candidates[i], 0) for i in neg_idx])
+        rnd.shuffle(pairs)
+
+        if not pairs:
+            continue
+        candidates, labels = zip(*pairs)
+        examples.append(
+            ListwiseExample(
+                nl=g.nl,
+                candidates=list(candidates),
+                labels=[int(x) for x in labels],
+                problem_id=g.problem_id,
+            )
+        )
+    return examples
+
+
+@torch.inference_mode()
+def _score_pairs(
+    model,
+    tokenizer,
+    nl_list: list[str],
+    lean_list: list[str],
+    *,
+    max_length: int,
+    use_features: bool,
+    batch_size: int,
+) -> list[float]:
+    if len(nl_list) != len(lean_list):
+        raise ValueError(f"Length mismatch: nl={len(nl_list)} lean={len(lean_list)}")
+    device = next(model.parameters()).device
+    scores: list[float] = []
+    for i in range(0, len(nl_list), batch_size):
+        chunk_nl = nl_list[i : i + batch_size]
+        chunk_lean = lean_list[i : i + batch_size]
+        nl_clean, lean_clean = _prepare_text_pairs(chunk_nl, chunk_lean, use_features)
+        enc = tokenizer(
+            nl_clean,
+            lean_clean,
+            padding=True,
+            truncation=True,
+            max_length=int(max_length),
+            return_tensors="pt",
+        ).to(device)
+        logits = model(**enc).logits
+        if logits.dim() == 2 and logits.size(-1) == 1:
+            vals = logits.squeeze(-1)
+        elif logits.dim() == 2 and logits.size(-1) >= 2:
+            vals = logits[:, 1]
+        else:
+            vals = logits.view(-1)
+        scores.extend(vals.detach().cpu().tolist())
+    return scores
+
+
+def _score_grouped_candidates(
+    groups: list[ProblemGroup],
+    model,
+    tokenizer,
+    *,
+    max_length: int,
+    use_features: bool,
+    batch_size: int,
+) -> list[list[float]]:
+    if not groups:
+        return []
+    flat_nl: list[str] = []
+    flat_cands: list[str] = []
+    sizes: list[int] = []
+    for g in groups:
+        sizes.append(len(g.candidates))
+        flat_nl.extend([g.nl] * len(g.candidates))
+        flat_cands.extend(g.candidates)
+    scores = _score_pairs(
+        model,
+        tokenizer,
+        flat_nl,
+        flat_cands,
+        max_length=max_length,
+        use_features=use_features,
+        batch_size=batch_size,
+    )
+    grouped_scores: list[list[float]] = []
+    offset = 0
+    for n in sizes:
+        grouped_scores.append(scores[offset : offset + n])
+        offset += n
+    return grouped_scores
+
+
+def _build_mined_listwise_examples(
+    groups: list[ProblemGroup],
+    grouped_scores: list[list[float]],
+    args,
+    *,
+    rnd: random.Random,
+) -> list[ListwiseExample]:
+    examples: list[ListwiseExample] = []
+    for g, scores in zip(groups, grouped_scores):
+        pos_idx = [i for i, lab in enumerate(g.labels) if int(lab) == 1]
+        neg_idx = [i for i, lab in enumerate(g.labels) if int(lab) == 0]
+        if not pos_idx or not neg_idx:
+            continue
+
+        pos_idx = _maybe_sample_indices(pos_idx, int(args.listwise_max_positives), rnd)
+
+        hard_sorted = sorted(neg_idx, key=lambda i: (-scores[i], i))
+        hard = hard_sorted[: int(args.mining_hard_k)]
+        remaining = [i for i in neg_idx if i not in hard]
+        rnd.shuffle(remaining)
+        easy = remaining[: int(args.mining_easy_k)]
+
+        neg_pool = list(dict.fromkeys(hard + easy))
+        max_negs = int(args.listwise_negatives)
+        if max_negs > 0:
+            if len(neg_pool) < max_negs:
+                remaining = [i for i in neg_idx if i not in neg_pool]
+                rnd.shuffle(remaining)
+                neg_pool.extend(remaining[: max_negs - len(neg_pool)])
+            else:
+                neg_pool = neg_pool[:max_negs]
+
+        if not neg_pool:
+            continue
+
+        pairs: list[tuple[str, int]] = []
+        pairs.extend([(g.candidates[i], 1) for i in pos_idx])
+        pairs.extend([(g.candidates[i], 0) for i in neg_pool])
+        rnd.shuffle(pairs)
+        if not pairs:
+            continue
+        candidates, labels = zip(*pairs)
+        examples.append(
+            ListwiseExample(
+                nl=g.nl,
+                candidates=list(candidates),
+                labels=[int(x) for x in labels],
+                problem_id=g.problem_id,
+            )
+        )
+    return examples
+
+
+def _build_mined_pairwise_examples(
+    groups: list[ProblemGroup],
+    grouped_scores: list[list[float]],
+    args,
+    *,
+    rnd: random.Random,
+) -> list[PairwiseExample]:
+    examples: list[PairwiseExample] = []
+    for g, scores in zip(groups, grouped_scores):
+        pos_idx = [i for i, lab in enumerate(g.labels) if int(lab) == 1]
+        neg_idx = [i for i, lab in enumerate(g.labels) if int(lab) == 0]
+        if not pos_idx or not neg_idx:
+            continue
+
+        hard_sorted = sorted(neg_idx, key=lambda i: (-scores[i], i))
+        hard = hard_sorted[: int(args.mining_hard_k)]
+        remaining = [i for i in neg_idx if i not in hard]
+        rnd.shuffle(remaining)
+        easy = remaining[: int(args.mining_easy_k)]
+        neg_pool = list(dict.fromkeys(hard + easy))
+        if not neg_pool:
+            continue
+
+        pairs: list[tuple[int, int]] = [(p, n) for p in pos_idx for n in neg_pool]
+        rnd.shuffle(pairs)
+        if int(args.max_pairs_per_problem) > 0:
+            pairs = pairs[: int(args.max_pairs_per_problem)]
+
+        for p_idx, n_idx in pairs:
+            examples.append(
+                PairwiseExample(
+                    nl=g.nl,
+                    pos=g.candidates[p_idx],
+                    neg=g.candidates[n_idx],
+                    problem_id=g.problem_id,
+                )
+            )
+    rnd.shuffle(examples)
+    return examples
+
+
 def _to_hf_dataset(examples: list[PairwiseExample]) -> Dataset:
     return Dataset.from_dict(
         {
             "nl": [e.nl for e in examples],
             "pos": [e.pos for e in examples],
             "neg": [e.neg for e in examples],
+            "problem_id": [e.problem_id for e in examples],
+        }
+    )
+
+
+def _to_listwise_dataset(examples: list[ListwiseExample]) -> Dataset:
+    return Dataset.from_dict(
+        {
+            "nl": [e.nl for e in examples],
+            "candidates": [list(e.candidates) for e in examples],
+            "labels": [list(e.labels) for e in examples],
             "problem_id": [e.problem_id for e in examples],
         }
     )
@@ -235,7 +522,75 @@ class PairwiseRankingTrainer(Trainer):
         return loss.detach(), diff, labels
 
 
-def compute_metrics(eval_pred):
+class ListwiseRankingTrainer(Trainer):
+    def __init__(self, *args, tau: float = 1.0, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.tau = float(tau)
+
+    @staticmethod
+    def _iter_groups(group_sizes: torch.Tensor) -> list[int]:
+        return [int(x) for x in group_sizes.detach().cpu().tolist()]
+
+    def _listwise_loss(
+        self,
+        logits: torch.Tensor,
+        labels: torch.Tensor,
+        group_sizes: torch.Tensor,
+    ) -> torch.Tensor:
+        losses: list[torch.Tensor] = []
+        offset = 0
+        for size in self._iter_groups(group_sizes):
+            if size <= 0:
+                continue
+            group_logits = logits[offset : offset + size]
+            group_labels = labels[offset : offset + size]
+            offset += size
+            pos_mask = group_labels > 0.5
+            if not bool(pos_mask.any()):
+                continue
+            target = pos_mask.float() / pos_mask.float().sum()
+            logp = (group_logits / float(self.tau)).log_softmax(0)
+            losses.append(-(target * logp).sum())
+        if not losses:
+            return logits.sum() * 0.0
+        return torch.stack(losses).mean()
+
+    def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
+        labels = inputs["labels"]
+        group_sizes = inputs["group_sizes"]
+        model_inputs = {k: v for k, v in inputs.items() if k not in {"labels", "group_sizes"}}
+        logits = model(**model_inputs).logits.squeeze(-1)
+        loss = self._listwise_loss(logits, labels, group_sizes)
+        if return_outputs:
+            return loss, {"logits": logits, "labels": labels, "group_sizes": group_sizes}
+        return loss
+
+    def prediction_step(self, model, inputs, prediction_loss_only=False, ignore_keys=None):
+        if prediction_loss_only:
+            loss = self.compute_loss(model, inputs)
+            return (loss.detach(), None, None)
+        with torch.no_grad():
+            loss, outputs = self.compute_loss(model, inputs, return_outputs=True)
+        logits = outputs["logits"].detach()
+        labels = outputs["labels"].detach()
+        group_sizes = outputs["group_sizes"].detach()
+
+        top1_correct: list[float] = []
+        offset = 0
+        for size in self._iter_groups(group_sizes):
+            if size <= 0:
+                continue
+            group_logits = logits[offset : offset + size]
+            group_labels = labels[offset : offset + size]
+            offset += size
+            top_idx = int(torch.argmax(group_logits))
+            top1_correct.append(1.0 if float(group_labels[top_idx]) > 0.5 else 0.0)
+
+        preds = torch.tensor(top1_correct)
+        return loss.detach(), preds.cpu(), preds.cpu()
+
+
+def compute_pairwise_metrics(eval_pred):
     diffs, labels = eval_pred
     diffs = np.asarray(diffs)
     if diffs.ndim > 1:
@@ -243,6 +598,15 @@ def compute_metrics(eval_pred):
     acc = float((diffs > 0).mean()) if diffs.size else 0.0
     mean_margin = float(diffs.mean()) if diffs.size else 0.0
     return {"rank_acc": acc, "mean_margin": mean_margin}
+
+
+def compute_listwise_metrics(eval_pred):
+    preds, _labels = eval_pred
+    preds = np.asarray(preds)
+    if preds.ndim > 1:
+        preds = preds.reshape(-1)
+    acc = float(preds.mean()) if preds.size else 0.0
+    return {"rank_acc": acc}
 
 
 def main() -> None:
@@ -262,9 +626,20 @@ def main() -> None:
     p.add_argument("--output-dir", type=str, required=True)
     p.add_argument("--max-length", type=int, default=512)
     p.add_argument("--use-features", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--loss", type=str, default="pairwise", choices=["pairwise", "listwise"])
+    p.add_argument("--listwise-tau", type=float, default=1.0)
+    p.add_argument("--listwise-negatives", type=int, default=0, help="0 = use all negatives")
+    p.add_argument("--listwise-max-positives", type=int, default=0, help="0 = use all positives")
+    p.add_argument("--listwise-eval-negatives", type=int, default=0, help="0 = use listwise-negatives")
 
     p.add_argument("--max-pairs-per-problem", type=int, default=64)
     p.add_argument("--neg-sampling", type=str, default="random", choices=["random", "hard"])
+    p.add_argument("--mining-rounds", type=int, default=0)
+    p.add_argument("--mining-hard-k", type=int, default=4)
+    p.add_argument("--mining-easy-k", type=int, default=1)
+    p.add_argument("--mining-epochs", type=float, default=1.0)
+    p.add_argument("--warmup-epochs", type=float, default=0.0)
+    p.add_argument("--mining-batch-size", type=int, default=32)
     p.add_argument("--seed", type=int, default=0)
 
     p.add_argument("--epochs", type=float, default=3.0)
@@ -309,19 +684,6 @@ def main() -> None:
             args.seed,
         )
 
-    train_examples = _build_pairwise_examples(train_rows, args)
-    eval_examples = _build_pairwise_examples(eval_rows, args)
-
-    def _print_example_stats(name: str, examples: list[PairwiseExample]) -> None:
-        by_pid = Counter(e.problem_id for e in examples)
-        print(f"{name} pairs: {len(examples)} (problems={len(by_pid)})")
-
-    _print_example_stats("Train", train_examples)
-    _print_example_stats("Eval", eval_examples)
-
-    train_ds = _to_hf_dataset(train_examples)
-    eval_ds = _to_hf_dataset(eval_examples)
-
     base_model = _resolve_base_model(args.base_model)
     local_only = Path(base_model).exists()
     tok = AutoTokenizer.from_pretrained(base_model, use_fast=True, local_files_only=local_only)
@@ -332,6 +694,21 @@ def main() -> None:
     )
 
     use_features = bool(args.use_features)
+    rnd = random.Random(args.seed)
+
+    def _print_pairwise_stats(name: str, examples: list[PairwiseExample]) -> None:
+        by_pid = Counter(e.problem_id for e in examples)
+        print(f"{name} pairs: {len(examples)} (problems={len(by_pid)})")
+
+    def _print_listwise_stats(name: str, examples: list[ListwiseExample]) -> None:
+        if not examples:
+            print(f"{name} groups: 0")
+            return
+        cand_counts = [len(e.candidates) for e in examples]
+        pos_counts = [sum(int(x) for x in e.labels) for e in examples]
+        avg_cands = sum(cand_counts) / max(1, len(cand_counts))
+        avg_pos = sum(pos_counts) / max(1, len(pos_counts))
+        print(f"{name} groups: {len(examples)} (avg candidates={avg_cands:.1f}, avg positives={avg_pos:.1f})")
 
     def preprocess(batch):
         nl_clean = [normalize_whitespace(x) for x in batch["nl"]]
@@ -362,9 +739,6 @@ def main() -> None:
             out[f"{k}_neg"] = v
         return out
 
-    train_tok = train_ds.map(preprocess, batched=True, remove_columns=train_ds.column_names)
-    eval_tok = eval_ds.map(preprocess, batched=True, remove_columns=eval_ds.column_names)
-
     class _PairwiseCollator:
         def __init__(self, tokenizer):
             self.tokenizer = tokenizer
@@ -384,46 +758,180 @@ def main() -> None:
                 out[f"{k}_neg"] = v
             return out
 
-    collator = _PairwiseCollator(tok)
+    class _ListwiseCollator:
+        def __init__(self, tokenizer):
+            self.tokenizer = tokenizer
 
-    targs = TrainingArguments(
-        output_dir=args.output_dir,
-        num_train_epochs=float(args.epochs),
-        learning_rate=float(args.lr),
-        per_device_train_batch_size=int(args.batch_size),
-        per_device_eval_batch_size=int(args.batch_size),
-        gradient_accumulation_steps=int(args.grad_accum),
-        eval_strategy="steps",
-        eval_steps=200,
-        save_steps=200,
-        logging_steps=50,
-        save_total_limit=2,
-        save_only_model=True,
-        remove_unused_columns=False,
-        fp16=bool(args.fp16),
-        bf16=bool(args.bf16),
-        report_to=[],
-        load_best_model_at_end=True,
-        metric_for_best_model="rank_acc",
-        greater_is_better=True,
-        ddp_find_unused_parameters=False,
-    )
+        def __call__(self, features):
+            nl_list: list[str] = []
+            cand_list: list[str] = []
+            labels: list[int] = []
+            group_sizes: list[int] = []
+            for f in features:
+                nl = "" if f.get("nl") is None else str(f.get("nl"))
+                cands = f.get("candidates") or []
+                labs = f.get("labels") or []
+                if len(cands) != len(labs):
+                    raise ValueError("Candidates/labels length mismatch in listwise batch.")
+                group_sizes.append(len(cands))
+                for cand, lab in zip(cands, labs):
+                    nl_list.append(nl)
+                    cand_list.append("" if cand is None else str(cand))
+                    labels.append(int(lab))
+            nl_clean, lean_clean = _prepare_text_pairs(nl_list, cand_list, use_features)
+            enc = self.tokenizer(
+                nl_clean,
+                lean_clean,
+                padding=True,
+                truncation=True,
+                max_length=int(args.max_length),
+                return_tensors="pt",
+            )
+            enc["labels"] = torch.tensor(labels, dtype=torch.float)
+            enc["group_sizes"] = torch.tensor(group_sizes, dtype=torch.long)
+            return enc
 
-    trainer = PairwiseRankingTrainer(
-        model=model,
-        args=targs,
-        train_dataset=train_tok,
-        eval_dataset=eval_tok,
-        tokenizer=tok,
-        data_collator=collator,
-        compute_metrics=compute_metrics,
-    )
+    def _make_pairwise_dataset(examples: list[PairwiseExample]) -> Dataset:
+        ds = _to_hf_dataset(examples)
+        return ds.map(preprocess, batched=True, remove_columns=ds.column_names)
 
-    trainer.train()
-    trainer.save_model(args.output_dir)
+    def _make_trainer(train_dataset: Dataset, num_epochs: float):
+        targs = TrainingArguments(
+            output_dir=args.output_dir,
+            num_train_epochs=float(num_epochs),
+            learning_rate=float(args.lr),
+            per_device_train_batch_size=int(args.batch_size),
+            per_device_eval_batch_size=int(args.batch_size),
+            gradient_accumulation_steps=int(args.grad_accum),
+            eval_strategy="steps",
+            eval_steps=200,
+            save_steps=200,
+            logging_steps=50,
+            save_total_limit=2,
+            save_only_model=True,
+            remove_unused_columns=False,
+            fp16=bool(args.fp16),
+            bf16=bool(args.bf16),
+            report_to=[],
+            load_best_model_at_end=True,
+            metric_for_best_model="rank_acc",
+            greater_is_better=True,
+            ddp_find_unused_parameters=False,
+        )
+
+        if args.loss == "pairwise":
+            return PairwiseRankingTrainer(
+                model=model,
+                args=targs,
+                train_dataset=train_dataset,
+                eval_dataset=eval_dataset,
+                tokenizer=tok,
+                data_collator=collator,
+                compute_metrics=compute_pairwise_metrics,
+            )
+        return ListwiseRankingTrainer(
+            model=model,
+            args=targs,
+            train_dataset=train_dataset,
+            eval_dataset=eval_dataset,
+            tokenizer=tok,
+            data_collator=collator,
+            compute_metrics=compute_listwise_metrics,
+            tau=float(args.listwise_tau),
+        )
+
+    if args.loss == "pairwise":
+        eval_examples = _build_pairwise_examples(eval_rows, args)
+        _print_pairwise_stats("Eval", eval_examples)
+        eval_dataset = _make_pairwise_dataset(eval_examples)
+        collator = _PairwiseCollator(tok)
+    else:
+        eval_groups = _build_groups(eval_rows, args)
+        eval_negatives = int(args.listwise_eval_negatives)
+        if eval_negatives <= 0:
+            eval_negatives = int(args.listwise_negatives)
+        eval_examples = _build_listwise_examples(
+            eval_groups,
+            rnd=random.Random(args.seed + 1),
+            negatives_per_group=eval_negatives,
+            max_positives=int(args.listwise_max_positives),
+        )
+        _print_listwise_stats("Eval", eval_examples)
+        eval_dataset = _to_listwise_dataset(eval_examples)
+        collator = _ListwiseCollator(tok)
+
+    final_trainer = None
+    train_groups = None
+    if int(args.mining_rounds) > 0:
+        train_groups = _build_groups(train_rows, args)
+        if float(args.warmup_epochs) > 0:
+            if args.loss == "pairwise":
+                warmup_examples = _build_pairwise_examples(train_rows, args)
+                _print_pairwise_stats("Warmup", warmup_examples)
+                warmup_dataset = _make_pairwise_dataset(warmup_examples)
+            else:
+                warmup_examples = _build_listwise_examples(
+                    train_groups,
+                    rnd=rnd,
+                    negatives_per_group=int(args.listwise_negatives),
+                    max_positives=int(args.listwise_max_positives),
+                )
+                _print_listwise_stats("Warmup", warmup_examples)
+                warmup_dataset = _to_listwise_dataset(warmup_examples)
+            final_trainer = _make_trainer(warmup_dataset, float(args.warmup_epochs))
+            final_trainer.train(resume_from_checkpoint=False)
+            model = final_trainer.model
+
+        for round_idx in range(int(args.mining_rounds)):
+            model.eval()
+            grouped_scores = _score_grouped_candidates(
+                train_groups,
+                model,
+                tok,
+                max_length=int(args.max_length),
+                use_features=use_features,
+                batch_size=int(args.mining_batch_size),
+            )
+            model.train()
+
+            if args.loss == "pairwise":
+                mined_examples = _build_mined_pairwise_examples(train_groups, grouped_scores, args, rnd=rnd)
+                _print_pairwise_stats(f"Mining {round_idx + 1}", mined_examples)
+                train_dataset = _make_pairwise_dataset(mined_examples)
+            else:
+                mined_examples = _build_mined_listwise_examples(train_groups, grouped_scores, args, rnd=rnd)
+                _print_listwise_stats(f"Mining {round_idx + 1}", mined_examples)
+                train_dataset = _to_listwise_dataset(mined_examples)
+
+            final_trainer = _make_trainer(train_dataset, float(args.mining_epochs))
+            final_trainer.train(resume_from_checkpoint=False)
+            model = final_trainer.model
+    else:
+        if args.loss == "pairwise":
+            train_examples = _build_pairwise_examples(train_rows, args)
+            _print_pairwise_stats("Train", train_examples)
+            train_dataset = _make_pairwise_dataset(train_examples)
+        else:
+            train_groups = _build_groups(train_rows, args)
+            train_examples = _build_listwise_examples(
+                train_groups,
+                rnd=rnd,
+                negatives_per_group=int(args.listwise_negatives),
+                max_positives=int(args.listwise_max_positives),
+            )
+            _print_listwise_stats("Train", train_examples)
+            train_dataset = _to_listwise_dataset(train_examples)
+
+        final_trainer = _make_trainer(train_dataset, float(args.epochs))
+        final_trainer.train(resume_from_checkpoint=False)
+
+    if final_trainer is None:
+        raise SystemExit("No training rounds were executed.")
+
+    final_trainer.save_model(args.output_dir)
     tok.save_pretrained(args.output_dir)
 
-    metrics = trainer.evaluate()
+    metrics = final_trainer.evaluate()
     print("Final eval:", metrics)
 
 
