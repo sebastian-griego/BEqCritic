@@ -160,6 +160,65 @@ python -m beqcritic.paper_pipeline.beq_plus_eval \
   --output-jsonl runs/verifier_v1/beqplus_results.jsonl
 ```
 
+## Typecheck filtering before selection
+
+Typecheck pre-pass using the same BEq+ wrapping logic (lean-interact + dataset headers) showed
+all candidates in this pool already typecheck, so filtering is a no-op:
+
+- Summary: `runs/typecheck_v1/typecheck_summary.md`
+- Verifier top1 typechecks rate: 100% (`runs/typecheck_v1/verifier_typecheck_stats.md`)
+
+BEq+ re-runs after typecheck-aware selection are unchanged:
+- selfbleu vs beqcritic: `runs/typecheck_v1/ab_metrics_beqplus_selfbleu_vs_beqcritic.md`
+- selfbleu vs verifier: `runs/typecheck_v1/ab_metrics_beqplus_selfbleu_vs_verifier.md`
+
+Repro (from repo root):
+
+```bash
+python -m beqcritic.paper_pipeline.beq_plus_typecheck \
+  --dataset PAug/ProofNetVerif --split test \
+  --input runs/beqplus_ab_v1/proofnetverif_test_candidates.jsonl \
+  --output runs/typecheck_v1/proofnetverif_test_candidates_typechecked.jsonl \
+  --output-filtered runs/typecheck_v1/proofnetverif_test_candidates_typechecked_filtered.jsonl \
+  --summary-md runs/typecheck_v1/typecheck_summary.md \
+  --cache-path runs/typecheck_v1/typecheck_cache.json \
+  --lean-version v4.8.0 --timeout-s 60
+
+python -m beqcritic.self_bleu_select \
+  --input runs/typecheck_v1/proofnetverif_test_candidates_typechecked_filtered.jsonl \
+  --output runs/typecheck_v1/proofnetverif_test_selection_selfbleu.jsonl
+
+python -m beqcritic.score_and_select \
+  --model runs/l40_v2/checkpoints/beqcritic_deberta_v3_base \
+  --input runs/typecheck_v1/proofnetverif_test_candidates_typechecked_filtered.jsonl \
+  --output runs/typecheck_v1/proofnetverif_test_selection_beqcritic.jsonl \
+  --device cuda:0 --similarity critic \
+  --threshold 0.5 --tie-break medoid --cluster-rank size_then_cohesion \
+  --triangle-prune-margin 0.2
+
+python -m beqcritic.verifier_select \
+  --model runs/verifier_v1/checkpoints/nl_verifier_deberta_v3_base \
+  --dataset PAug/ProofNetVerif --split test \
+  --input runs/typecheck_v1/proofnetverif_test_candidates_typechecked.jsonl \
+  --output runs/typecheck_v1/proofnetverif_test_selection_verifier.jsonl \
+  --device cuda:0 --batch-size 64 \
+  --stats-md runs/typecheck_v1/verifier_typecheck_stats.md
+
+python -m beqcritic.paper_pipeline.beq_plus_eval \
+  --dataset PAug/ProofNetVerif --split test \
+  --selections-a runs/typecheck_v1/proofnetverif_test_selection_selfbleu.jsonl --a-name selfbleu \
+  --selections-b runs/typecheck_v1/proofnetverif_test_selection_beqcritic.jsonl --b-name beqcritic \
+  --lean-version v4.8.0 --timeout-s 60 \
+  --output-jsonl runs/typecheck_v1/beqplus_results_selfbleu_vs_beqcritic.jsonl
+
+python -m beqcritic.paper_pipeline.beq_plus_eval \
+  --dataset PAug/ProofNetVerif --split test \
+  --selections-a runs/typecheck_v1/proofnetverif_test_selection_selfbleu.jsonl --a-name selfbleu \
+  --selections-b runs/typecheck_v1/proofnetverif_test_selection_verifier.jsonl --b-name verifier \
+  --lean-version v4.8.0 --timeout-s 60 \
+  --output-jsonl runs/typecheck_v1/beqplus_results_selfbleu_vs_verifier.jsonl
+```
+
 Cost drivers:
 - Both methods score all candidate pairs on this split: `∑_problems n(n-1)/2 = 6638`.
 - BEqCritic’s per-pair cost is dominated by cross-encoder inference; Self-BLEU is dominated by tokenization + n-gram overlap.
