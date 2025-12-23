@@ -10,9 +10,10 @@ Supports:
 from __future__ import annotations
 
 import argparse
+import math
 import random
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,7 @@ from transformers import (
     AutoTokenizer,
     AutoModelForSequenceClassification,
     Trainer,
+    TrainerCallback,
     TrainingArguments,
     set_seed,
 )
@@ -101,18 +103,18 @@ def _resolve_base_model(name_or_path: str) -> str:
     return name_or_path
 
 
-def _guess_bool_label(x: Any) -> int:
+def _as_label(x: Any) -> int:
     if isinstance(x, bool):
-        return int(x)
-    if isinstance(x, (int, np.integer)):
-        return int(x)
-    if isinstance(x, str):
-        xl = x.strip().lower()
-        if xl in ["1", "true", "yes", "correct", "ok"]:
-            return 1
-        if xl in ["0", "false", "no", "incorrect", "wrong"]:
-            return 0
-    raise ValueError(f"Cannot interpret label value: {x!r}")
+        x = int(x)
+    elif isinstance(x, str):
+        x = x.strip()
+    try:
+        x_int = int(x)
+    except Exception as exc:
+        raise ValueError(f"label must be 0/1, got {x!r}") from exc
+    if x_int not in (0, 1):
+        raise ValueError(f"label must be 0/1, got {x_int!r}")
+    return int(x_int)
 
 
 def _rows_from_hf(
@@ -171,6 +173,7 @@ class ListwiseExample:
     candidates: list[str]
     labels: list[int]
     problem_id: str | None = None
+    sampled_indices: list[int] | None = None
 
 
 @dataclass(frozen=True)
@@ -181,9 +184,33 @@ class ProblemGroup:
     labels: list[int]
 
 
+@dataclass
+class ListwiseBuildStats:
+    groups_total: int = 0
+    groups_used: int = 0
+    skipped_no_pos: int = 0
+    skipped_no_neg: int = 0
+    skipped_invalid: int = 0
+    raw_candidate_counts: list[int] = field(default_factory=list)
+    pos_counts: list[int] = field(default_factory=list)
+    neg_counts: list[int] = field(default_factory=list)
+    label_hist: Counter = field(default_factory=Counter)
+    sampled_pos_fracs: list[float] = field(default_factory=list)
+
+
+@dataclass
+class MiningStats:
+    groups_total: int = 0
+    top1_neg: int = 0
+    pos_score_sum: float = 0.0
+    pos_score_count: int = 0
+    hard_score_sum: float = 0.0
+    hard_score_count: int = 0
+
+
 def _build_pairwise_examples(rows: list[dict], args) -> list[PairwiseExample]:
     for r in rows:
-        r[args.label_key] = _guess_bool_label(r.get(args.label_key))
+        r[args.label_key] = _as_label(r.get(args.label_key))
 
     if not args.problem_id_key:
         raise ValueError("--problem-id-key is required for pairwise ranking")
@@ -239,7 +266,7 @@ def _build_pairwise_examples(rows: list[dict], args) -> list[PairwiseExample]:
 
 def _build_groups(rows: list[dict], args) -> list[ProblemGroup]:
     for r in rows:
-        r[args.label_key] = _guess_bool_label(r.get(args.label_key))
+        r[args.label_key] = _as_label(r.get(args.label_key))
 
     if not args.problem_id_key:
         raise ValueError("--problem-id-key is required for listwise ranking")
@@ -274,40 +301,192 @@ def _build_groups(rows: list[dict], args) -> list[ProblemGroup]:
     return groups
 
 
+def _safe_mean(values: list[int | float]) -> float:
+    return float(sum(values) / len(values)) if values else 0.0
+
+
+def _safe_median(values: list[int | float]) -> float:
+    if not values:
+        return 0.0
+    return float(np.median(np.asarray(values, dtype=np.float64)))
+
+
+def _update_listwise_stats(
+    stats: ListwiseBuildStats,
+    raw_count: int,
+    pos_count: int,
+    neg_count: int,
+    labels: list[int],
+) -> None:
+    stats.groups_used += 1
+    stats.raw_candidate_counts.append(int(raw_count))
+    stats.pos_counts.append(int(pos_count))
+    stats.neg_counts.append(int(neg_count))
+    stats.label_hist.update(labels)
+    total = pos_count + neg_count
+    stats.sampled_pos_fracs.append(float(pos_count) / float(total) if total else 0.0)
+
+
+def _validate_listwise_stats(
+    stats: ListwiseBuildStats,
+    label: str,
+    *,
+    max_no_pos_rate: float,
+    max_no_neg_rate: float,
+) -> None:
+    total = max(1, stats.groups_total)
+    no_pos_rate = stats.skipped_no_pos / total
+    no_neg_rate = stats.skipped_no_neg / total
+    if no_pos_rate > float(max_no_pos_rate):
+        raise ValueError(
+            f"{label}: skipped_no_pos rate {no_pos_rate:.1%} exceeds {float(max_no_pos_rate):.0%}"
+        )
+    if no_neg_rate > float(max_no_neg_rate):
+        raise ValueError(
+            f"{label}: skipped_no_neg rate {no_neg_rate:.1%} exceeds {float(max_no_neg_rate):.0%}"
+        )
+    if stats.groups_used == 0:
+        raise ValueError(f"{label}: no usable groups after filtering")
+
+
+def _print_listwise_stats(stats: ListwiseBuildStats, label: str) -> None:
+    total_labels = sum(stats.label_hist.values())
+    total_pos = int(stats.label_hist.get(1, 0))
+    total_neg = int(stats.label_hist.get(0, 0))
+    pos_frac = total_pos / max(1, total_labels)
+    print(
+        f"{label} groups: seen={stats.groups_total}, used={stats.groups_used}, "
+        f"skipped_no_pos={stats.skipped_no_pos}, skipped_no_neg={stats.skipped_no_neg}, "
+        f"skipped_invalid={stats.skipped_invalid}"
+    )
+    print(
+        f"{label} mean/median pos per group: "
+        f"{_safe_mean(stats.pos_counts):.2f}/{_safe_median(stats.pos_counts):.2f}, "
+        f"neg per group: {_safe_mean(stats.neg_counts):.2f}/{_safe_median(stats.neg_counts):.2f}"
+    )
+    print(
+        f"{label} mean candidates before sampling: {_safe_mean(stats.raw_candidate_counts):.2f}"
+    )
+    print(
+        f"{label} label_hist: {{0: {total_neg}, 1: {total_pos}}}, "
+        f"sampled_pos_frac mean/median: "
+        f"{_safe_mean(stats.sampled_pos_fracs):.3f}/{_safe_median(stats.sampled_pos_fracs):.3f}, "
+        f"pos_frac_overall: {pos_frac:.3f}"
+    )
+
+
+def _update_mining_stats(
+    stats: MiningStats,
+    labels: list[int],
+    scores: list[float],
+    pos_idx: list[int],
+    hard_idx: list[int],
+) -> None:
+    stats.groups_total += 1
+    if scores:
+        top_idx = max(range(len(scores)), key=lambda i: scores[i])
+        if int(labels[top_idx]) == 0:
+            stats.top1_neg += 1
+    for i in pos_idx:
+        stats.pos_score_sum += float(scores[i])
+        stats.pos_score_count += 1
+    for i in hard_idx:
+        stats.hard_score_sum += float(scores[i])
+        stats.hard_score_count += 1
+
+
+def _print_mining_stats(stats: MiningStats, label: str) -> None:
+    pos_mean = stats.pos_score_sum / max(1, stats.pos_score_count)
+    hard_mean = stats.hard_score_sum / max(1, stats.hard_score_count)
+    top1_neg_frac = stats.top1_neg / max(1, stats.groups_total)
+    print(
+        f"{label} mining: groups={stats.groups_total}, "
+        f"top1_neg_frac={top1_neg_frac:.3f}, "
+        f"pos_score_mean={pos_mean:.3f}, hard_neg_score_mean={hard_mean:.3f}"
+    )
+
+
+def _compute_listwise_loss(
+    logits: torch.Tensor,
+    labels: torch.Tensor,
+    group_sizes: torch.Tensor,
+    tau: float,
+) -> torch.Tensor:
+    losses: list[torch.Tensor] = []
+    offset = 0
+    sizes = [int(x) for x in group_sizes.detach().cpu().tolist()]
+    for size in sizes:
+        if size <= 0:
+            continue
+        group_logits = logits[offset : offset + size]
+        group_labels = labels[offset : offset + size]
+        offset += size
+        pos_mask = group_labels > 0.5
+        if not bool(pos_mask.any()):
+            continue
+        target = pos_mask.float() / pos_mask.float().sum()
+        logp = (group_logits / float(tau)).log_softmax(0)
+        losses.append(-(target * logp).sum())
+    if not losses:
+        return logits.sum() * 0.0
+    return torch.stack(losses).mean()
+
+
 def _build_listwise_examples(
     groups: list[ProblemGroup],
     *,
     rnd: random.Random,
     negatives_per_group: int,
     max_positives: int,
-) -> list[ListwiseExample]:
+) -> tuple[list[ListwiseExample], ListwiseBuildStats]:
     examples: list[ListwiseExample] = []
+    stats = ListwiseBuildStats()
     for g in groups:
+        stats.groups_total += 1
+        if len(g.candidates) != len(g.labels):
+            stats.skipped_invalid += 1
+            continue
         pos_idx = [i for i, lab in enumerate(g.labels) if int(lab) == 1]
         neg_idx = [i for i, lab in enumerate(g.labels) if int(lab) == 0]
         if not pos_idx or not neg_idx:
+            if not pos_idx:
+                stats.skipped_no_pos += 1
+            if not neg_idx:
+                stats.skipped_no_neg += 1
+            continue
+        if set(pos_idx) & set(neg_idx):
+            stats.skipped_invalid += 1
             continue
 
         pos_idx = _maybe_sample_indices(pos_idx, max_positives, rnd)
         neg_idx = _maybe_sample_indices(neg_idx, negatives_per_group, rnd)
+        if not pos_idx or not neg_idx:
+            stats.skipped_invalid += 1
+            continue
+        if any(i < 0 or i >= len(g.candidates) for i in pos_idx + neg_idx):
+            stats.skipped_invalid += 1
+            continue
 
-        pairs: list[tuple[str, int]] = []
-        pairs.extend([(g.candidates[i], 1) for i in pos_idx])
-        pairs.extend([(g.candidates[i], 0) for i in neg_idx])
+        pairs: list[tuple[str, int, int]] = []
+        pairs.extend([(g.candidates[i], 1, i) for i in pos_idx])
+        pairs.extend([(g.candidates[i], 0, i) for i in neg_idx])
         rnd.shuffle(pairs)
 
         if not pairs:
             continue
-        candidates, labels = zip(*pairs)
+        candidates, labels, indices = zip(*pairs)
+        labels_list = [int(x) for x in labels]
+        _update_listwise_stats(stats, len(g.candidates), len(pos_idx), len(neg_idx), labels_list)
         examples.append(
             ListwiseExample(
                 nl=g.nl,
                 candidates=list(candidates),
-                labels=[int(x) for x in labels],
+                labels=labels_list,
                 problem_id=g.problem_id,
+                sampled_indices=list(indices),
             )
         )
-    return examples
+    return examples, stats
 
 
 @torch.inference_mode()
@@ -389,21 +568,44 @@ def _build_mined_listwise_examples(
     args,
     *,
     rnd: random.Random,
-) -> list[ListwiseExample]:
+) -> tuple[list[ListwiseExample], ListwiseBuildStats, MiningStats]:
     examples: list[ListwiseExample] = []
+    stats = ListwiseBuildStats()
+    mining_stats = MiningStats()
     for g, scores in zip(groups, grouped_scores):
+        stats.groups_total += 1
+        if len(g.candidates) != len(g.labels):
+            stats.skipped_invalid += 1
+            continue
         pos_idx = [i for i, lab in enumerate(g.labels) if int(lab) == 1]
         neg_idx = [i for i, lab in enumerate(g.labels) if int(lab) == 0]
         if not pos_idx or not neg_idx:
+            if not pos_idx:
+                stats.skipped_no_pos += 1
+            if not neg_idx:
+                stats.skipped_no_neg += 1
+            continue
+        if set(pos_idx) & set(neg_idx):
+            stats.skipped_invalid += 1
             continue
 
         pos_idx = _maybe_sample_indices(pos_idx, int(args.listwise_max_positives), rnd)
+        if not pos_idx:
+            stats.skipped_invalid += 1
+            continue
+        if any(i < 0 or i >= len(g.candidates) for i in pos_idx):
+            stats.skipped_invalid += 1
+            continue
+        if any(int(g.labels[i]) != 1 for i in pos_idx):
+            raise ValueError(f"Mining positives include non-positive labels for problem_id={g.problem_id}")
 
         hard_sorted = sorted(neg_idx, key=lambda i: (-scores[i], i))
         hard = hard_sorted[: int(args.mining_hard_k)]
         remaining = [i for i in neg_idx if i not in hard]
         rnd.shuffle(remaining)
         easy = remaining[: int(args.mining_easy_k)]
+        if any(int(g.labels[i]) != 0 for i in hard + easy):
+            raise ValueError(f"Mining negatives include positive labels for problem_id={g.problem_id}")
 
         neg_pool = list(dict.fromkeys(hard + easy))
         max_negs = int(args.listwise_negatives)
@@ -418,22 +620,26 @@ def _build_mined_listwise_examples(
         if not neg_pool:
             continue
 
-        pairs: list[tuple[str, int]] = []
-        pairs.extend([(g.candidates[i], 1) for i in pos_idx])
-        pairs.extend([(g.candidates[i], 0) for i in neg_pool])
+        pairs: list[tuple[str, int, int]] = []
+        pairs.extend([(g.candidates[i], 1, i) for i in pos_idx])
+        pairs.extend([(g.candidates[i], 0, i) for i in neg_pool])
         rnd.shuffle(pairs)
         if not pairs:
             continue
-        candidates, labels = zip(*pairs)
+        candidates, labels, indices = zip(*pairs)
+        labels_list = [int(x) for x in labels]
+        _update_listwise_stats(stats, len(g.candidates), len(pos_idx), len(neg_pool), labels_list)
+        _update_mining_stats(mining_stats, g.labels, scores, pos_idx, hard)
         examples.append(
             ListwiseExample(
                 nl=g.nl,
                 candidates=list(candidates),
-                labels=[int(x) for x in labels],
+                labels=labels_list,
                 problem_id=g.problem_id,
+                sampled_indices=list(indices),
             )
         )
-    return examples
+    return examples, stats, mining_stats
 
 
 def _build_mined_pairwise_examples(
@@ -442,9 +648,12 @@ def _build_mined_pairwise_examples(
     args,
     *,
     rnd: random.Random,
-) -> list[PairwiseExample]:
+) -> tuple[list[PairwiseExample], MiningStats]:
     examples: list[PairwiseExample] = []
+    mining_stats = MiningStats()
     for g, scores in zip(groups, grouped_scores):
+        if len(g.candidates) != len(g.labels):
+            continue
         pos_idx = [i for i, lab in enumerate(g.labels) if int(lab) == 1]
         neg_idx = [i for i, lab in enumerate(g.labels) if int(lab) == 0]
         if not pos_idx or not neg_idx:
@@ -455,6 +664,8 @@ def _build_mined_pairwise_examples(
         remaining = [i for i in neg_idx if i not in hard]
         rnd.shuffle(remaining)
         easy = remaining[: int(args.mining_easy_k)]
+        if any(int(g.labels[i]) != 0 for i in hard + easy):
+            raise ValueError(f"Mining negatives include positive labels for problem_id={g.problem_id}")
         neg_pool = list(dict.fromkeys(hard + easy))
         if not neg_pool:
             continue
@@ -465,6 +676,8 @@ def _build_mined_pairwise_examples(
             pairs = pairs[: int(args.max_pairs_per_problem)]
 
         for p_idx, n_idx in pairs:
+            if int(g.labels[p_idx]) != 1:
+                raise ValueError(f"Mining positives include non-positive labels for problem_id={g.problem_id}")
             examples.append(
                 PairwiseExample(
                     nl=g.nl,
@@ -473,8 +686,9 @@ def _build_mined_pairwise_examples(
                     problem_id=g.problem_id,
                 )
             )
+        _update_mining_stats(mining_stats, g.labels, scores, pos_idx, hard)
     rnd.shuffle(examples)
-    return examples
+    return examples, mining_stats
 
 
 def _to_hf_dataset(examples: list[PairwiseExample]) -> Dataset:
@@ -489,14 +703,15 @@ def _to_hf_dataset(examples: list[PairwiseExample]) -> Dataset:
 
 
 def _to_listwise_dataset(examples: list[ListwiseExample]) -> Dataset:
-    return Dataset.from_dict(
-        {
-            "nl": [e.nl for e in examples],
-            "candidates": [list(e.candidates) for e in examples],
-            "labels": [list(e.labels) for e in examples],
-            "problem_id": [e.problem_id for e in examples],
-        }
-    )
+    data = {
+        "nl": [e.nl for e in examples],
+        "candidates": [list(e.candidates) for e in examples],
+        "labels": [list(e.labels) for e in examples],
+        "problem_id": [e.problem_id for e in examples],
+    }
+    if any(e.sampled_indices is not None for e in examples):
+        data["sampled_indices"] = [e.sampled_indices for e in examples]
+    return Dataset.from_dict(data)
 
 
 class PairwiseRankingTrainer(Trainer):
@@ -531,36 +746,12 @@ class ListwiseRankingTrainer(Trainer):
     def _iter_groups(group_sizes: torch.Tensor) -> list[int]:
         return [int(x) for x in group_sizes.detach().cpu().tolist()]
 
-    def _listwise_loss(
-        self,
-        logits: torch.Tensor,
-        labels: torch.Tensor,
-        group_sizes: torch.Tensor,
-    ) -> torch.Tensor:
-        losses: list[torch.Tensor] = []
-        offset = 0
-        for size in self._iter_groups(group_sizes):
-            if size <= 0:
-                continue
-            group_logits = logits[offset : offset + size]
-            group_labels = labels[offset : offset + size]
-            offset += size
-            pos_mask = group_labels > 0.5
-            if not bool(pos_mask.any()):
-                continue
-            target = pos_mask.float() / pos_mask.float().sum()
-            logp = (group_logits / float(self.tau)).log_softmax(0)
-            losses.append(-(target * logp).sum())
-        if not losses:
-            return logits.sum() * 0.0
-        return torch.stack(losses).mean()
-
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
         labels = inputs["labels"]
         group_sizes = inputs["group_sizes"]
         model_inputs = {k: v for k, v in inputs.items() if k not in {"labels", "group_sizes"}}
         logits = model(**model_inputs).logits.squeeze(-1)
-        loss = self._listwise_loss(logits, labels, group_sizes)
+        loss = _compute_listwise_loss(logits, labels, group_sizes, self.tau)
         if return_outputs:
             return loss, {"logits": logits, "labels": labels, "group_sizes": group_sizes}
         return loss
@@ -588,6 +779,22 @@ class ListwiseRankingTrainer(Trainer):
 
         preds = torch.tensor(top1_correct)
         return loss.detach(), preds.cpu(), preds.cpu()
+
+
+class ListwiseStatsCallback(TrainerCallback):
+    def __init__(self, stats: ListwiseBuildStats, label: str):
+        self.stats = stats
+        self.label = label
+        self._seen_epochs: set[int] = set()
+
+    def on_epoch_end(self, args, state, control, **kwargs):
+        if state.epoch is None:
+            return
+        epoch = int(round(state.epoch))
+        if epoch in self._seen_epochs:
+            return
+        self._seen_epochs.add(epoch)
+        _print_listwise_stats(self.stats, f"{self.label} epoch {epoch}")
 
 
 def compute_pairwise_metrics(eval_pred):
@@ -631,6 +838,19 @@ def main() -> None:
     p.add_argument("--listwise-negatives", type=int, default=0, help="0 = use all negatives")
     p.add_argument("--listwise-max-positives", type=int, default=0, help="0 = use all positives")
     p.add_argument("--listwise-eval-negatives", type=int, default=0, help="0 = use listwise-negatives")
+    p.add_argument("--debug-batch", type=int, default=0, help="Debug listwise batches without training.")
+    p.add_argument(
+        "--max-skip-no-pos-rate",
+        type=float,
+        default=0.4,
+        help="Fail if skipped_no_pos / total_groups exceeds this rate.",
+    )
+    p.add_argument(
+        "--max-skip-no-neg-rate",
+        type=float,
+        default=0.05,
+        help="Fail if skipped_no_neg / total_groups exceeds this rate.",
+    )
 
     p.add_argument("--max-pairs-per-problem", type=int, default=64)
     p.add_argument("--neg-sampling", type=str, default="random", choices=["random", "hard"])
@@ -700,16 +920,6 @@ def main() -> None:
         by_pid = Counter(e.problem_id for e in examples)
         print(f"{name} pairs: {len(examples)} (problems={len(by_pid)})")
 
-    def _print_listwise_stats(name: str, examples: list[ListwiseExample]) -> None:
-        if not examples:
-            print(f"{name} groups: 0")
-            return
-        cand_counts = [len(e.candidates) for e in examples]
-        pos_counts = [sum(int(x) for x in e.labels) for e in examples]
-        avg_cands = sum(cand_counts) / max(1, len(cand_counts))
-        avg_pos = sum(pos_counts) / max(1, len(pos_counts))
-        print(f"{name} groups: {len(examples)} (avg candidates={avg_cands:.1f}, avg positives={avg_pos:.1f})")
-
     def preprocess(batch):
         nl_clean = [normalize_whitespace(x) for x in batch["nl"]]
         pos_clean = [normalize_lean_statement(x) for x in batch["pos"]]
@@ -777,7 +987,10 @@ def main() -> None:
                 for cand, lab in zip(cands, labs):
                     nl_list.append(nl)
                     cand_list.append("" if cand is None else str(cand))
-                    labels.append(int(lab))
+                    lab_int = int(lab)
+                    if lab_int not in (0, 1):
+                        raise ValueError(f"label must be 0/1, got {lab_int!r}")
+                    labels.append(lab_int)
             nl_clean, lean_clean = _prepare_text_pairs(nl_list, cand_list, use_features)
             enc = self.tokenizer(
                 nl_clean,
@@ -791,11 +1004,54 @@ def main() -> None:
             enc["group_sizes"] = torch.tensor(group_sizes, dtype=torch.long)
             return enc
 
+    def _run_debug_batches(examples: list[ListwiseExample], label: str) -> None:
+        if int(args.debug_batch) <= 0:
+            return
+        if args.loss != "listwise":
+            raise ValueError("--debug-batch requires --loss listwise")
+        if not examples:
+            raise ValueError("No listwise examples available for debug mode.")
+        batch_size = int(args.batch_size)
+        max_batches = min(int(args.debug_batch), math.ceil(len(examples) / max(1, batch_size)))
+        device = next(model.parameters()).device
+        model.eval()
+        for b in range(max_batches):
+            batch_examples = examples[b * batch_size : (b + 1) * batch_size]
+            features = [
+                {"nl": e.nl, "candidates": e.candidates, "labels": e.labels, "sampled_indices": e.sampled_indices}
+                for e in batch_examples
+            ]
+            batch = collator(features)
+            labels = batch.pop("labels").to(device)
+            group_sizes = batch.pop("group_sizes").to(device)
+            batch = {k: v.to(device) for k, v in batch.items()}
+            with torch.no_grad():
+                logits = model(**batch).logits.squeeze(-1)
+                loss = _compute_listwise_loss(logits, labels, group_sizes, float(args.listwise_tau))
+
+            if b == 0:
+                print(f"{label} debug batch (size={len(batch_examples)})")
+                for ex in batch_examples:
+                    cand_lens = [len(c) for c in ex.candidates]
+                    print(
+                        f"problem_id={ex.problem_id} nl_len={len(ex.nl)} "
+                        f"cand_lens={cand_lens} labels={ex.labels} "
+                        f"sampled_indices={ex.sampled_indices}"
+                    )
+            print(f"debug batch {b + 1}/{max_batches} loss={loss.item():.4f}")
+
+        raise SystemExit("Debug batch complete.")
+
     def _make_pairwise_dataset(examples: list[PairwiseExample]) -> Dataset:
         ds = _to_hf_dataset(examples)
         return ds.map(preprocess, batched=True, remove_columns=ds.column_names)
 
-    def _make_trainer(train_dataset: Dataset, num_epochs: float):
+    def _make_trainer(
+        train_dataset: Dataset,
+        num_epochs: float,
+        listwise_stats: ListwiseBuildStats | None = None,
+        label: str = "Train",
+    ):
         targs = TrainingArguments(
             output_dir=args.output_dir,
             num_train_epochs=float(num_epochs),
@@ -829,7 +1085,7 @@ def main() -> None:
                 data_collator=collator,
                 compute_metrics=compute_pairwise_metrics,
             )
-        return ListwiseRankingTrainer(
+        trainer = ListwiseRankingTrainer(
             model=model,
             args=targs,
             train_dataset=train_dataset,
@@ -839,6 +1095,9 @@ def main() -> None:
             compute_metrics=compute_listwise_metrics,
             tau=float(args.listwise_tau),
         )
+        if listwise_stats is not None:
+            trainer.add_callback(ListwiseStatsCallback(listwise_stats, label))
+        return trainer
 
     if args.loss == "pairwise":
         eval_examples = _build_pairwise_examples(eval_rows, args)
@@ -850,35 +1109,69 @@ def main() -> None:
         eval_negatives = int(args.listwise_eval_negatives)
         if eval_negatives <= 0:
             eval_negatives = int(args.listwise_negatives)
-        eval_examples = _build_listwise_examples(
+        eval_examples, eval_stats = _build_listwise_examples(
             eval_groups,
             rnd=random.Random(args.seed + 1),
             negatives_per_group=eval_negatives,
             max_positives=int(args.listwise_max_positives),
         )
-        _print_listwise_stats("Eval", eval_examples)
+        _validate_listwise_stats(
+            eval_stats,
+            "Eval",
+            max_no_pos_rate=float(args.max_skip_no_pos_rate),
+            max_no_neg_rate=float(args.max_skip_no_neg_rate),
+        )
+        _print_listwise_stats(eval_stats, "Eval")
         eval_dataset = _to_listwise_dataset(eval_examples)
         collator = _ListwiseCollator(tok)
 
     final_trainer = None
-    train_groups = None
+    train_groups = _build_groups(train_rows, args) if (args.loss == "listwise" or int(args.mining_rounds) > 0) else None
+
+    if args.loss == "listwise" and int(args.debug_batch) > 0:
+        debug_examples, debug_stats = _build_listwise_examples(
+            train_groups,
+            rnd=rnd,
+            negatives_per_group=int(args.listwise_negatives),
+            max_positives=int(args.listwise_max_positives),
+        )
+        _validate_listwise_stats(
+            debug_stats,
+            "Debug",
+            max_no_pos_rate=float(args.max_skip_no_pos_rate),
+            max_no_neg_rate=float(args.max_skip_no_neg_rate),
+        )
+        _print_listwise_stats(debug_stats, "Debug")
+        _run_debug_batches(debug_examples, "Debug")
+
     if int(args.mining_rounds) > 0:
-        train_groups = _build_groups(train_rows, args)
         if float(args.warmup_epochs) > 0:
             if args.loss == "pairwise":
                 warmup_examples = _build_pairwise_examples(train_rows, args)
                 _print_pairwise_stats("Warmup", warmup_examples)
                 warmup_dataset = _make_pairwise_dataset(warmup_examples)
+                warmup_stats = None
             else:
-                warmup_examples = _build_listwise_examples(
+                warmup_examples, warmup_stats = _build_listwise_examples(
                     train_groups,
                     rnd=rnd,
                     negatives_per_group=int(args.listwise_negatives),
                     max_positives=int(args.listwise_max_positives),
                 )
-                _print_listwise_stats("Warmup", warmup_examples)
+                _validate_listwise_stats(
+                    warmup_stats,
+                    "Warmup",
+                    max_no_pos_rate=float(args.max_skip_no_pos_rate),
+                    max_no_neg_rate=float(args.max_skip_no_neg_rate),
+                )
+                _print_listwise_stats(warmup_stats, "Warmup")
                 warmup_dataset = _to_listwise_dataset(warmup_examples)
-            final_trainer = _make_trainer(warmup_dataset, float(args.warmup_epochs))
+            final_trainer = _make_trainer(
+                warmup_dataset,
+                float(args.warmup_epochs),
+                listwise_stats=warmup_stats,
+                label="Warmup",
+            )
             final_trainer.train(resume_from_checkpoint=False)
             model = final_trainer.model
 
@@ -895,15 +1188,34 @@ def main() -> None:
             model.train()
 
             if args.loss == "pairwise":
-                mined_examples = _build_mined_pairwise_examples(train_groups, grouped_scores, args, rnd=rnd)
+                mined_examples, mining_stats = _build_mined_pairwise_examples(
+                    train_groups, grouped_scores, args, rnd=rnd
+                )
                 _print_pairwise_stats(f"Mining {round_idx + 1}", mined_examples)
+                _print_mining_stats(mining_stats, f"Mining {round_idx + 1}")
                 train_dataset = _make_pairwise_dataset(mined_examples)
+                listwise_stats = None
             else:
-                mined_examples = _build_mined_listwise_examples(train_groups, grouped_scores, args, rnd=rnd)
-                _print_listwise_stats(f"Mining {round_idx + 1}", mined_examples)
+                mined_examples, mined_stats, mining_stats = _build_mined_listwise_examples(
+                    train_groups, grouped_scores, args, rnd=rnd
+                )
+                _validate_listwise_stats(
+                    mined_stats,
+                    f"Mining {round_idx + 1}",
+                    max_no_pos_rate=float(args.max_skip_no_pos_rate),
+                    max_no_neg_rate=float(args.max_skip_no_neg_rate),
+                )
+                _print_listwise_stats(mined_stats, f"Mining {round_idx + 1}")
+                _print_mining_stats(mining_stats, f"Mining {round_idx + 1}")
                 train_dataset = _to_listwise_dataset(mined_examples)
+                listwise_stats = mined_stats
 
-            final_trainer = _make_trainer(train_dataset, float(args.mining_epochs))
+            final_trainer = _make_trainer(
+                train_dataset,
+                float(args.mining_epochs),
+                listwise_stats=listwise_stats,
+                label=f"Mining {round_idx + 1}",
+            )
             final_trainer.train(resume_from_checkpoint=False)
             model = final_trainer.model
     else:
@@ -911,18 +1223,30 @@ def main() -> None:
             train_examples = _build_pairwise_examples(train_rows, args)
             _print_pairwise_stats("Train", train_examples)
             train_dataset = _make_pairwise_dataset(train_examples)
+            listwise_stats = None
         else:
-            train_groups = _build_groups(train_rows, args)
-            train_examples = _build_listwise_examples(
+            train_examples, train_stats = _build_listwise_examples(
                 train_groups,
                 rnd=rnd,
                 negatives_per_group=int(args.listwise_negatives),
                 max_positives=int(args.listwise_max_positives),
             )
-            _print_listwise_stats("Train", train_examples)
+            _validate_listwise_stats(
+                train_stats,
+                "Train",
+                max_no_pos_rate=float(args.max_skip_no_pos_rate),
+                max_no_neg_rate=float(args.max_skip_no_neg_rate),
+            )
+            _print_listwise_stats(train_stats, "Train")
             train_dataset = _to_listwise_dataset(train_examples)
+            listwise_stats = train_stats
 
-        final_trainer = _make_trainer(train_dataset, float(args.epochs))
+        final_trainer = _make_trainer(
+            train_dataset,
+            float(args.epochs),
+            listwise_stats=listwise_stats,
+            label="Train",
+        )
         final_trainer.train(resume_from_checkpoint=False)
 
     if final_trainer is None:
