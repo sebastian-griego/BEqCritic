@@ -40,7 +40,7 @@ def _iter_jsonl(path: str) -> Iterable[dict]:
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--model", type=str, required=True)
+    p.add_argument("--model", type=str, action="append", required=True)
     p.add_argument("--dataset", type=str, required=True)
     p.add_argument("--split", type=str, default="test")
     p.add_argument("--dataset-id-key", type=str, default="id")
@@ -64,12 +64,16 @@ def main() -> None:
 
     nl_map = _load_nl_map(str(args.dataset), str(args.split), str(args.dataset_id_key), str(args.dataset_nl_key))
 
-    verifier = NLVerifier(
-        model_name_or_path=str(args.model),
-        max_length=int(args.max_length),
-        device=str(args.device).strip() or None,
-        use_features=bool(args.use_features),
-    )
+    model_names = args.model if isinstance(args.model, list) else [args.model]
+    verifiers = [
+        NLVerifier(
+            model_name_or_path=str(name),
+            max_length=int(args.max_length),
+            device=str(args.device).strip() or None,
+            use_features=bool(args.use_features),
+        )
+        for name in model_names
+    ]
 
     total = 0
     top1_typechecks = 0
@@ -90,7 +94,17 @@ def main() -> None:
                 raise ValueError(f"Missing nl_statement for problem_id={pid!r}")
             nl = nl_map[pid]
 
-            scores = verifier.score_pairs([nl] * len(cands), [str(c) for c in cands], batch_size=int(args.batch_size))
+            all_scores: list[list[float]] = []
+            for verifier in verifiers:
+                all_scores.append(
+                    verifier.score_pairs([nl] * len(cands), [str(c) for c in cands], batch_size=int(args.batch_size))
+                )
+            if not all_scores:
+                raise ValueError("No models provided.")
+            n = len(all_scores[0])
+            if any(len(s) != n for s in all_scores):
+                raise ValueError("Score length mismatch across models.")
+            scores = [sum(vals) / len(all_scores) for vals in zip(*all_scores)]
             if args.minimize:
                 raw_idx = min(range(len(scores)), key=lambda i: scores[i])
             else:
