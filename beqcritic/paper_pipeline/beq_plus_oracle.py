@@ -17,6 +17,34 @@ from dataclasses import dataclass
 from .beq_plus_eval import _load_dataset_rows, _require_lean_interact, beq_plus, _load_jsonl_map
 
 
+def _load_done_stats(path: str) -> tuple[set[str], int, int, int, int, int]:
+    done: set[str] = set()
+    oracle_hits = 0
+    a_hits = 0
+    b_hits = 0
+    a_missing = 0
+    b_missing = 0
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            obj = json.loads(line)
+            pid = str(obj.get("problem_id"))
+            if pid:
+                done.add(pid)
+            if "oracle_ok" in obj:
+                oracle_hits += int(bool(obj.get("oracle_ok")))
+            if "a_ok" in obj:
+                a_hits += int(bool(obj.get("a_ok")))
+            if "b_ok" in obj:
+                b_hits += int(bool(obj.get("b_ok")))
+            if obj.get("a_in_pool") is False:
+                a_missing += 1
+            if obj.get("b_in_pool") is False:
+                b_missing += 1
+    return done, oracle_hits, a_hits, b_hits, a_missing, b_missing
+
+
 @dataclass(frozen=True)
 class _SelectionInfo:
     name: str
@@ -75,6 +103,8 @@ def main() -> None:
     p.add_argument("--max-problems", type=int, default=0)
     p.add_argument("--shuffle-seed", type=int, default=0)
     p.add_argument("--output-jsonl", type=str, default="")
+    p.add_argument("--project-dir", type=str, default="", help="Reuse a stable Lean project directory.")
+    p.add_argument("--resume", action="store_true", help="Resume from an existing output JSONL file.")
     args = p.parse_args()
 
     _require_lean_interact()
@@ -130,21 +160,35 @@ def main() -> None:
     if int(args.max_problems) > 0:
         pids = pids[: int(args.max_problems)]
 
-    proj = TempRequireProject(lean_version=str(args.lean_version), require="mathlib", verbose=True)
+    project_dir = str(args.project_dir).strip() or None
+    proj = TempRequireProject(
+        lean_version=str(args.lean_version),
+        require="mathlib",
+        verbose=True,
+        directory=project_dir,
+    )
     cfg = LeanREPLConfig(project=proj, verbose=False)
     server = AutoLeanServer(config=cfg)
 
     out_path = str(args.output_jsonl).strip()
-    out_f = open(out_path, "w", encoding="utf-8") if out_path else None
-
+    done_ids: set[str] = set()
     oracle_hits = 0
     a_hits = 0
     b_hits = 0
     a_missing = 0
     b_missing = 0
+    if out_path and args.resume and Path(out_path).exists():
+        done_ids, oracle_hits, a_hits, b_hits, a_missing, b_missing = _load_done_stats(out_path)
+    out_f = None
+    if out_path:
+        mode = "a" if (args.resume and Path(out_path).exists()) else "w"
+        out_f = open(out_path, mode, encoding="utf-8")
 
     try:
+        processed = 0
         for idx, pid in enumerate(pids, start=1):
+            if pid in done_ids:
+                continue
             row = dataset_rows[pid]
             cands = grouped[pid]
 
@@ -211,13 +255,16 @@ def main() -> None:
                 if sel_b is not None:
                     rec.update({"b_ok": bool(b_ok), "b_name": sel_b.name, "b_in_pool": bool(b_in_pool)})
                 out_f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+                out_f.flush()
 
-            if idx % 10 == 0 or idx == len(pids):
-                msg = f"[{idx}/{len(pids)}] oracle={oracle_hits / max(1, idx):.3f}"
+            processed += 1
+            if processed % 10 == 0 or idx == len(pids):
+                seen = len(done_ids) + processed
+                msg = f"[{seen}/{len(pids)}] oracle={oracle_hits / max(1, seen):.3f}"
                 if sel_a is not None:
-                    msg += f", {sel_a.name}={a_hits / max(1, idx):.3f}"
+                    msg += f", {sel_a.name}={a_hits / max(1, seen):.3f}"
                 if sel_b is not None:
-                    msg += f", {sel_b.name}={b_hits / max(1, idx):.3f}"
+                    msg += f", {sel_b.name}={b_hits / max(1, seen):.3f}"
                 print(msg)
 
         total = len(pids)

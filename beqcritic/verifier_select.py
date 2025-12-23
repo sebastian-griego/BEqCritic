@@ -56,6 +56,7 @@ def main() -> None:
     p.add_argument("--batch-size", type=int, default=32)
     p.add_argument("--max-length", type=int, default=512)
     p.add_argument("--use-features", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--minimize", action="store_true", help="Select the lowest score instead of the highest.")
     p.add_argument("--emit-scores", action="store_true")
     p.add_argument("--stats-md", type=str, default="", help="Optional markdown summary path")
     p.add_argument("--stats-json", type=str, default="", help="Optional JSON summary path")
@@ -90,7 +91,10 @@ def main() -> None:
             nl = nl_map[pid]
 
             scores = verifier.score_pairs([nl] * len(cands), [str(c) for c in cands], batch_size=int(args.batch_size))
-            raw_idx = max(range(len(scores)), key=lambda i: scores[i])
+            if args.minimize:
+                raw_idx = min(range(len(scores)), key=lambda i: scores[i])
+            else:
+                raw_idx = max(range(len(scores)), key=lambda i: scores[i])
 
             typechecks = obj.get(args.typechecks_key)
             typecheck_mask = None
@@ -109,10 +113,11 @@ def main() -> None:
             if typecheck_mask is not None:
                 raw_top1_typechecks = bool(typecheck_mask[raw_idx])
                 if any(typecheck_mask):
-                    best_idx = max(
-                        [i for i, ok in enumerate(typecheck_mask) if ok],
-                        key=lambda i: scores[i],
-                    )
+                    survivors = [i for i, ok in enumerate(typecheck_mask) if ok]
+                    if args.minimize:
+                        best_idx = min(survivors, key=lambda i: scores[i])
+                    else:
+                        best_idx = max(survivors, key=lambda i: scores[i])
                     if raw_top1_typechecks is False and typecheck_mask[best_idx]:
                         rescued_by_typecheck += 1
                 else:

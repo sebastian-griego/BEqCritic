@@ -45,6 +45,25 @@ def _load_jsonl_map(path: str, key: str, value: str) -> dict[str, str]:
     return out
 
 
+def _load_done_stats(path: str) -> tuple[set[str], list[int], list[int]]:
+    done: set[str] = set()
+    a_hits: list[int] = []
+    b_hits: list[int] = []
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            obj = json.loads(line)
+            pid = str(obj.get("problem_id"))
+            if pid:
+                done.add(pid)
+            if "a_ok" in obj:
+                a_hits.append(int(bool(obj.get("a_ok"))))
+            if "b_ok" in obj:
+                b_hits.append(int(bool(obj.get("b_ok"))))
+    return done, a_hits, b_hits
+
+
 @dataclass(frozen=True)
 class _DatasetRow:
     ref: str
@@ -248,6 +267,8 @@ def main() -> None:
     p.add_argument("--max-problems", type=int, default=0)
     p.add_argument("--shuffle-seed", type=int, default=0, help="If non-zero, shuffle problem order for sampling.")
     p.add_argument("--output-jsonl", type=str, default="", help="Optional per-problem results JSONL.")
+    p.add_argument("--project-dir", type=str, default="", help="Reuse a stable Lean project directory.")
+    p.add_argument("--resume", action="store_true", help="Resume from an existing output JSONL file.")
     args = p.parse_args()
 
     _require_lean_interact()
@@ -280,16 +301,33 @@ def main() -> None:
     if int(args.max_problems) > 0:
         pids = pids[: int(args.max_problems)]
 
-    proj = TempRequireProject(lean_version=str(args.lean_version), require="mathlib", verbose=True)
+    project_dir = str(args.project_dir).strip() or None
+    proj = TempRequireProject(
+        lean_version=str(args.lean_version),
+        require="mathlib",
+        verbose=True,
+        directory=project_dir,
+    )
     cfg = LeanREPLConfig(project=proj, verbose=False)
     server = AutoLeanServer(config=cfg)
 
     out_path = str(args.output_jsonl).strip()
-    out_f = open(out_path, "w", encoding="utf-8") if out_path else None
+    done_ids: set[str] = set()
+    prior_a_hits: list[int] = []
+    prior_b_hits: list[int] = []
+    if out_path and args.resume and Path(out_path).exists():
+        done_ids, prior_a_hits, prior_b_hits = _load_done_stats(out_path)
+    out_f = None
+    if out_path:
+        mode = "a" if (args.resume and Path(out_path).exists()) else "w"
+        out_f = open(out_path, mode, encoding="utf-8")
     try:
-        a_hits: list[int] = []
-        b_hits: list[int] = []
+        a_hits: list[int] = list(prior_a_hits)
+        b_hits: list[int] = list(prior_b_hits)
+        processed = 0
         for idx, pid in enumerate(pids, start=1):
+            if pid in done_ids:
+                continue
             row = dataset_rows[pid]
             a_stmt = sel_a[pid]
             a_ok = beq_plus(row.ref, a_stmt, row.header, server=server, timeout_s=int(args.timeout_s))
@@ -306,10 +344,12 @@ def main() -> None:
                 if sel_b is not None:
                     rec.update({"b_ok": bool(b_ok), "b_name": str(args.b_name)})
                 out_f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+                out_f.flush()
 
-            if idx % 10 == 0 or idx == len(pids):
+            processed += 1
+            if processed % 10 == 0 or idx == len(pids):
                 a_acc = sum(a_hits) / max(1, len(a_hits))
-                msg = f"[{idx}/{len(pids)}] {args.a_name} acc={a_acc:.3f}"
+                msg = f"[{len(a_hits)}/{len(pids)}] {args.a_name} acc={a_acc:.3f}"
                 if sel_b is not None:
                     b_acc = sum(b_hits) / max(1, len(b_hits))
                     msg += f", {args.b_name} acc={b_acc:.3f}"
