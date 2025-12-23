@@ -253,3 +253,57 @@ Representative examples (from `runs/quickstart`):
 ## Notes on licensing
 
 This repo does not include a `LICENSE` file; redistribution/derivative-use terms are unclear.
+
+## Verifier training: fast-label gains vs BEq+ parity
+
+### What changed
+- Trained a listwise-only NL→Lean verifier on the ProofNetVerif train split, initialized from the verifier_v1 checkpoint.
+- Evaluated selection with the fast label metric (dataset `correct`) on valid and test using the same fixed candidate pools.
+- Ran BEq+ on test for the best listwise checkpoint, using the cached Lean project and resume-safe evaluation.
+
+### BEq+ evaluation stability
+- beqcritic/paper_pipeline/beq_plus_eval.py and beqcritic/paper_pipeline/beq_plus_oracle.py support:
+  - --project-dir for a stable cached Lean project
+  - --resume to skip completed ids and append+flush per record
+
+### Fast label selection results (dataset `correct`, fixed pools)
+
+**Valid (n = 183)**
+- verifier_v1: 104/183 = 56.83% (oracle 114/183)
+- listwise-train seed0: 107/183 = 58.47% (oracle 114/183)
+- listwise-train seed1: 108/183 = 59.02% (oracle 114/183)
+- Paired seed1 vs v1: wins 5, losses 1, ties_correct 103, ties_wrong 74
+
+**Test (n = 178)**
+- verifier_v1: 113/178 = 63.48% (oracle 120/178, gap 7)
+- listwise-train seed0: 114/178 = 64.04% (gap 6)
+- listwise-train seed1: 116/178 = 65.17% (gap 4)
+- Paired seed1 vs v1: wins 3, losses 0, ties_correct 113, ties_wrong 62
+
+**Ensemble check (seed0 + seed1)**
+- ensemble: 114/178 = 64.04%
+- ensemble vs seed1: wins 0, losses 2 (ensemble is worse)
+- Winner for fast-label on test: listwise-train seed1
+
+### BEq+ results on test (paper metric, fixed pool)
+
+**Self-BLEU baseline vs verifier**
+- selfbleu: 45/178 = 25.3%
+- verifier_v1: 59/178 = 33.1%
+
+**Self-BLEU baseline vs listwise-train seed1**
+- selfbleu: 45/178 = 25.3%
+- verifier_listwise_seed1: 59/178 = 33.1%
+
+**Direct BEq+ comparison: verifier_v1 vs listwise-train seed1**
+- No disagreements across 178 problems
+- wins 0, losses 0, ties_correct 59, ties_wrong 119
+- Conclusion: on this pool, BEq+ is insensitive to the verifier changes so far
+
+### Takeaway
+- Listwise training improves label-based verification on valid and test.
+- Those improvements do not translate to BEq+ on this fixed ProofNetVerif test candidate pool.
+
+### Next direction
+1. BEq+-distilled verifier: generate BEq+ labels for candidates (resume-safe, cached Lean project), then train the verifier directly to predict BEq+ success with a listwise objective.
+2. Raise BEq+ oracle: increase or diversify the candidate pool (more generations or additional generators), then rerun selection. The current pool caps BEq+ at Oracle@pool.
