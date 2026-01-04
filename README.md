@@ -129,6 +129,23 @@ Optional:
 - Debug one problem (inspect clusters + top edges):
   `python -m beqcritic.debug_selection --input runs/myrun/proofnetverif_test_candidates.jsonl --problem-id <id> --model runs/myrun/checkpoints/beqcritic_deberta --similarity critic --device cpu`
 
+## NLVerifier (NL->Lean reranker)
+
+NLVerifier scores `(nl_statement, lean_statement)` pairs and selects the top candidate (NLVerifier-Select). This is
+distinct from BEqCritic, which scores Lean<->Lean similarity and clusters candidates.
+
+Example selection (prefer new output names containing `nlverifier`):
+
+```bash
+python -m beqcritic.verifier_select \
+  --model runs/myrun/checkpoints/nlverifier_deberta \
+  --dataset <hf_dataset> --split test \
+  --input runs/myrun/proofnetverif_test_candidates.jsonl \
+  --output runs/myrun/proofnetverif_test_selection_nlverifier.jsonl
+```
+
+Prefer new output filenames containing `nlverifier` (existing `runs/` artifacts keep their original names).
+
 ## More
 
 See `README_BEQCRITIC.md` for a fuller walkthrough, tuning notes, and additional CLI examples.

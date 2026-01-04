@@ -125,14 +125,15 @@ Oracle@pool (test candidates, `runs/beqplus_ab_v1/oracle_metrics.md`):
 
 This shows 22–25 problems where the pool contains a BEq+-correct candidate but consensus selection misses it.
 
-## Reference-free verifier reranker (NL -> Lean)
+## Reference-free NLVerifier reranker (NL -> Lean)
 
-Train a verifier on `(nl_statement, lean4_prediction)` with a pairwise ranking loss per problem id,
-then select the max-scoring candidate per problem.
+Train NLVerifier on `(nl_statement, lean4_prediction)` with a pairwise ranking loss per problem id,
+then select the max-scoring candidate per problem (NLVerifier-Select). NLVerifier scores NL->Lean pairs,
+while BEqCritic scores Lean<->Lean similarity and clusters candidates.
 
 Results (test, BEq+, `runs/verifier_v1/ab_metrics_beqplus.md`):
-- verifier: 59/178 (33.1%), +7.8 vs selfbleu, +6.1 vs beqcritic
-- oracle gap for verifier: 11
+- NLVerifier-Select: 59/178 (33.1%), +7.8 vs selfbleu, +6.1 vs beqcritic
+- oracle gap for NLVerifier-Select: 11
 
 Repro (from repo root; uses 2 GPUs because GPU1 was occupied):
 
@@ -155,19 +156,19 @@ python -m beqcritic.verifier_select \
 python -m beqcritic.paper_pipeline.beq_plus_eval \
   --dataset PAug/ProofNetVerif --split test \
   --selections-a runs/beqplus_ab_v1/proofnetverif_test_selection_selfbleu.jsonl --a-name selfbleu \
-  --selections-b runs/verifier_v1/proofnetverif_test_selection_verifier.jsonl --b-name verifier \
+  --selections-b runs/verifier_v1/proofnetverif_test_selection_verifier.jsonl --b-name NLVerifier-Select \
   --lean-version v4.8.0 --timeout-s 60 \
   --output-jsonl runs/verifier_v1/beqplus_results.jsonl
 ```
 
-Verifier oracle-miss diagnostic (`runs/verifier_v1/oracle_miss_analysis.md`):
-- 11 oracle-true / verifier-wrong problems
-- best-correct rank under verifier: 8/11 within top-2, 9/11 within top-5, 11/11 within top-10
+NLVerifier oracle-miss diagnostic (`runs/verifier_v1/oracle_miss_analysis.md`):
+- 11 oracle-true / NLVerifier-wrong problems
+- best-correct rank under NLVerifier: 8/11 within top-2, 9/11 within top-5, 11/11 within top-10
 - mean score gap top1 vs best-correct: 2.72 (median 1.65)
 
 This suggests a better decision rule on the top-k (e.g., cluster aggregation) should recover several misses.
 
-Cluster-aggregate selector (top-M + BEqCritic clustering + mean(top2) score) did not change BEq+ accuracy:
+Cluster-aggregate selector (top-M + BEqCritic clustering + mean(top2) NLVerifier score) did not change BEq+ accuracy:
 - selfbleu vs clusteragg: `runs/verifier_v1/ab_metrics_beqplus_selfbleu_vs_clusteragg.md` (clusteragg 33.1%)
 
 ## Typecheck filtering before selection
@@ -176,11 +177,11 @@ Typecheck pre-pass using the same BEq+ wrapping logic (lean-interact + dataset h
 all candidates in this pool already typecheck, so filtering is a no-op:
 
 - Summary: `runs/typecheck_v1/typecheck_summary.md`
-- Verifier top1 typechecks rate: 100% (`runs/typecheck_v1/verifier_typecheck_stats.md`)
+- NLVerifier-Select top1 typechecks rate: 100% (`runs/typecheck_v1/verifier_typecheck_stats.md`)
 
 BEq+ re-runs after typecheck-aware selection are unchanged:
 - selfbleu vs beqcritic: `runs/typecheck_v1/ab_metrics_beqplus_selfbleu_vs_beqcritic.md`
-- selfbleu vs verifier: `runs/typecheck_v1/ab_metrics_beqplus_selfbleu_vs_verifier.md`
+- selfbleu vs NLVerifier-Select: `runs/typecheck_v1/ab_metrics_beqplus_selfbleu_vs_verifier.md`
 
 Repro (from repo root):
 
@@ -224,7 +225,7 @@ python -m beqcritic.paper_pipeline.beq_plus_eval \
 python -m beqcritic.paper_pipeline.beq_plus_eval \
   --dataset PAug/ProofNetVerif --split test \
   --selections-a runs/typecheck_v1/proofnetverif_test_selection_selfbleu.jsonl --a-name selfbleu \
-  --selections-b runs/typecheck_v1/proofnetverif_test_selection_verifier.jsonl --b-name verifier \
+  --selections-b runs/typecheck_v1/proofnetverif_test_selection_verifier.jsonl --b-name NLVerifier-Select \
   --lean-version v4.8.0 --timeout-s 60 \
   --output-jsonl runs/typecheck_v1/beqplus_results_selfbleu_vs_verifier.jsonl
 ```
@@ -254,10 +255,10 @@ Representative examples (from `runs/quickstart`):
 
 This repo does not include a `LICENSE` file; redistribution/derivative-use terms are unclear.
 
-## Verifier training: fast-label gains vs BEq+ parity
+## NLVerifier training: fast-label gains vs BEq+ parity
 
 ### What changed
-- Trained a listwise-only NL→Lean verifier on the ProofNetVerif train split, initialized from the verifier_v1 checkpoint.
+- Trained a listwise-only NLVerifier (NL->Lean) on the ProofNetVerif train split, initialized from the verifier_v1 checkpoint.
 - Evaluated selection with the fast label metric (dataset `correct`) on valid and test using the same fixed candidate pools.
 - Ran BEq+ on test for the best listwise checkpoint, using the cached Lean project and resume-safe evaluation.
 
@@ -269,16 +270,16 @@ This repo does not include a `LICENSE` file; redistribution/derivative-use terms
 ### Fast label selection results (dataset `correct`, fixed pools)
 
 **Valid (n = 183)**
-- verifier_v1: 104/183 = 56.83% (oracle 114/183)
+- NLVerifier v1 (`verifier_v1`): 104/183 = 56.83% (oracle 114/183)
 - listwise-train seed0: 107/183 = 58.47% (oracle 114/183)
 - listwise-train seed1: 108/183 = 59.02% (oracle 114/183)
-- Paired seed1 vs v1: wins 5, losses 1, ties_correct 103, ties_wrong 74
+- Paired seed1 vs NLVerifier v1: wins 5, losses 1, ties_correct 103, ties_wrong 74
 
 **Test (n = 178)**
-- verifier_v1: 113/178 = 63.48% (oracle 120/178, gap 7)
+- NLVerifier v1 (`verifier_v1`): 113/178 = 63.48% (oracle 120/178, gap 7)
 - listwise-train seed0: 114/178 = 64.04% (gap 6)
 - listwise-train seed1: 116/178 = 65.17% (gap 4)
-- Paired seed1 vs v1: wins 3, losses 0, ties_correct 113, ties_wrong 62
+- Paired seed1 vs NLVerifier v1: wins 3, losses 0, ties_correct 113, ties_wrong 62
 
 **Ensemble check (seed0 + seed1)**
 - ensemble: 114/178 = 64.04%
@@ -287,23 +288,23 @@ This repo does not include a `LICENSE` file; redistribution/derivative-use terms
 
 ### BEq+ results on test (paper metric, fixed pool)
 
-**Self-BLEU baseline vs verifier**
+**Self-BLEU baseline vs NLVerifier-Select**
 - selfbleu: 45/178 = 25.3%
-- verifier_v1: 59/178 = 33.1%
+- NLVerifier v1 (`verifier_v1`): 59/178 = 33.1%
 
 **Self-BLEU baseline vs listwise-train seed1**
 - selfbleu: 45/178 = 25.3%
-- verifier_listwise_seed1: 59/178 = 33.1%
+- NLVerifier listwise seed1 (`verifier_listwise_seed1`): 59/178 = 33.1%
 
-**Direct BEq+ comparison: verifier_v1 vs listwise-train seed1**
+**Direct BEq+ comparison: NLVerifier v1 (`verifier_v1`) vs listwise-train seed1**
 - No disagreements across 178 problems
 - wins 0, losses 0, ties_correct 59, ties_wrong 119
-- Conclusion: on this pool, BEq+ is insensitive to the verifier changes so far
+- Conclusion: on this pool, BEq+ is insensitive to the NLVerifier changes so far
 
 ### Takeaway
 - Listwise training improves label-based verification on valid and test.
 - Those improvements do not translate to BEq+ on this fixed ProofNetVerif test candidate pool.
 
 ### Next direction
-1. BEq+-distilled verifier: generate BEq+ labels for candidates (resume-safe, cached Lean project), then train the verifier directly to predict BEq+ success with a listwise objective.
+1. BEq+-distilled NLVerifier: generate BEq+ labels for candidates (resume-safe, cached Lean project), then train the NLVerifier directly to predict BEq+ success with a listwise objective.
 2. Raise BEq+ oracle: increase or diversify the candidate pool (more generations or additional generators), then rerun selection. The current pool caps BEq+ at Oracle@pool.

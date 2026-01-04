@@ -1,7 +1,7 @@
 """
-CLI: select the best candidate by a reference-free verifier.
+CLI: NLVerifier-Select (pick the best candidate with NLVerifier).
 
-Scores each candidate against the problem's natural language statement and
+Scores each candidate against the problem's natural language statement with NLVerifier and
 selects the max-score candidate.
 """
 
@@ -39,7 +39,7 @@ def _iter_jsonl(path: str) -> Iterable[dict]:
 
 
 def main() -> None:
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(description="NLVerifier-Select: choose the top-scoring candidate with NLVerifier.")
     p.add_argument("--model", type=str, action="append", required=True)
     p.add_argument("--dataset", type=str, required=True)
     p.add_argument("--split", type=str, default="test")
@@ -58,8 +58,8 @@ def main() -> None:
     p.add_argument("--use-features", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--minimize", action="store_true", help="Select the lowest score instead of the highest.")
     p.add_argument("--emit-scores", action="store_true")
-    p.add_argument("--stats-md", type=str, default="", help="Optional markdown summary path")
-    p.add_argument("--stats-json", type=str, default="", help="Optional JSON summary path")
+    p.add_argument("--stats-md", type=str, default="", help="Optional NLVerifier-Select markdown summary path")
+    p.add_argument("--stats-json", type=str, default="", help="Optional NLVerifier-Select JSON summary path")
     args = p.parse_args()
 
     nl_map = _load_nl_map(str(args.dataset), str(args.split), str(args.dataset_id_key), str(args.dataset_nl_key))
@@ -170,7 +170,7 @@ def main() -> None:
                 f.write("\n")
         if args.stats_md:
             lines = [
-                "# Verifier typecheck stats",
+                "# NLVerifier-Select typecheck stats",
                 "",
                 f"Problems: {total}",
                 "",

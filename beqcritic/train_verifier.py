@@ -1,5 +1,5 @@
 """
-Train a reference-free verifier: score (nl_statement, lean_statement) pairs.
+Train NLVerifier, a reference-free NL->Lean reranker: score (nl_statement, lean_statement) pairs.
 
 Supports:
   - Pairwise ranking loss per problem id (score(pos) > score(neg))
@@ -817,7 +817,9 @@ def compute_listwise_metrics(eval_pred):
 
 
 def main() -> None:
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(
+        description="Train NLVerifier (NL->Lean reranker) on (nl_statement, lean_statement) pairs."
+    )
     p.add_argument("--dataset", type=str, required=True)
     p.add_argument("--split", type=str, default="train")
     p.add_argument("--eval-split", type=str, default="", help="Optional separate eval split")
