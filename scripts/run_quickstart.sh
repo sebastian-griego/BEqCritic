@@ -14,6 +14,7 @@ TRAIN_SPLIT="${TRAIN_SPLIT:-valid}"
 TEST_SPLIT="${TEST_SPLIT:-test}"
 DEVICE="${BEQCRITIC_DEVICE:-}"
 BASE_MODEL="${BEQCRITIC_BASE_MODEL:-microsoft/deberta-v3-small}"
+NLVERIFIER_MODEL="${BEQCRITIC_NLVERIFIER_MODEL:-$ROOT/runs/verifier_v1/checkpoints/nl_verifier_deberta_v3_base}"
 TRAIN_MAX_ROWS="${TRAIN_MAX_ROWS:-0}"
 TRAIN_MAX_PROBLEMS="${TRAIN_MAX_PROBLEMS:-0}"
 TEST_MAX_PROBLEMS="${TEST_MAX_PROBLEMS:-0}"
@@ -51,6 +52,7 @@ CKPT_DIR="$RUN_DIR/checkpoints/beqcritic_deberta"
 CAND="$RUN_DIR/proofnetverif_${TEST_SPLIT}_candidates.jsonl"
 SEL_BEQ="$RUN_DIR/proofnetverif_${TEST_SPLIT}_selection_beqcritic.jsonl"
 SEL_SELF="$RUN_DIR/proofnetverif_${TEST_SPLIT}_selection_selfbleu.jsonl"
+SEL_NLVERIFIER="$RUN_DIR/proofnetverif_${TEST_SPLIT}_selection_nlverifier.jsonl"
 
 run_step train_beqcritic \
   env CUDA_VISIBLE_DEVICES="$TRAIN_CUDA_VISIBLE_DEVICES" \
@@ -109,6 +111,23 @@ run_step eval_selfbleu \
   "$PYTHON_BIN" -m beqcritic.evaluate_selection \
   --candidates "$CAND" \
   --selections "$SEL_SELF"
+
+if [[ -e "$NLVERIFIER_MODEL" ]]; then
+  run_step select_nlverifier \
+    "$PYTHON_BIN" -m beqcritic.verifier_select \
+    --model "$NLVERIFIER_MODEL" \
+    --dataset "$DATASET" \
+    --split "$TEST_SPLIT" \
+    --input "$CAND" \
+    --output "$SEL_NLVERIFIER"
+
+  run_step eval_nlverifier \
+    "$PYTHON_BIN" -m beqcritic.evaluate_selection \
+    --candidates "$CAND" \
+    --selections "$SEL_NLVERIFIER"
+else
+  echo "==> select_nlverifier (skipped: missing model at $NLVERIFIER_MODEL)" | tee "$RUN_DIR/select_nlverifier.log"
+fi
 
 run_step ab_compare \
   "$PYTHON_BIN" -m beqcritic.evaluate_ab \
