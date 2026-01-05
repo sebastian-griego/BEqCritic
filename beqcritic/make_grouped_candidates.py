@@ -14,20 +14,7 @@ from typing import Any
 
 from .hf_datasets import load_dataset_split
 from .textnorm import normalize_lean_statement
-
-
-def _guess_bool_label(x: Any) -> int:
-    if isinstance(x, bool):
-        return int(x)
-    if isinstance(x, int):
-        return int(x)
-    if isinstance(x, str):
-        xl = x.strip().lower()
-        if xl in ["1", "true", "yes", "correct", "ok"]:
-            return 1
-        if xl in ["0", "false", "no", "incorrect", "wrong"]:
-            return 0
-    raise ValueError(f"Cannot interpret label value: {x!r}")
+from .labels import coerce_binary_label
 
 
 def main() -> None:
@@ -51,7 +38,7 @@ def main() -> None:
     for r in ds:
         pid = str(r.get(args.problem_id_key))
         cand = "" if r.get(args.pred_key) is None else str(r.get(args.pred_key))
-        lab = _guess_bool_label(r.get(args.label_key))
+        lab = coerce_binary_label(r.get(args.label_key))
 
         if pid not in grouped:
             if args.max_problems and len(grouped) >= int(args.max_problems):

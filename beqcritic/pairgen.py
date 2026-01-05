@@ -21,6 +21,8 @@ from typing import Iterable, Iterator, Any
 import random
 
 from .bleu import sym_bleu
+from .labels import coerce_binary_label
+
 
 @dataclass
 class PairExample:
@@ -30,8 +32,10 @@ class PairExample:
     task: str
     problem_id: str | None = None
 
+
 def _as_str(x: Any) -> str:
     return "" if x is None else str(x)
+
 
 def make_pred_vs_ref_pairs(
     rows: Iterable[dict],
@@ -45,7 +49,7 @@ def make_pred_vs_ref_pairs(
         yield PairExample(
             a=_as_str(r.get(pred_key)),
             b=_as_str(r.get(ref_key)),
-            label=int(r.get(label_key)),
+            label=coerce_binary_label(r.get(label_key)),
             task="pred_vs_ref",
             problem_id=pid,
         )
@@ -68,8 +72,14 @@ def make_cand_vs_cand_pairs(
         by_pid.setdefault(pid, []).append(r)
 
     for pid, group in by_pid.items():
-        correct = [g for g in group if int(g.get(label_key)) == 1]
-        incorrect = [g for g in group if int(g.get(label_key)) == 0]
+        correct = []
+        incorrect = []
+        for g in group:
+            lab = coerce_binary_label(g.get(label_key))
+            if lab == 1:
+                correct.append(g)
+            else:
+                incorrect.append(g)
 
         if len(correct) >= 2:
             pairs: list[tuple[dict, dict]] = []

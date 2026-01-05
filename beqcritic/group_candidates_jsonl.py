@@ -19,19 +19,7 @@ import argparse
 import json
 from typing import Any
 
-
-def _guess_bool_label(x: Any) -> int:
-    if isinstance(x, bool):
-        return int(x)
-    if isinstance(x, int):
-        return int(x)
-    if isinstance(x, str):
-        xl = x.strip().lower()
-        if xl in ["1", "true", "yes", "correct", "ok"]:
-            return 1
-        if xl in ["0", "false", "no", "incorrect", "wrong"]:
-            return 0
-    raise ValueError(f"Cannot interpret label value: {x!r}")
+from .labels import coerce_binary_label
 
 
 def main() -> None:
@@ -95,7 +83,7 @@ def main() -> None:
             if args.label_key:
                 if args.label_key not in obj:
                     raise ValueError(f"Missing {args.label_key!r} in input row: {obj}")
-                grouped[pid]["labels"].append(_guess_bool_label(obj.get(args.label_key)))
+                grouped[pid]["labels"].append(coerce_binary_label(obj.get(args.label_key)))
 
             if args.reference_key:
                 ref = obj.get(args.reference_key)
@@ -118,4 +106,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

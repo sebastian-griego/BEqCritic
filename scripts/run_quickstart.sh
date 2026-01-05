@@ -17,6 +17,7 @@ BASE_MODEL="${BEQCRITIC_BASE_MODEL:-microsoft/deberta-v3-small}"
 TRAIN_MAX_ROWS="${TRAIN_MAX_ROWS:-0}"
 TRAIN_MAX_PROBLEMS="${TRAIN_MAX_PROBLEMS:-0}"
 TEST_MAX_PROBLEMS="${TEST_MAX_PROBLEMS:-0}"
+TRAIN_CUDA_VISIBLE_DEVICES="${BEQCRITIC_TRAIN_CUDA_VISIBLE_DEVICES:-0}"
 
 if [[ "$RUN_DIR" != /* ]]; then
   RUN_DIR="$ROOT/$RUN_DIR"
@@ -52,6 +53,7 @@ SEL_BEQ="$RUN_DIR/proofnetverif_${TEST_SPLIT}_selection_beqcritic.jsonl"
 SEL_SELF="$RUN_DIR/proofnetverif_${TEST_SPLIT}_selection_selfbleu.jsonl"
 
 run_step train_beqcritic \
+  env CUDA_VISIBLE_DEVICES="$TRAIN_CUDA_VISIBLE_DEVICES" \
   "$PYTHON_BIN" -m beqcritic.train_beq_critic \
   --dataset "$DATASET" \
   --split "$TRAIN_SPLIT" \

@@ -21,13 +21,14 @@ Design choices:
 from __future__ import annotations
 
 import argparse
+import inspect
 import random
-from typing import Any
 from pathlib import Path
 from collections import Counter
 import os
 
 import numpy as np
+import torch
 from datasets import Dataset
 from transformers import (
     AutoTokenizer,
@@ -42,6 +43,7 @@ from .textnorm import normalize_lean_statement
 from .features import featurize_pair
 from .pairgen import make_pred_vs_ref_pairs, make_cand_vs_cand_pairs, PairExample
 from .hf_datasets import load_dataset_split
+from .labels import coerce_binary_label
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -109,18 +111,45 @@ def _resolve_base_model(name_or_path: str) -> str:
 
     return name_or_path
 
-def _guess_bool_label(x: Any) -> int:
-    if isinstance(x, bool):
-        return int(x)
-    if isinstance(x, (int, np.integer)):
-        return int(x)
-    if isinstance(x, str):
-        xl = x.strip().lower()
-        if xl in ["1", "true", "yes", "correct", "ok"]:
-            return 1
-        if xl in ["0", "false", "no", "incorrect", "wrong"]:
-            return 0
-    raise ValueError(f"Cannot interpret label value: {x!r}")
+
+class DebugTrainer(Trainer):
+    def __init__(self, *args, debug_checks: bool = False, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.debug_checks = debug_checks
+        self._supports_num_items_in_batch = (
+            "num_items_in_batch" in inspect.signature(super().compute_loss).parameters
+        )
+
+    def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None, **kwargs):
+        if self.debug_checks:
+            base_model = model.module if hasattr(model, "module") else model
+            labels = inputs.get("labels")
+            if labels is not None:
+                labels_t = labels if torch.is_tensor(labels) else torch.as_tensor(labels)
+                bad = ~((labels_t == -100) | ((labels_t >= 0) & (labels_t < base_model.config.num_labels)))
+                if torch.any(bad).item():
+                    bad_vals = torch.unique(labels_t[bad]).detach().cpu().tolist()
+                    raise ValueError(f"Bad labels {bad_vals}, num_labels={base_model.config.num_labels}")
+
+            input_ids = inputs.get("input_ids")
+            if input_ids is not None:
+                ids_t = input_ids if torch.is_tensor(input_ids) else torch.as_tensor(input_ids)
+                vocab_size = base_model.get_input_embeddings().num_embeddings
+                bad = (ids_t < 0) | (ids_t >= vocab_size)
+                if torch.any(bad).item():
+                    bad_vals = torch.unique(ids_t[bad]).detach().cpu().tolist()
+                    raise ValueError(f"Bad token ids {bad_vals}, vocab_size={vocab_size}")
+
+        if self._supports_num_items_in_batch:
+            return super().compute_loss(
+                model,
+                inputs,
+                return_outputs=return_outputs,
+                num_items_in_batch=num_items_in_batch,
+                **kwargs,
+            )
+        return super().compute_loss(model, inputs, return_outputs=return_outputs, **kwargs)
+
 
 def _rows_from_hf(
     ds: "object",
@@ -152,7 +181,7 @@ def _rows_from_hf(
 
 def _build_examples(rows: list[dict], args) -> list[PairExample]:
     for r in rows:
-        r[args.label_key] = _guess_bool_label(r.get(args.label_key))
+        r[args.label_key] = coerce_binary_label(r.get(args.label_key))
 
     examples: list[PairExample] = []
     task_mix = [t.strip() for t in args.task_mix.split(",") if t.strip()]
@@ -279,6 +308,7 @@ def main():
     p.add_argument("--grad-accum", type=int, default=1)
     p.add_argument("--fp16", action="store_true")
     p.add_argument("--bf16", action="store_true")
+    p.add_argument("--debug-checks", action="store_true", help="Enable label/token range checks before loss.")
     args = p.parse_args()
 
     set_seed(args.seed)
@@ -432,9 +462,10 @@ def main():
         metric_for_best_model="f1",
         greater_is_better=True,
         ddp_find_unused_parameters=False,
+        seed=int(args.seed),
     )
 
-    trainer = Trainer(
+    trainer = DebugTrainer(
         model=model,
         args=targs,
         train_dataset=train_tok,
@@ -442,6 +473,7 @@ def main():
         tokenizer=tok,
         data_collator=collator,
         compute_metrics=compute_metrics,
+        debug_checks=bool(args.debug_checks),
     )
 
     trainer.train()
