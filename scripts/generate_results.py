@@ -48,6 +48,11 @@ def main() -> None:
     cand = run_dir / "proofnetverif_test_candidates.jsonl"
     selfbleu = run_dir / "proofnetverif_test_selection_selfbleu.jsonl"
     beqcritic = run_dir / "proofnetverif_test_selection_beqcritic.jsonl"
+    nlverifier = run_dir / "proofnetverif_test_selection_nlverifier.jsonl"
+    if not nlverifier.exists():
+        legacy = run_dir / "proofnetverif_test_selection_verifier.jsonl"
+        if legacy.exists():
+            nlverifier = legacy
 
     missing = [str(p) for p in [cand, selfbleu, beqcritic] if not p.exists()]
     if missing:
@@ -72,6 +77,14 @@ def main() -> None:
             name="beqcritic",
         )
     )
+    if nlverifier.exists():
+        metrics.append(
+            _run_summarize_selection(
+                candidates=cand,
+                selections=nlverifier,
+                name="nlverifier",
+            )
+        )
 
     out_path = Path(str(args.output))
     out_path.parent.mkdir(parents=True, exist_ok=True)
