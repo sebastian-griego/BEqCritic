@@ -1,11 +1,11 @@
 """
-CLI: verifier-driven selection with BEqCritic clustering on top-M candidates.
+CLI: NLVerifier-driven selection with BEqCritic clustering on top-M candidates.
 
 Algorithm:
-  1) score all candidates with the verifier
-  2) keep top-M by verifier score
+  1) score all candidates with NLVerifier
+  2) keep top-M by NLVerifier score
   3) cluster top-M using BEqCritic similarity
-  4) score clusters by an aggregator over verifier scores
+  4) score clusters by an aggregator over NLVerifier scores
   5) choose best cluster, then pick a representative within it
 """
 
@@ -112,7 +112,7 @@ def main() -> None:
     p.add_argument("--max-length", type=int, default=512)
     p.add_argument("--use-features", action=argparse.BooleanOptionalAction, default=True)
 
-    p.add_argument("--top-m", type=int, default=20, help="Top-M candidates by verifier score to cluster (0 = all).")
+    p.add_argument("--top-m", type=int, default=20, help="Top-M candidates by NLVerifier score to cluster (0 = all).")
     p.add_argument("--threshold", type=float, default=0.5)
     p.add_argument("--mutual-k", type=int, default=0)
     p.add_argument("--triangle-prune-margin", type=float, default=0.0)

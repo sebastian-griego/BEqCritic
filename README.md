@@ -133,6 +133,7 @@ Optional:
 
 NLVerifier scores `(nl_statement, lean_statement)` pairs and selects the top candidate (NLVerifier-Select). This is
 distinct from BEqCritic, which scores Lean<->Lean similarity and clusters candidates.
+NLVerifier is the NL->Lean reranker (previously labeled 'verifier' in older run artifacts).
 
 Example selection (prefer new output names containing `nlverifier`):
 

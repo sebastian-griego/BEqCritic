@@ -1,8 +1,8 @@
 """
-Analyze verifier misses against BEq+ oracle.
+Analyze NLVerifier misses against BEq+ oracle.
 
-For problems where oracle is true but verifier is wrong, compute:
-  - rank of the first BEq+-correct candidate under verifier scores
+For problems where oracle is true but NLVerifier is wrong, compute:
+  - rank of the first BEq+-correct candidate under NLVerifier scores
   - score gap between top1 and best-correct
   - near-duplicate stats among top-K by BEqCritic similarity
 """
@@ -95,7 +95,7 @@ def _rank_buckets(ranks: list[int]) -> dict[str, int]:
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--oracle", type=str, required=True, help="Oracle results JSONL with oracle_ok")
-    p.add_argument("--verifier-results", type=str, required=True, help="BEq+ results JSONL with verifier ok key")
+    p.add_argument("--verifier-results", type=str, required=True, help="BEq+ results JSONL with NLVerifier ok key")
     p.add_argument("--verifier-ok-key", type=str, default="b_ok")
     p.add_argument("--candidates", type=str, required=True, help="Grouped candidates JSONL")
     p.add_argument("--verifier-model", type=str, required=True)

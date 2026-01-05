@@ -1,5 +1,5 @@
 """
-NL->Lean verifier for reference-free reranking.
+NLVerifier (NL->Lean reranker) for reference-free reranking.
 
 Scores (nl_statement, lean_statement) pairs; higher means "more likely correct".
 """

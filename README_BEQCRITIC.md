@@ -170,7 +170,7 @@ python -m beqcritic.evaluate_selection \
   --candidates proofnetverif_test_candidates.jsonl \
   --selections proofnetverif_test_selection.jsonl
 
-Emit/evaluate top-k selections (to reduce verifier compute):
+Emit/evaluate top-k selections (to reduce BEq+ compute):
 
 python -m beqcritic.score_and_select \
   --model checkpoints/beqcritic_deberta \
