@@ -242,6 +242,48 @@ python -m beqcritic.benchmark_selection \
   --ensemble --ensemble-vote majority \
   --top-strategies 10
 
+Multi-GPU training (DDP, 4 GPUs)
+--------------------------------
+
+Use `torchrun` so Transformers Trainer uses DDP (one process per GPU). `--batch-size` is per GPU.
+
+BEqCritic training on 4 GPUs:
+
+CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --standalone --nproc_per_node=4 \
+  -m beqcritic.train_beq_critic \
+  --dataset PAug/ProofNetVerif \
+  --split valid \
+  --pred-key lean4_prediction \
+  --ref-key lean4_formalization \
+  --label-key correct \
+  --problem-id-key id \
+  --base-model microsoft/deberta-v3-small \
+  --output-dir runs/beqcritic_ddp \
+  --task-mix pred_vs_ref,cand_vs_cand \
+  --epochs 1 \
+  --batch-size 2 \
+  --seed 0
+
+NLVerifier training on 4 GPUs:
+
+CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --standalone --nproc_per_node=4 \
+  -m beqcritic.train_verifier \
+  --dataset PAug/ProofNetVerif --split train \
+  --problem-id-key id --nl-key nl_statement --pred-key lean4_prediction --label-key correct \
+  --base-model runs/verifier_v1/checkpoints/nl_verifier_deberta_v3_base \
+  --output-dir runs/nlverifier_ddp \
+  --loss listwise --listwise-negatives 8 --listwise-max-positives 4 \
+  --lr 1e-5 --batch-size 2 --bf16 \
+  --seed 0 \
+  --max-skip-no-pos-rate 0.4 --max-skip-no-neg-rate 0.1
+
+Notes:
+- `--batch-size` is per GPU. With 4 GPUs, `--batch-size 2` gives a global batch of 8; use `--batch-size 8` for global 32 and consider LR/warmup.
+- Training scripts already set `ddp_find_unused_parameters=False`; keep it false if you expose a flag.
+- Avoid output directory collisions unless you intend to resume.
+- For concurrent jobs, split devices (example: `CUDA_VISIBLE_DEVICES=0,1` with `--nproc_per_node=2` and `CUDA_VISIBLE_DEVICES=2,3` for another run).
+- BEq+ runs are mostly CPU/Lean compute, so they can run while GPUs are busy.
+
 Clean train/dev/test on ProofNetVerif (avoid test leakage):
 
 Preferred setup (Hub dataset has `valid` + `test` only):
@@ -281,7 +323,7 @@ Alternative setup (when you only have a single split available locally):
 
 1) Train on `valid` with a held-out dev subset (group split by problem_id), and write the split ids:
 
-CUDA_VISIBLE_DEVICES=0,1,2 python -m torch.distributed.run --nproc_per_node 3 -m beqcritic.train_beq_critic \
+CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --standalone --nproc_per_node=4 -m beqcritic.train_beq_critic \
   --dataset PAug/ProofNetVerif \
   --split valid \
   --pred-key lean4_prediction \
@@ -297,7 +339,7 @@ CUDA_VISIBLE_DEVICES=0,1,2 python -m torch.distributed.run --nproc_per_node 3 -m
   --cand-pos-sampling hard \
   --cand-neg-sampling hard \
   --epochs 1 \
-  --batch-size 8 \
+  --batch-size 2 \
   --grad-accum 1 \
   --bf16 \
   --eval-size 0.2 \

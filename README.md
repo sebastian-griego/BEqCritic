@@ -39,6 +39,15 @@ cat results/results.md
 
 All quickstart artifacts/logs are written under `runs/quickstart/`.
 
+Quickstart trains on a single GPU for stability. Choose the GPU with `BEQCRITIC_TRAIN_CUDA_VISIBLE_DEVICES`:
+
+```bash
+BEQCRITIC_TRAIN_CUDA_VISIBLE_DEVICES=0 make quickstart
+BEQCRITIC_TRAIN_CUDA_VISIBLE_DEVICES=3 make quickstart
+```
+
+For multi-GPU DDP training, use `torchrun` (one process per GPU); see `README_BEQCRITIC.md` for examples.
+
 Manual steps (if you want to run each stage yourself):
 
 Train a critic (downloads the base model; set `BEQCRITIC_BASE_MODEL` to override):

@@ -29,6 +29,13 @@ python -m beqcritic.smoke
 bash scripts/run_quickstart.sh
 ```
 
+Quickstart trains on a single GPU by default. Choose the GPU with `BEQCRITIC_TRAIN_CUDA_VISIBLE_DEVICES`:
+
+```bash
+BEQCRITIC_TRAIN_CUDA_VISIBLE_DEVICES=0 bash scripts/run_quickstart.sh
+BEQCRITIC_TRAIN_CUDA_VISIBLE_DEVICES=3 bash scripts/run_quickstart.sh
+```
+
 Outputs are written under `runs/quickstart/`.
 
 ## Convenience targets
