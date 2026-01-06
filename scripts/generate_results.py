@@ -184,9 +184,9 @@ def main() -> None:
     lines.append("")
     lines.append("Definitions:")
     lines.append("- `any correct (%)` is the oracle reachability of the candidate pool.")
-    lines.append("- `selected correct | any correct (%)` is selector quality conditional on reachability.")
+    lines.append("- `selected correct given any correct (%)` is selector quality conditional on reachability.")
     lines.append("")
-    lines.append("| method | selected correct (%) | selected correct \\| any correct (%) | problems |")
+    lines.append("| method | selected correct (%) | selected correct given any correct (%) | problems |")
     lines.append("|---|---:|---:|---:|")
     for m in metrics:
         name = m.get("name") or "-"
