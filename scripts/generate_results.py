@@ -89,6 +89,10 @@ def main() -> None:
     out_path = Path(str(args.output))
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
+    any_correct_pct = float(metrics[0].get("has_any_correct_pct") or 0.0)
+    any_correct = int(metrics[0].get("has_any_correct") or 0)
+    problems = int(metrics[0].get("problems") or 0)
+
     lines: list[str] = []
     lines.append("# Results: ProofNetVerif test (selection proxy)")
     lines.append("")
@@ -98,6 +102,12 @@ def main() -> None:
     )
     lines.append("")
     lines.append(f"Inputs: `{cand}`")
+    lines.append("")
+    lines.append(f"Oracle ceiling (any correct): {any_correct_pct:.1f}% ({any_correct}/{problems})")
+    lines.append("")
+    lines.append("Definitions:")
+    lines.append("- `any correct (%)` is the oracle reachability of the candidate pool.")
+    lines.append("- `selected correct | any correct (%)` is selector quality conditional on reachability.")
     lines.append("")
     lines.append("| method | selected correct (%) | selected correct \\| any correct (%) | problems |")
     lines.append("|---|---:|---:|---:|")
