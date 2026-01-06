@@ -8,7 +8,7 @@ version = "0.2.0"
 description = "Learned equivalence scorer for Lean autoformalization candidates"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["datasets", "transformers", "torch", "numpy", "accelerate"]
+dependencies = ["datasets", "transformers", "torch", "numpy", "accelerate", "protobuf", "sentencepiece"]
 
 [project.optional-dependencies]
 beqplus = ["lean-interact"]
