@@ -1,0 +1,17 @@
+{
+  "avg_candidates_per_problem": 9.854545454545455,
+  "baseline_first_pct": 23.636363636363637,
+  "baseline_shortest_pct": 10.909090909090908,
+  "has_any_correct": 29,
+  "has_any_correct_pct": 52.72727272727273,
+  "name": "critic_small",
+  "problems": 55,
+  "selected_correct_given_any_pct": 58.620689655172406,
+  "selected_correct_pct": 30.909090909090907,
+  "topk_any_correct_given_any_pct": [
+    58.620689655172406
+  ],
+  "topk_any_correct_pct": [
+    30.909090909090907
+  ]
+}

@@ -59,6 +59,17 @@ def load_dataset_split(dataset: str, split: str) -> Dataset:
 
 
 def _load_local_dataset_split(dataset_path: Path, split: str) -> Dataset:
+    # Support a single JSON/JSONL file.
+    if dataset_path.is_file() and dataset_path.suffix.lower() in {".json", ".jsonl"}:
+        cache_dir = REPO_ROOT / ".hf_cache" / "datasets"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        return load_dataset(
+            "json",
+            data_files=str(dataset_path),
+            split="train",
+            cache_dir=str(cache_dir),
+        )
+
     # Support datasets saved via `DatasetDict.save_to_disk()`.
     if dataset_path.is_dir() and (dataset_path / "dataset_dict.json").exists():
         dd = load_from_disk(str(dataset_path))
@@ -83,6 +94,16 @@ def _load_local_dataset_split(dataset_path: Path, split: str) -> Dataset:
             raise ValueError(
                 f"Split {split!r} not available in {dataset_path}; "
                 f"available splits: {sorted(parquet_splits.keys())}"
+            )
+        json_splits = _load_json_splits(dataset_path)
+        if json_splits is not None:
+            if split in json_splits:
+                return json_splits[split]
+            if split == "train":
+                return _make_train_fallback(json_splits, dataset_path)
+            raise ValueError(
+                f"Split {split!r} not available in {dataset_path}; "
+                f"available splits: {sorted(json_splits.keys())}"
             )
 
     # Fall back to `load_dataset()` for other local dataset types (data files, scripts, etc).
@@ -131,6 +152,30 @@ def _load_parquet_splits(dataset_path: Path) -> Optional[dict[str, Dataset]]:
         splits["test"] = load_dataset(
             "parquet",
             data_files=[str(p) for p in test_files],
+            split="train",
+            cache_dir=str(cache_dir),
+        )
+    return splits
+
+
+def _load_json_splits(dataset_path: Path) -> Optional[dict[str, Dataset]]:
+    split_files: dict[str, list[Path]] = {}
+    for name in ["train", "valid", "validation", "dev", "test"]:
+        files = sorted(dataset_path.glob(f"{name}*.jsonl"))
+        files += sorted(dataset_path.glob(f"{name}*.json"))
+        if files:
+            split_files[name] = files
+    if not split_files:
+        return None
+
+    cache_dir = REPO_ROOT / ".hf_cache" / "datasets"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    splits: dict[str, Dataset] = {}
+    for split_name, files in split_files.items():
+        splits[split_name] = load_dataset(
+            "json",
+            data_files=[str(p) for p in files],
             split="train",
             cache_dir=str(cache_dir),
         )

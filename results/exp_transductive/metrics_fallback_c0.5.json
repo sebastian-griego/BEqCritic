@@ -1,0 +1,17 @@
+{
+  "avg_candidates_per_problem": 12.568306010928962,
+  "baseline_first_pct": 28.415300546448087,
+  "baseline_shortest_pct": 4.918032786885246,
+  "has_any_correct": 114,
+  "has_any_correct_pct": 62.295081967213115,
+  "name": "fallback_c0.5",
+  "problems": 183,
+  "selected_correct_given_any_pct": 74.56140350877193,
+  "selected_correct_pct": 46.44808743169399,
+  "topk_any_correct_given_any_pct": [
+    74.56140350877193
+  ],
+  "topk_any_correct_pct": [
+    46.44808743169399
+  ]
+}

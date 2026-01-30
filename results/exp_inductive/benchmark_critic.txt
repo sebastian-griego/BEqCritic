@@ -1,0 +1,142 @@
+Baseline first
+Problems: 55
+Has any correct: 29 (52.7%)
+Selected correct: 13 (23.6%)
+Selected correct | any correct: 13 (44.8%)
+Avg component_size: 1.00
+Avg chosen_centrality: 0.000
+
+Baseline shortest
+Problems: 55
+Has any correct: 29 (52.7%)
+Selected correct: 6 (10.9%)
+Selected correct | any correct: 6 (20.7%)
+Avg component_size: 1.00
+Avg chosen_centrality: 0.000
+
+Baseline majority
+Problems: 55
+Has any correct: 29 (52.7%)
+Selected correct: 6 (10.9%)
+Selected correct | any correct: 6 (20.7%)
+Avg component_size: 1.00
+Avg chosen_centrality: 0.000
+
+Baseline random
+Problems: 55
+Has any correct: 29 (52.7%)
+Selected correct: 9 (16.4%)
+Selected correct | any correct: 9 (31.0%)
+Avg component_size: 1.00
+Avg chosen_centrality: 0.000
+
+Baseline BLEU-medoid
+Problems: 55
+Has any correct: 29 (52.7%)
+Selected correct: 17 (30.9%)
+Selected correct | any correct: 17 (58.6%)
+Avg component_size: 1.00
+Avg chosen_centrality: 0.484
+
+Baseline MBR-global similarity=critic temp=1.3659523725509644
+Problems: 55
+Has any correct: 29 (52.7%)
+Selected correct: 20 (36.4%)
+Selected correct | any correct: 20 (69.0%)
+Avg component_size: 1.00
+Avg chosen_centrality: 0.318
+
+Baseline MBR-kNN(k=3) similarity=critic temp=1.3659523725509644
+Problems: 55
+Has any correct: 29 (52.7%)
+Selected correct: 20 (36.4%)
+Selected correct | any correct: 20 (69.0%)
+Avg component_size: 1.00
+Avg chosen_centrality: 0.598
+
+Baseline first buckets (n_candidates) bounds=[5, 10, 20, 40, 80]
+  bucket 0: 18 problems acc=0.0% acc|any=0.0%
+  bucket 1: 16 problems acc=37.5% acc|any=46.2%
+  bucket 2: 16 problems acc=37.5% acc|any=54.5%
+  bucket 3: 5 problems acc=20.0% acc|any=25.0%
+
+Baseline shortest buckets (n_candidates) bounds=[5, 10, 20, 40, 80]
+  bucket 0: 18 problems acc=0.0% acc|any=0.0%
+  bucket 1: 16 problems acc=12.5% acc|any=15.4%
+  bucket 2: 16 problems acc=25.0% acc|any=36.4%
+  bucket 3: 5 problems acc=0.0% acc|any=0.0%
+
+Baseline majority buckets (n_candidates) bounds=[5, 10, 20, 40, 80]
+  bucket 0: 18 problems acc=0.0% acc|any=0.0%
+  bucket 1: 16 problems acc=12.5% acc|any=15.4%
+  bucket 2: 16 problems acc=25.0% acc|any=36.4%
+  bucket 3: 5 problems acc=0.0% acc|any=0.0%
+
+Baseline random buckets (n_candidates) bounds=[5, 10, 20, 40, 80]
+  bucket 0: 18 problems acc=0.0% acc|any=0.0%
+  bucket 1: 16 problems acc=31.2% acc|any=38.5%
+  bucket 2: 16 problems acc=18.8% acc|any=27.3%
+  bucket 3: 5 problems acc=20.0% acc|any=25.0%
+
+Baseline BLEU-medoid buckets (n_candidates) bounds=[5, 10, 20, 40, 80]
+  bucket 0: 18 problems acc=5.6% acc|any=100.0%
+  bucket 1: 16 problems acc=43.8% acc|any=53.8%
+  bucket 2: 16 problems acc=43.8% acc|any=63.6%
+  bucket 3: 5 problems acc=40.0% acc|any=50.0%
+
+Baseline MBR-global similarity=critic temp=1.3659523725509644 buckets (n_candidates) bounds=[5, 10, 20, 40, 80]
+  bucket 0: 18 problems acc=5.6% acc|any=100.0%
+  bucket 1: 16 problems acc=50.0% acc|any=61.5%
+  bucket 2: 16 problems acc=50.0% acc|any=72.7%
+  bucket 3: 5 problems acc=60.0% acc|any=75.0%
+
+Baseline MBR-kNN(k=3) similarity=critic temp=1.3659523725509644 buckets (n_candidates) bounds=[5, 10, 20, 40, 80]
+  bucket 0: 18 problems acc=5.6% acc|any=100.0%
+  bucket 1: 16 problems acc=50.0% acc|any=61.5%
+  bucket 2: 16 problems acc=50.0% acc|any=72.7%
+  bucket 3: 5 problems acc=60.0% acc|any=75.0%
+
+Baseline first buckets (selected_component_size) bounds=[1, 2, 3, 5, 10]
+  bucket 0: 55 problems acc=23.6% acc|any=44.8%
+
+Baseline shortest buckets (selected_component_size) bounds=[1, 2, 3, 5, 10]
+  bucket 0: 55 problems acc=10.9% acc|any=20.7%
+
+Baseline majority buckets (selected_component_size) bounds=[1, 2, 3, 5, 10]
+  bucket 0: 55 problems acc=10.9% acc|any=20.7%
+
+Baseline random buckets (selected_component_size) bounds=[1, 2, 3, 5, 10]
+  bucket 0: 55 problems acc=16.4% acc|any=31.0%
+
+Baseline BLEU-medoid buckets (selected_component_size) bounds=[1, 2, 3, 5, 10]
+  bucket 0: 55 problems acc=30.9% acc|any=58.6%
+
+Baseline MBR-global similarity=critic temp=1.3659523725509644 buckets (selected_component_size) bounds=[1, 2, 3, 5, 10]
+  bucket 0: 55 problems acc=36.4% acc|any=69.0%
+
+Baseline MBR-kNN(k=3) similarity=critic temp=1.3659523725509644 buckets (selected_component_size) bounds=[1, 2, 3, 5, 10]
+  bucket 0: 55 problems acc=36.4% acc|any=69.0%
+
+Strategy: similarity=critic temp=1.3659523725509644 threshold=0.5 tie_break=medoid cluster_rank=size_then_cohesion symmetric=False mutual_k=0 tri_margin=0.2 mode=support support=0.7
+Problems: 55
+Has any correct: 29 (52.7%)
+Selected correct: 18 (32.7%)
+Selected correct | any correct: 18 (62.1%)
+Avg component_size: 3.44
+Avg component_cohesion: 0.938
+Avg chosen_centrality: 0.946
+
+Strategy: similarity=critic temp=1.3659523725509644 threshold=0.5 tie_break=medoid cluster_rank=size_then_cohesion symmetric=False mutual_k=0 tri_margin=0.2 mode=support support=0.7 buckets (n_candidates) bounds=[5, 10, 20, 40, 80]
+  bucket 0: 18 problems acc=0.0% acc|any=0.0%
+  bucket 1: 16 problems acc=43.8% acc|any=53.8%
+  bucket 2: 16 problems acc=50.0% acc|any=72.7%
+  bucket 3: 5 problems acc=60.0% acc|any=75.0%
+
+Strategy: similarity=critic temp=1.3659523725509644 threshold=0.5 tie_break=medoid cluster_rank=size_then_cohesion symmetric=False mutual_k=0 tri_margin=0.2 mode=support support=0.7 buckets (selected_component_size) bounds=[1, 2, 3, 5, 10]
+  bucket 0: 14 problems acc=7.1% acc|any=33.3%
+  bucket 1: 11 problems acc=0.0% acc|any=0.0%
+  bucket 2: 11 problems acc=27.3% acc|any=42.9%
+  bucket 3: 6 problems acc=50.0% acc|any=75.0%
+  bucket 4: 12 problems acc=83.3% acc|any=90.9%
+  bucket 5: 1 problems acc=100.0% acc|any=100.0%
+

@@ -286,6 +286,38 @@ Notes:
 
 Clean train/dev/test on ProofNetVerif (avoid test leakage):
 
+Inductive (ID-disjoint) split across ProofNetVerif valid+test:
+
+This creates a new train/dev/test split where no problem ids overlap. Treat the original Hub
+split as "transductive" and the ID-disjoint split as "inductive" (OOD by problem).
+
+1) Build the ID-disjoint split locally:
+
+python -m beqcritic.make_id_disjoint_split \
+  --dataset PAug/ProofNetVerif \
+  --input-splits valid,test \
+  --id-key id \
+  --output-dir hf_datasets/ProofNetVerif_id_disjoint \
+  --seed 0 \
+  --train-frac 0.7 --dev-frac 0.15
+
+This writes `train.jsonl`, `dev.jsonl`, `test.jsonl` (use `--dev-name valid` to write `valid.jsonl` instead).
+
+2) Train/eval using the local split:
+
+python -m beqcritic.train_beq_critic \
+  --dataset hf_datasets/ProofNetVerif_id_disjoint \
+  --split train \
+  --eval-split dev \
+  --pred-key lean4_prediction \
+  --ref-key lean4_formalization \
+  --label-key correct \
+  --problem-id-key id \
+  --base-model microsoft/deberta-v3-base \
+  --output-dir runs/beqcritic_id_disjoint
+
+Then tune selection on `dev` and report on `test` using `make_grouped_candidates` and `score_and_select`.
+
 Preferred setup (Hub dataset has `valid` + `test` only):
 
 Train on `valid` (with a held-out `--eval-size` group split), then report selection quality on `test`.
