@@ -1,0 +1,62 @@
+{
+  "transductive_nl": {
+    "problems": 178,
+    "avg_candidates_per_problem": 8.157303370786517,
+    "selected_correct_pct": 62.359550561797754,
+    "has_any_correct_pct": 67.41573033707866,
+    "selected_correct_given_any_pct": 92.5,
+    "mrr": 0.955138888888889,
+    "hit_at_3": 98.33333333333333,
+    "hit_at_5": 100.0
+  },
+  "transductive_nl_blank": {
+    "problems": 178,
+    "avg_candidates_per_problem": 8.157303370786517,
+    "selected_correct_pct": 56.741573033707866,
+    "has_any_correct_pct": 67.41573033707866,
+    "selected_correct_given_any_pct": 84.16666666666667,
+    "mrr": 0.9109126984126985,
+    "hit_at_3": 99.16666666666667,
+    "hit_at_5": 99.16666666666667
+  },
+  "transductive_nl_const": {
+    "problems": 178,
+    "avg_candidates_per_problem": 8.157303370786517,
+    "selected_correct_pct": 58.42696629213483,
+    "has_any_correct_pct": 67.41573033707866,
+    "selected_correct_given_any_pct": 86.66666666666667,
+    "mrr": 0.9232638888888889,
+    "hit_at_3": 98.33333333333333,
+    "hit_at_5": 98.33333333333333
+  },
+  "inductive_nl": {
+    "problems": 55,
+    "avg_candidates_per_problem": 9.854545454545455,
+    "selected_correct_pct": 49.09090909090909,
+    "has_any_correct_pct": 52.72727272727273,
+    "selected_correct_given_any_pct": 93.10344827586206,
+    "mrr": 0.9597701149425287,
+    "hit_at_3": 100.0,
+    "hit_at_5": 100.0
+  },
+  "inductive_nl_blank": {
+    "problems": 55,
+    "avg_candidates_per_problem": 9.854545454545455,
+    "selected_correct_pct": 41.81818181818182,
+    "has_any_correct_pct": 52.72727272727273,
+    "selected_correct_given_any_pct": 79.3103448275862,
+    "mrr": 0.8735632183908045,
+    "hit_at_3": 93.10344827586206,
+    "hit_at_5": 100.0
+  },
+  "inductive_nl_const": {
+    "problems": 55,
+    "avg_candidates_per_problem": 9.854545454545455,
+    "selected_correct_pct": 45.45454545454545,
+    "has_any_correct_pct": 52.72727272727273,
+    "selected_correct_given_any_pct": 86.20689655172414,
+    "mrr": 0.9080459770114943,
+    "hit_at_3": 93.10344827586206,
+    "hit_at_5": 100.0
+  }
+}
