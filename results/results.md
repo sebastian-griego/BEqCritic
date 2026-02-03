@@ -15,6 +15,7 @@ NLVerifier provenance: `runs/verifier_v1/checkpoints/nl_verifier_deberta_v3_base
 
 | method | selected correct (%) | selected correct given any correct (%) | problems |
 |---|---:|---:|---:|
+| random | 35.4 | 52.5 | 178 |
 | selfbleu | 47.2 | 70.0 | 178 |
 | nlverifier | 62.4 | 92.5 | 178 |
 
@@ -31,5 +32,6 @@ NLVerifier provenance: `runs/verifier_v1/checkpoints/nl_verifier_deberta_v3_base
 
 | method | selected correct (%) | selected correct given any correct (%) | problems |
 |---|---:|---:|---:|
+| random | 21.8 | 41.4 | 55 |
 | selfbleu | 30.9 | 58.6 | 55 |
 | nlverifier | 49.1 | 93.1 | 55 |

@@ -1,0 +1,189 @@
+% main.tex
+\documentclass{article}
+
+% VerifAI asks for ICLR format
+\usepackage{iclr2026_conference,times}
+
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+\usepackage{url}
+\usepackage{hyperref}
+
+\title{NLVerifier: Natural Language Conditioned Cross-Encoder Selection for Lean Autoformalization Candidates}
+
+\author{Anonymous authors\\
+Paper under double-blind review
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Sampling multiple candidate formalizations and selecting a final prediction is a common strategy in statement autoformalization.
+Prior work uses type-check filtering followed by a surface-form consensus heuristic such as Self-BLEU.
+We study a simple alternative: a learned natural language conditioned verifier (NLVerifier) that scores each (natural language statement, candidate Lean statement) pair and selects the highest scoring candidate.
+On ProofNetVerif, NLVerifier improves top-1 selection accuracy from 84/178 (47.2\%) to 111/178 (62.4\%) on the original (transductive) test split, and from 17/55 (30.9\%) to 27/55 (49.1\%) on a new ID-disjoint (inductive) split constructed to prevent problem overlap.
+Ablations that remove or collapse the natural language input reduce performance, indicating that the gains come from conditioning on the informal statement rather than only modeling Lean syntax.
+\end{abstract}
+
+\section{Introduction}
+Statement autoformalization translates informal mathematical statements into formal languages such as Lean, enabling machine checking and downstream verification.
+Recent evaluations emphasize that correctness cannot be reliably measured by surface overlap metrics alone, motivating equivalence-centric benchmarks and metrics \citep{poiroux2025reliable}.
+In practical pipelines, models often sample many candidate formalizations, discard those that fail to type-check, then select a single prediction using a heuristic such as Self-BLEU \citep{poiroux2025reliable,zhu2018texygen}.
+These heuristics are attractive because they require no training, but they ignore the natural language prompt and can fail under distribution shift.
+
+This paper evaluates a small, direct modification: replace the consensus heuristic with a learned verifier that explicitly scores alignment between the natural language statement and each candidate Lean statement.
+Our goal is not to propose a new full autoformalization system, but to isolate and strengthen the selection component that sits between sampling and final evaluation.
+
+\section{Task}
+We consider the following selection setting.
+For each problem ID $p$, we observe a natural language statement $x_p$ and a set of $n_p$ candidate Lean statements $\{y_{p,i}\}_{i=1}^{n_p}$.
+Each candidate is annotated with a binary semantic equivalence label $c_{p,i} \in \{0,1\}$ indicating whether it is correct for $x_p$.
+A selection method outputs a single index $\hat{i}$ and is scored by whether $c_{p,\hat{i}} = 1$.
+
+\paragraph{Top-1 selection accuracy}
+We report \texttt{selected\_correct}, the fraction of problems where the selected candidate is correct.
+
+\paragraph{Conditional accuracy}
+We also report \texttt{selected\_correct\_given\_any}, the fraction of problems where the method selects a correct candidate conditional on the candidate set containing at least one correct option.
+This isolates selection quality from candidate coverage.
+
+\section{Methods}
+
+\subsection{Self-BLEU consensus baseline}
+Self-BLEU was introduced as a diversity diagnostic \citep{zhu2018texygen}, and has been used as a practical selection heuristic in autoformalization pipelines \citep{poiroux2025reliable}.
+We use it as a surface-form consensus selector by choosing the candidate with the highest average BLEU score against the other candidates for the same problem.
+
+\subsection{Random baseline}
+As a lower bound, we select a candidate uniformly at random from each candidate set.
+
+\subsection{Candidate-candidate critic baseline}
+We include a learned candidate-only baseline that scores candidates without access to the natural language input.
+This can be implemented as a cross-encoder that predicts semantic compatibility between two Lean candidates and selects a medoid under the learned similarity.
+It captures stronger Lean-aware similarity than BLEU, but it cannot directly test alignment with the informal statement.
+
+\subsection{NLVerifier}
+NLVerifier is a cross-encoder reranker \citep{nogueira2019passage} that produces a scalar score $s_\theta(x_p, y_{p,i})$ for each (natural language, Lean) pair.
+We instantiate NLVerifier with DeBERTa-v3-base \citep{he2021debertav3} and fine-tune it as a binary classifier on labeled pairs.
+At inference time, NLVerifier selects:
+\[
+\hat{i} = \arg\max_i s_\theta(x_p, y_{p,i}).
+\]
+
+\paragraph{Ablations}
+To test whether the model truly uses the natural language input, we evaluate two inference-time ablations:
+(1) \textbf{blank NL}, where $x_p$ is replaced by an empty string, and
+(2) \textbf{constant NL}, where $x_p$ is replaced by the same constant string for all problems.
+
+\section{Evaluation setup}
+
+\subsection{ProofNetVerif}
+ProofNetVerif is a benchmark introduced to evaluate autoformalization metrics and equivalence labeling \citep{poiroux2025reliable,proofnetverif_hf}.
+We use the dataset in a local packaging that provides an ``original'' split and a derived ID-disjoint split.
+
+\paragraph{Candidate sets and construction}
+ProofNetVerif is stored as a flat table of candidate rows keyed by a problem ID.
+Each row contains a natural language statement, a candidate Lean statement, and a binary equivalence label.
+For selection evaluation, we construct one candidate set per problem by grouping rows with the same problem ID and taking each row's candidate Lean statement as one selectable option.
+
+On the transductive test split, we evaluate 178 problems with 1{,}452 total candidates (mean 8.16 candidates per problem), and 120/178 problems (67.4\%) contain at least one correct candidate.
+On the ID-disjoint inductive test split, we evaluate 55 problems with 542 total candidates (mean 9.85 candidates per problem), and 29/55 problems (52.7\%) contain at least one correct candidate.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Candidate set statistics for evaluation splits.}
+\label{tab:candstats}
+\begin{tabular}{lrrrr}
+\toprule
+Split & Problems & Candidates & Mean cand./prob. & Any-correct problems \\
+\midrule
+Transductive test & 178 & 1{,}452 & 8.16 & 120 (67.4\%) \\
+ID-disjoint test & 55 & 542 & 9.85 & 29 (52.7\%) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Transductive evaluation}
+We evaluate on the original test split, which is transductive with respect to the dataset's original split design.
+
+\paragraph{Inductive evaluation via ID-disjoint splitting}
+To test generalization to unseen problems, we construct a new split by grouping examples by problem ID and ensuring IDs do not overlap between train, dev, and test.
+Our ID-disjoint split yields 252 train IDs (2{,}724 rows), 54 dev IDs (486 rows), and 55 test IDs (542 rows).
+We report inductive results on the 55-ID test partition.
+
+\section{Results}
+
+\begin{table}[t]
+\centering
+\small
+\caption{Selection accuracy on ProofNetVerif, reported as correct/total (percent).
+``Given-any'' conditions on problems whose candidate set contains at least one correct candidate
+(120/178 transductive, 29/55 inductive).}
+\label{tab:main}
+\begin{tabular}{lcccc}
+\toprule
+& \multicolumn{2}{c}{Transductive (178 problems)} & \multicolumn{2}{c}{Inductive ID-disjoint (55 problems)} \\
+Method & Top-1 & Given-any & Top-1 & Given-any \\
+\midrule
+Random selection &
+63/178 (35.4\%) & 63/120 (52.5\%) &
+12/55 (21.8\%) & 12/29 (41.4\%) \\
+Self-BLEU consensus \citep{zhu2018texygen,poiroux2025reliable} &
+84/178 (47.2\%) & 84/120 (70.0\%) &
+17/55 (30.9\%) & 17/29 (58.6\%) \\
+Candidate-only critic (best variant) &
+87/178 (48.9\%) & 87/120 (72.5\%) &
+20/55 (36.4\%) & 20/29 (69.0\%) \\
+\midrule
+NLVerifier (full input) &
+\textbf{111/178 (62.4\%)} & \textbf{111/120 (92.5\%)} &
+\textbf{27/55 (49.1\%)} & \textbf{27/29 (93.1\%)} \\
+NLVerifier (blank NL) &
+101/178 (56.7\%) & 101/120 (84.2\%) &
+23/55 (41.8\%) & 23/29 (79.3\%) \\
+NLVerifier (constant NL) &
+104/178 (58.4\%) & 104/120 (86.7\%) &
+25/55 (45.5\%) & 25/29 (86.2\%) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:main} shows that NLVerifier improves top-1 selection accuracy over Self-BLEU
+from 84/178 (47.2\%) to 111/178 (62.4\%) on the transductive test split, and from 17/55 (30.9\%) to 27/55 (49.1\%) on the ID-disjoint inductive split.
+When at least one correct candidate exists in the candidate set, NLVerifier selects a correct candidate
+in 111/120 cases (92.5\%) transductively and 27/29 cases (93.1\%) inductively.
+
+\paragraph{Does NL conditioning matter}
+Both ablations reduce performance, especially on the inductive split, supporting that NLVerifier uses the natural language statement and is not only learning Lean plausibility priors.
+
+\section{Limitations and future work}
+This study focuses on one primary selection benchmark.
+As a preliminary stress test, we also evaluated zero-shot transfer to an external misalignment dataset and observed limited transfer, which we summarize in Appendix~\ref{app:ood}.
+Two natural next steps are (1) training on a mixture of alignment and equivalence datasets spanning multiple benchmarks, and (2) integrating the verifier into an end-to-end autoformalization pipeline to measure downstream gains in statement correctness after type-check filtering.
+
+\section{Conclusion}
+We presented NLVerifier, a simple natural language conditioned cross-encoder for selecting among sampled Lean autoformalization candidates.
+On ProofNetVerif, NLVerifier yields large gains over Self-BLEU and remains substantially stronger under an ID-disjoint inductive evaluation.
+
+\section*{Reproducibility}
+For double-blind review, we provide code, splits, and all paper tables in supplementary material via an anonymized repository and artifact bundle.
+
+\bibliography{references}
+\bibliographystyle{iclr2026_conference}
+
+\appendix
+
+\section{Out-of-distribution stress test}
+\label{app:ood}
+A concern with any learned verifier is generalization beyond the training distribution.
+As a stress test, we applied NLVerifier zero-shot to a misalignment benchmark from FormalAlign \citep{lu2024formalalign} (MiniF2F misalignment test).
+FormalAlign constructs adversarially misaligned formal statements and evaluates both detection and selection settings.
+
+In our zero-shot evaluation, we observed 73.6\% overall pair classification accuracy at a fixed threshold, with lower accuracy on the positive class (26.3\%) than on the negative class (76.7\%).
+When cast as per-input selection among candidates, top-1 selection accuracy was 2.47\%.
+These results indicate substantial domain shift between ProofNetVerif equivalence labels and FormalAlign's adversarial misalignment construction, motivating multi-benchmark training as future work.
+
+\end{document}
