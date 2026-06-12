@@ -10,6 +10,7 @@ __all__ = [
     "benchmark_selection",
     "calibrate_temperature",
     "debug_selection",
+    "audit",
     "select",
     "modeling",
     "embedder",

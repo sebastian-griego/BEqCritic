@@ -10,9 +10,11 @@ Output JSONL format:
 from __future__ import annotations
 
 import argparse
+from contextlib import ExitStack
 import json
 import math
 
+from .audit import build_selection_audit
 from .bleu import bleu_medoid_index, bleu_centrality_ranking
 from .embedder import TextEmbedder
 from .features import extract_features
@@ -242,6 +244,21 @@ def main():
         action="store_true",
         help="When used with --top-k > 1, also include the selected top-k Lean strings in the output JSONL.",
     )
+    p.add_argument(
+        "--audit-output",
+        type=str,
+        default="",
+        help="Optional JSONL path for per-problem selection audits with clusters, graph stats, and top edges.",
+    )
+    p.add_argument("--audit-top-components", type=int, default=5)
+    p.add_argument("--audit-top-edges", type=int, default=30)
+    p.add_argument("--audit-edge-min-score", type=float, default=0.0)
+    p.add_argument(
+        "--audit-max-text-chars",
+        type=int,
+        default=500,
+        help="Maximum candidate text length stored in audits; use 0 for full text.",
+    )
     args = p.parse_args()
 
     critic = None
@@ -263,7 +280,14 @@ def main():
                 device=str(critic.device) if critic.device is not None else None,
             )
 
-    with open(args.input, "r", encoding="utf-8") as fin, open(args.output, "w", encoding="utf-8") as fout:
+    with ExitStack() as stack:
+        fin = stack.enter_context(open(args.input, "r", encoding="utf-8"))
+        fout = stack.enter_context(open(args.output, "w", encoding="utf-8"))
+        audit_fout = (
+            stack.enter_context(open(args.audit_output, "w", encoding="utf-8"))
+            if args.audit_output
+            else None
+        )
         for line in fin:
             if not line.strip():
                 continue
@@ -543,6 +567,42 @@ def main():
                         }
                     )
             fout.write(json.dumps(out, ensure_ascii=False) + "\n")
+            if audit_fout is not None:
+                labels = obj.get("labels") if isinstance(obj.get("labels"), list) else None
+                audit = build_selection_audit(
+                    problem_id=obj.get("problem_id"),
+                    candidates=candidates,
+                    norm=norm_scored,
+                    scores=scores,
+                    selected_index=int(chosen_index),
+                    selection_method=str(selection_method),
+                    select_mode=str(args.select_mode),
+                    threshold=float(args.threshold),
+                    tie_break=str(args.tie_break),
+                    component_rank=str(args.cluster_rank),
+                    mutual_top_k=int(args.mutual_k),
+                    triangle_prune_margin=float(args.triangle_prune_margin),
+                    triangle_prune_keep_best_edge=True,
+                    cluster_mode=str(args.cluster_mode),
+                    support_frac=float(args.support_frac),
+                    medoid_simple_top_k=int(args.medoid_simple_top_k),
+                    medoid_simple_max_drop=float(args.medoid_simple_max_drop),
+                    simple_weight_chars=float(args.simple_weight_chars),
+                    simple_weight_binders=float(args.simple_weight_binders),
+                    simple_weight_prop_assumptions=float(args.simple_weight_prop_assumptions),
+                    simple_chars_scale=float(args.simple_chars_scale),
+                    selection_result=stats,
+                    labels=labels,
+                    fallback_used=bool(fallback_used),
+                    primary_selected_index=int(primary_chosen_index),
+                    top_components=int(args.audit_top_components),
+                    top_edges=int(args.audit_top_edges),
+                    edge_min_score=float(args.audit_edge_min_score),
+                    max_text_chars=int(args.audit_max_text_chars),
+                )
+                if chosen_indices is not None:
+                    audit["selection"]["chosen_indices"] = [int(i) for i in chosen_indices]
+                audit_fout.write(json.dumps(audit, ensure_ascii=False) + "\n")
 
 if __name__ == "__main__":
     main()

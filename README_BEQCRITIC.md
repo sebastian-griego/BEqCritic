@@ -170,6 +170,22 @@ python -m beqcritic.evaluate_selection \
   --candidates proofnetverif_test_candidates.jsonl \
   --selections proofnetverif_test_selection.jsonl
 
+For run-level error analysis, emit a compact audit JSONL while selecting:
+
+python -m beqcritic.score_and_select \
+  --model checkpoints/beqcritic_deberta \
+  --input proofnetverif_test_candidates.jsonl \
+  --output proofnetverif_test_selection.jsonl \
+  --audit-output proofnetverif_test_selection_audit.jsonl \
+  --threshold 0.5 \
+  --tie-break medoid \
+  --cluster-rank size_then_cohesion \
+  --triangle-prune-margin 0.2 \
+  --emit-stats
+
+Each audit record includes the selected/fallback candidate, graph statistics, ranked clusters,
+top scored edges, labels when available, and truncated candidate text for review.
+
 Emit/evaluate top-k selections (to reduce BEq+ compute):
 
 python -m beqcritic.score_and_select \

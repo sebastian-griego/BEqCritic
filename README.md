@@ -104,6 +104,20 @@ python -m beqcritic.evaluate_selection \
   --selections runs/myrun/proofnetverif_test_selection.jsonl
 ```
 
+For reproducible error analysis, ask the selector to write a compact audit JSONL alongside the selections:
+
+```bash
+python -m beqcritic.score_and_select \
+  --model runs/myrun/checkpoints/beqcritic_deberta \
+  --input runs/myrun/proofnetverif_test_candidates.jsonl \
+  --output runs/myrun/proofnetverif_test_selection.jsonl \
+  --audit-output runs/myrun/proofnetverif_test_selection_audit.jsonl \
+  --device cpu \
+  --emit-stats
+```
+
+Each audit line records the final choice, fallback status, graph statistics, ranked clusters, top scored edges, and compact candidate snippets.
+
 Benchmark a sweep (no re-scoring across thresholds/strategies):
 
 ```bash
