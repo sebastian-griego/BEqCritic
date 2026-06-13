@@ -179,7 +179,19 @@ python -m beqcritic.verifier_select \
   --model runs/myrun/checkpoints/nlverifier_deberta \
   --dataset <hf_dataset> --split test \
   --input runs/myrun/proofnetverif_test_candidates.jsonl \
-  --output runs/myrun/proofnetverif_test_selection_nlverifier.jsonl
+  --output runs/myrun/proofnetverif_test_selection_nlverifier.jsonl \
+  --emit-scores
+```
+
+Turn emitted scores into a ranking-quality and failure-analysis report:
+
+```bash
+python -m beqcritic.nlverifier_diagnostics \
+  --candidates runs/myrun/proofnetverif_test_candidates.jsonl \
+  --selections runs/myrun/proofnetverif_test_selection_nlverifier.jsonl \
+  --output-md runs/myrun/nlverifier_diagnostics.md \
+  --output-json runs/myrun/nlverifier_diagnostics.json \
+  --failures-jsonl runs/myrun/nlverifier_failures.jsonl
 ```
 
 Prefer new output filenames containing `nlverifier` (existing `runs/` artifacts keep their original names).
