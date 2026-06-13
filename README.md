@@ -104,6 +104,19 @@ python -m beqcritic.evaluate_selection \
   --selections runs/myrun/proofnetverif_test_selection.jsonl
 ```
 
+Compare two selectors with Wilson confidence intervals and a paired exact
+sign test:
+
+```bash
+python -m beqcritic.compare_selection_methods \
+  --candidates runs/myrun/proofnetverif_test_candidates.jsonl \
+  --selections-a runs/myrun/proofnetverif_test_selection_selfbleu.jsonl \
+  --selections-b runs/myrun/proofnetverif_test_selection_beqcritic.jsonl \
+  --a-name selfbleu \
+  --b-name beqcritic \
+  --output-md runs/myrun/selection_comparison.md
+```
+
 For reproducible error analysis, ask the selector to write a compact audit JSONL alongside the selections:
 
 ```bash
