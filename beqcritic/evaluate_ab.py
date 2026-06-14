@@ -10,6 +10,10 @@ from __future__ import annotations
 import argparse
 import json
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+from .jsonl import load_jsonl_map_by_problem_id
 
 
 @dataclass(frozen=True)
@@ -20,18 +24,19 @@ class _Problem:
     n_candidates: int
 
 
-def _load_jsonl_map(path: str) -> dict[str, dict]:
-    out: dict[str, dict] = {}
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            obj = json.loads(line)
-            pid = obj.get("problem_id")
-            if pid is None:
-                raise ValueError(f"Missing problem_id in {path}: {obj}")
-            out[str(pid)] = obj
-    return out
+def _load_jsonl_map(path: str | Path) -> dict[str, dict[str, Any]]:
+    return load_jsonl_map_by_problem_id(path, encoding="utf-8-sig")
+
+
+def _chosen_index(record: dict[str, Any], *, problem_id: str, method_name: str) -> int:
+    raw_indices = record.get("chosen_indices")
+    if isinstance(raw_indices, list) and raw_indices:
+        return int(raw_indices[0])
+    if "chosen_index" in record:
+        return int(record["chosen_index"])
+    raise ValueError(
+        f"{method_name} selection has no chosen_index/chosen_indices for {problem_id}: {record!r}"
+    )
 
 
 def _parse_timing(path: str) -> dict[str, float]:
@@ -98,8 +103,8 @@ def main() -> None:
         labels01 = [1 if int(x) else 0 for x in labels]
         any_correct = any(labels01)
 
-        ia = int(sel_a[pid].get("chosen_index"))
-        ib = int(sel_b[pid].get("chosen_index"))
+        ia = _chosen_index(sel_a[pid], problem_id=pid, method_name=str(args.a_name))
+        ib = _chosen_index(sel_b[pid], problem_id=pid, method_name=str(args.b_name))
         if ia < 0 or ia >= n:
             raise ValueError(f"{args.a_name} chosen_index out of range for {pid}: {ia} (n={n})")
         if ib < 0 or ib >= n:
