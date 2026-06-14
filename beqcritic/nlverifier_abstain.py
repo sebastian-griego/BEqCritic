@@ -13,7 +13,11 @@ from pathlib import Path
 from typing import Any
 
 from .jsonl import load_jsonl_map_by_problem_id
-from .nlverifier_selective import SelectiveExample, load_selective_examples
+from .nlverifier_selective import (
+    SelectiveExample,
+    load_selective_examples,
+    matching_problem_ids,
+)
 from .statistics import proportion_summary
 
 
@@ -125,6 +129,7 @@ def load_source_rows(
     scored_path: str | Path | None = None,
     candidates_path: str | Path | None = None,
     selections_path: str | Path | None = None,
+    allow_partial_overlap: bool = False,
 ) -> dict[str, dict[str, Any]]:
     if scored_path is not None:
         return _load_jsonl_map(scored_path)
@@ -133,9 +138,13 @@ def load_source_rows(
 
     candidates = _load_jsonl_map(candidates_path)
     selections = _load_jsonl_map(selections_path)
-    common = sorted(set(candidates) & set(selections))
-    if not common:
-        raise ValueError("no overlapping problem_ids across candidates and selections")
+    common = matching_problem_ids(
+        candidates,
+        selections,
+        left_name="candidates",
+        right_name="selections",
+        allow_partial_overlap=allow_partial_overlap,
+    )
     rows: dict[str, dict[str, Any]] = {}
     for problem_id in common:
         merged = dict(candidates[problem_id])
@@ -395,6 +404,11 @@ def main() -> None:
     parser.add_argument("--calibration-json", default="")
     parser.add_argument("--minimize", action="store_true")
     parser.add_argument(
+        "--allow-partial-overlap",
+        action="store_true",
+        help="Analyze only overlapping candidates/selections IDs instead of failing on mismatches.",
+    )
+    parser.add_argument(
         "--confidence-key",
         default="chosen_probability",
         choices=tuple(sorted(SUPPORTED_CONFIDENCE_KEYS)),
@@ -425,11 +439,13 @@ def main() -> None:
         temperature=float(args.temperature),
         score_key=str(args.score_key),
         minimize=bool(args.minimize),
+        allow_partial_overlap=bool(args.allow_partial_overlap),
     )
     source_rows = load_source_rows(
         scored_path=args.scores,
         candidates_path=args.candidates,
         selections_path=args.selections,
+        allow_partial_overlap=bool(args.allow_partial_overlap),
     )
     accepted, abstained, report = apply_abstention(
         examples,
