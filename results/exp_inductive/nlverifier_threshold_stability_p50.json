@@ -1,0 +1,3805 @@
+{
+  "dataset": {
+    "has_any_correct": 29,
+    "has_any_correct_rate": 0.5272727272727272,
+    "problems": 55,
+    "selected_accuracy": 0.4909090909090909,
+    "selected_correct": 27
+  },
+  "full_recommendation": {
+    "accepted": 36,
+    "accuracy": 0.6666666666666666,
+    "accuracy_ci95": {
+      "high": 0.7978538117569468,
+      "low": 0.5033399787115652
+    },
+    "applied_to_full_sample": {
+      "accepted": 36,
+      "accuracy": {
+        "ci_high": 0.7978538117569468,
+        "ci_low": 0.5033399787115652,
+        "rate": 0.6666666666666666,
+        "successes": 24,
+        "total": 36
+      },
+      "coverage": 0.6545454545454545,
+      "has_any_correct": 25,
+      "oracle_ceiling": {
+        "ci_high": 0.8199554840517008,
+        "ci_low": 0.5314372714948966,
+        "rate": 0.6944444444444444,
+        "successes": 25,
+        "total": 36
+      },
+      "selected_correct": 24
+    },
+    "coverage": 0.6545454545454545,
+    "meets_target": true,
+    "risk": 0.33333333333333337,
+    "risk_ci95": {
+      "high": 0.4966600212884348,
+      "low": 0.2021461882430532
+    },
+    "selected_correct": 24,
+    "target_accuracy": 0.5,
+    "threshold": 0.5412837391475258
+  },
+  "leave_one_out": {
+    "accepted_set_jaccard_mean": 0.9819819819819819,
+    "accepted_set_jaccard_min": 0.9722222222222222,
+    "applied_full_accepted_max": 37,
+    "applied_full_accepted_min": 35,
+    "heldout": {
+      "accepted": 36,
+      "ci_high": 0.7978538117569468,
+      "ci_low": 0.5033399787115652,
+      "rate": 0.6666666666666666,
+      "rejected": 19,
+      "successes": 24,
+      "total": 36
+    },
+    "meets_target": 55,
+    "resamples": 55,
+    "threshold_changed": 36,
+    "threshold_changed_rate": 0.6545454545454545,
+    "threshold_max": 0.6005773057060484,
+    "threshold_mean": 0.5610192157595483,
+    "threshold_min": 0.5131508738355837,
+    "train_accepted_max": 36,
+    "train_accepted_min": 34,
+    "unique_threshold_count": 3
+  },
+  "leave_one_out_rows": [
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9313561932324301,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Artin|exercise_10_1_13",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.08508068209171857,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Artin|exercise_11_2_13",
+      "omitted_selected_correct": false,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.8867971721565803,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Artin|exercise_3_2_7",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.17438692663245084,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Axler|exercise_1_6",
+      "omitted_selected_correct": false,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.1150104570989819,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Axler|exercise_1_7",
+      "omitted_selected_correct": false,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.25865987227457604,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Axler|exercise_4_4",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": 1,
+      "accepted_set_jaccard_with_full": 0.972972972972973,
+      "applied_to_full_sample": {
+        "accepted": 37,
+        "accuracy": {
+          "ci_high": 0.7817439286607287,
+          "ci_low": 0.4875902312255084,
+          "rate": 0.6486486486486487,
+          "successes": 24,
+          "total": 37
+        },
+        "coverage": 0.6727272727272727,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8036673347185581,
+          "ci_low": 0.514636672419722,
+          "rate": 0.6756756756756757,
+          "successes": 25,
+          "total": 37
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.5131508738355837,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.8838113067171269,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Axler|exercise_6_2",
+      "omitted_selected_correct": false,
+      "threshold_delta": -0.028132865311942146,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.7635730484299885,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Axler|exercise_6_3",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": 1,
+      "accepted_set_jaccard_with_full": 0.972972972972973,
+      "applied_to_full_sample": {
+        "accepted": 37,
+        "accuracy": {
+          "ci_high": 0.7817439286607287,
+          "ci_low": 0.4875902312255084,
+          "rate": 0.6486486486486487,
+          "successes": 24,
+          "total": 37
+        },
+        "coverage": 0.6727272727272727,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8036673347185581,
+          "ci_low": 0.514636672419722,
+          "rate": 0.6756756756756757,
+          "successes": 25,
+          "total": 37
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.5131508738355837,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9637240008162034,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Axler|exercise_7_10",
+      "omitted_selected_correct": false,
+      "threshold_delta": -0.028132865311942146,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.3480560932687527,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Axler|exercise_7_14",
+      "omitted_selected_correct": false,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.1062089716117875,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Dummit-Foote|exercise_1_6_4",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": 1,
+      "accepted_set_jaccard_with_full": 0.972972972972973,
+      "applied_to_full_sample": {
+        "accepted": 37,
+        "accuracy": {
+          "ci_high": 0.7817439286607287,
+          "ci_low": 0.4875902312255084,
+          "rate": 0.6486486486486487,
+          "successes": 24,
+          "total": 37
+        },
+        "coverage": 0.6727272727272727,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8036673347185581,
+          "ci_low": 0.514636672419722,
+          "rate": 0.6756756756756757,
+          "successes": 25,
+          "total": 37
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.5131508738355837,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9495543413736579,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Dummit-Foote|exercise_2_4_16b",
+      "omitted_selected_correct": false,
+      "threshold_delta": -0.028132865311942146,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": 1,
+      "accepted_set_jaccard_with_full": 0.972972972972973,
+      "applied_to_full_sample": {
+        "accepted": 37,
+        "accuracy": {
+          "ci_high": 0.7817439286607287,
+          "ci_low": 0.4875902312255084,
+          "rate": 0.6486486486486487,
+          "successes": 24,
+          "total": 37
+        },
+        "coverage": 0.6727272727272727,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8036673347185581,
+          "ci_low": 0.514636672419722,
+          "rate": 0.6756756756756757,
+          "successes": 25,
+          "total": 37
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.5131508738355837,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.8397006266464543,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Dummit-Foote|exercise_4_4_7",
+      "omitted_selected_correct": false,
+      "threshold_delta": -0.028132865311942146,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9327259654344926,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Dummit-Foote|exercise_4_5_18",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.34237218437561673,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Dummit-Foote|exercise_4_5_28",
+      "omitted_selected_correct": false,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.2762723453033884,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Dummit-Foote|exercise_5_4_2",
+      "omitted_selected_correct": false,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": 1,
+      "accepted_set_jaccard_with_full": 0.972972972972973,
+      "applied_to_full_sample": {
+        "accepted": 37,
+        "accuracy": {
+          "ci_high": 0.7817439286607287,
+          "ci_low": 0.4875902312255084,
+          "rate": 0.6486486486486487,
+          "successes": 24,
+          "total": 37
+        },
+        "coverage": 0.6727272727272727,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8036673347185581,
+          "ci_low": 0.514636672419722,
+          "rate": 0.6756756756756757,
+          "successes": 25,
+          "total": 37
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.5131508738355837,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.5412837391475258,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Dummit-Foote|exercise_8_2_4",
+      "omitted_selected_correct": false,
+      "threshold_delta": -0.028132865311942146,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": 1,
+      "accepted_set_jaccard_with_full": 0.972972972972973,
+      "applied_to_full_sample": {
+        "accepted": 37,
+        "accuracy": {
+          "ci_high": 0.7817439286607287,
+          "ci_low": 0.4875902312255084,
+          "rate": 0.6486486486486487,
+          "successes": 24,
+          "total": 37
+        },
+        "coverage": 0.6727272727272727,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8036673347185581,
+          "ci_low": 0.514636672419722,
+          "rate": 0.6756756756756757,
+          "successes": 25,
+          "total": 37
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.5131508738355837,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9673796852533771,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Dummit-Foote|exercise_8_3_6b",
+      "omitted_selected_correct": false,
+      "threshold_delta": -0.028132865311942146,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": 1,
+      "accepted_set_jaccard_with_full": 0.972972972972973,
+      "applied_to_full_sample": {
+        "accepted": 37,
+        "accuracy": {
+          "ci_high": 0.7817439286607287,
+          "ci_low": 0.4875902312255084,
+          "rate": 0.6486486486486487,
+          "successes": 24,
+          "total": 37
+        },
+        "coverage": 0.6727272727272727,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8036673347185581,
+          "ci_low": 0.514636672419722,
+          "rate": 0.6756756756756757,
+          "successes": 25,
+          "total": 37
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.5131508738355837,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.6303154073381068,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Dummit-Foote|exercise_9_4_11",
+      "omitted_selected_correct": false,
+      "threshold_delta": -0.028132865311942146,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9275935915660566,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Dummit-Foote|exercise_9_4_2a",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9338708856197341,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Herstein|exercise_2_1_26",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": 1,
+      "accepted_set_jaccard_with_full": 0.972972972972973,
+      "applied_to_full_sample": {
+        "accepted": 37,
+        "accuracy": {
+          "ci_high": 0.7817439286607287,
+          "ci_low": 0.4875902312255084,
+          "rate": 0.6486486486486487,
+          "successes": 24,
+          "total": 37
+        },
+        "coverage": 0.6727272727272727,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8036673347185581,
+          "ci_low": 0.514636672419722,
+          "rate": 0.6756756756756757,
+          "successes": 25,
+          "total": 37
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.5131508738355837,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.7272815456184614,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Herstein|exercise_2_5_43",
+      "omitted_selected_correct": false,
+      "threshold_delta": -0.028132865311942146,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.8144625885609039,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Herstein|exercise_2_6_15",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.09282547967225108,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Herstein|exercise_2_8_15",
+      "omitted_selected_correct": false,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9649461515498863,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Herstein|exercise_4_2_5",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.07014415616326267,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Herstein|exercise_4_3_1",
+      "omitted_selected_correct": false,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": 1,
+      "accepted_set_jaccard_with_full": 0.972972972972973,
+      "applied_to_full_sample": {
+        "accepted": 37,
+        "accuracy": {
+          "ci_high": 0.7817439286607287,
+          "ci_low": 0.4875902312255084,
+          "rate": 0.6486486486486487,
+          "successes": 24,
+          "total": 37
+        },
+        "coverage": 0.6727272727272727,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8036673347185581,
+          "ci_low": 0.514636672419722,
+          "rate": 0.6756756756756757,
+          "successes": 25,
+          "total": 37
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.5131508738355837,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9502472289722269,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Herstein|exercise_4_3_25",
+      "omitted_selected_correct": false,
+      "threshold_delta": -0.028132865311942146,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.12806065563120758,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Herstein|exercise_5_4_3",
+      "omitted_selected_correct": false,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": 1,
+      "accepted_set_jaccard_with_full": 0.972972972972973,
+      "applied_to_full_sample": {
+        "accepted": 37,
+        "accuracy": {
+          "ci_high": 0.7817439286607287,
+          "ci_low": 0.4875902312255084,
+          "rate": 0.6486486486486487,
+          "successes": 24,
+          "total": 37
+        },
+        "coverage": 0.6727272727272727,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8036673347185581,
+          "ci_low": 0.514636672419722,
+          "rate": 0.6756756756756757,
+          "successes": 25,
+          "total": 37
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.5131508738355837,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9039552644964457,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Herstein|exercise_5_6_14",
+      "omitted_selected_correct": false,
+      "threshold_delta": -0.028132865311942146,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.5131508738355837,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Ireland-Rosen|exercise_4_11",
+      "omitted_selected_correct": false,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.39533285565602944,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Ireland-Rosen|exercise_5_37",
+      "omitted_selected_correct": false,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.4405987786131045,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Munkres|exercise_13_4b1",
+      "omitted_selected_correct": false,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9568295497738631,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Munkres|exercise_16_4",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.2501290326946287,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Munkres|exercise_20_2",
+      "omitted_selected_correct": false,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.7692481580682093,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Munkres|exercise_22_2a",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9668796498096474,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Munkres|exercise_27_4",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.7636746568179812,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Munkres|exercise_28_6",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9319721102575946,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Munkres|exercise_30_10",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9454286625089946,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Munkres|exercise_31_3",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9650377490996785,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Munkres|exercise_33_7",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.8399796279708917,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Munkres|exercise_38_6",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": 1,
+      "accepted_set_jaccard_with_full": 0.972972972972973,
+      "applied_to_full_sample": {
+        "accepted": 37,
+        "accuracy": {
+          "ci_high": 0.7817439286607287,
+          "ci_low": 0.4875902312255084,
+          "rate": 0.6486486486486487,
+          "successes": 24,
+          "total": 37
+        },
+        "coverage": 0.6727272727272727,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8036673347185581,
+          "ci_low": 0.514636672419722,
+          "rate": 0.6756756756756757,
+          "successes": 25,
+          "total": 37
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.5131508738355837,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.6005773057060484,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Pugh|exercise_2_29",
+      "omitted_selected_correct": false,
+      "threshold_delta": -0.028132865311942146,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.3805591212372207,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Pugh|exercise_3_1",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9142266561302389,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Putnam|exercise_2000_a2",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9492737673117805,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Putnam|exercise_2010_a4",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": 1,
+      "accepted_set_jaccard_with_full": 0.972972972972973,
+      "applied_to_full_sample": {
+        "accepted": 37,
+        "accuracy": {
+          "ci_high": 0.7817439286607287,
+          "ci_low": 0.4875902312255084,
+          "rate": 0.6486486486486487,
+          "successes": 24,
+          "total": 37
+        },
+        "coverage": 0.6727272727272727,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8036673347185581,
+          "ci_low": 0.514636672419722,
+          "rate": 0.6756756756756757,
+          "successes": 25,
+          "total": 37
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.5131508738355837,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.7878946999019798,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Putnam|exercise_2018_b2",
+      "omitted_selected_correct": false,
+      "threshold_delta": -0.028132865311942146,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.7526592967517888,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Rudin|exercise_1_13",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9151501388085287,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Rudin|exercise_1_2",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.8988652591888905,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Rudin|exercise_2_29",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.24783850739257376,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Rudin|exercise_3_21",
+      "omitted_selected_correct": false,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9591954650307224,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Rudin|exercise_3_22",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.09249795969821056,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Rudin|exercise_3_5",
+      "omitted_selected_correct": false,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9361861865434721,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Rudin|exercise_4_2a",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.7783226815293719,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Shakarchi|exercise_1_13c",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": 0,
+      "accepted_set_jaccard_with_full": 1.0,
+      "applied_to_full_sample": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6545454545454545,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": false,
+      "loo_threshold": 0.5412837391475258,
+      "loo_threshold_would_accept_omitted": false,
+      "meets_target": true,
+      "omitted_confidence": 0.07454928178155283,
+      "omitted_has_any_correct": false,
+      "omitted_problem_id": "Shakarchi|exercise_2_13",
+      "omitted_selected_correct": false,
+      "threshold_delta": 0.0,
+      "train": {
+        "accepted": 36,
+        "accuracy": {
+          "ci_high": 0.7978538117569468,
+          "ci_low": 0.5033399787115652,
+          "rate": 0.6666666666666666,
+          "successes": 24,
+          "total": 36
+        },
+        "coverage": 0.6666666666666666,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.8199554840517008,
+          "ci_low": 0.5314372714948966,
+          "rate": 0.6944444444444444,
+          "successes": 25,
+          "total": 36
+        },
+        "selected_correct": 24
+      }
+    }
+  ],
+  "policy": {
+    "confidence_key": "chosen_probability",
+    "min_accepted": 5,
+    "target_accuracy": 0.5
+  },
+  "sensitive_omissions": [
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.7783226815293719,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Shakarchi|exercise_1_13c",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9361861865434721,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Rudin|exercise_4_2a",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9591954650307224,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Rudin|exercise_3_22",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.8988652591888905,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Rudin|exercise_2_29",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9151501388085287,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Rudin|exercise_1_2",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.7526592967517888,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Rudin|exercise_1_13",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9492737673117805,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Putnam|exercise_2010_a4",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9142266561302389,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Putnam|exercise_2000_a2",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.8399796279708917,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Munkres|exercise_38_6",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9650377490996785,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Munkres|exercise_33_7",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9454286625089946,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Munkres|exercise_31_3",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9319721102575946,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Munkres|exercise_30_10",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.7636746568179812,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Munkres|exercise_28_6",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.9668796498096474,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Munkres|exercise_27_4",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    },
+    {
+      "accepted_delta_from_full": -1,
+      "accepted_set_jaccard_with_full": 0.9722222222222222,
+      "applied_to_full_sample": {
+        "accepted": 35,
+        "accuracy": {
+          "ci_high": 0.8144915532573418,
+          "ci_low": 0.5202023638793081,
+          "rate": 0.6857142857142857,
+          "successes": 24,
+          "total": 35
+        },
+        "coverage": 0.6363636363636364,
+        "has_any_correct": 25,
+        "oracle_ceiling": {
+          "ci_high": 0.836734637635653,
+          "ci_low": 0.5494506513681738,
+          "rate": 0.7142857142857143,
+          "successes": 25,
+          "total": 35
+        },
+        "selected_correct": 24
+      },
+      "full_threshold_would_accept_omitted": true,
+      "loo_threshold": 0.6005773057060484,
+      "loo_threshold_would_accept_omitted": true,
+      "meets_target": true,
+      "omitted_confidence": 0.7692481580682093,
+      "omitted_has_any_correct": true,
+      "omitted_problem_id": "Munkres|exercise_22_2a",
+      "omitted_selected_correct": true,
+      "threshold_delta": 0.05929356655852258,
+      "train": {
+        "accepted": 34,
+        "accuracy": {
+          "ci_high": 0.808683564359745,
+          "ci_low": 0.508428945939082,
+          "rate": 0.6764705882352942,
+          "successes": 23,
+          "total": 34
+        },
+        "coverage": 0.6296296296296297,
+        "has_any_correct": 24,
+        "oracle_ceiling": {
+          "ci_high": 0.8316536932957758,
+          "ci_low": 0.5383109020528557,
+          "rate": 0.7058823529411765,
+          "successes": 24,
+          "total": 34
+        },
+        "selected_correct": 23
+      }
+    }
+  ],
+  "threshold_values": [
+    {
+      "resamples": 24,
+      "threshold": 0.600577305706
+    },
+    {
+      "resamples": 19,
+      "threshold": 0.541283739148
+    },
+    {
+      "resamples": 12,
+      "threshold": 0.513150873836
+    }
+  ]
+}

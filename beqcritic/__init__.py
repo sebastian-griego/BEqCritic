@@ -16,6 +16,7 @@ __all__ = [
     "nlverifier_abstention_cases",
     "nlverifier_confidence_audit",
     "nlverifier_thresholds",
+    "nlverifier_threshold_stability",
     "debug_selection",
     "audit",
     "select",

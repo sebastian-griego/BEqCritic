@@ -239,6 +239,18 @@ python -m beqcritic.nlverifier_thresholds \
   --output-json runs/myrun/nlverifier_thresholds.json
 ```
 
+Audit the chosen threshold's leave-one-out stability before deploying it:
+
+```bash
+python -m beqcritic.nlverifier_threshold_stability \
+  --scores runs/myrun/nlverifier_scores.jsonl \
+  --calibration-json runs/myrun/nlverifier_calibration.json \
+  --confidence-key chosen_probability \
+  --target-accuracy 0.5 \
+  --output-md runs/myrun/nlverifier_threshold_stability_p50.md \
+  --output-json runs/myrun/nlverifier_threshold_stability_p50.json
+```
+
 Apply a recommended threshold to produce accepted selections, abstentions, and
 an audit report:
 
@@ -285,6 +297,12 @@ On `results/exp_inductive`, the certified 50% Wilson-LCB threshold accepts
 bucket's oracle ceiling is `25/36`, so only one accepted problem still has a
 correct candidate that NLVerifier missed. The abstention-aware evaluator writes
 the same operational split to `results/exp_inductive/metrics_nlverifier_abstain_p50.json`.
+The leave-one-out stability report in
+`results/exp_inductive/nlverifier_threshold_stability_p50.md` finds three
+nearby recommended thresholds (`0.5132`, `0.5413`, `0.6006`); although the exact
+cutoff changes in `36/55` folds, applying each fold's cutoff back to the full
+sample accepts `35` to `37` problems and keeps the accepted set at least `97.2%`
+Jaccard-similar to the full-sample policy.
 The casebook in `results/exp_inductive/nlverifier_abstention_cases_p50.md`
 shows that the 12 accepted errors include 11 problems with no correct candidate
 available, and that the abstained bucket contains 3 correct selections plus 1
