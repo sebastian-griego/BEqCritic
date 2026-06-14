@@ -96,6 +96,11 @@ python -m beqcritic.score_and_select \
   --emit-stats
 ```
 
+The selector validates the full grouped-candidate JSONL before loading a critic
+or writing selection/audit outputs. Malformed rows, missing `problem_id`, empty
+or non-string candidates, and label/candidate length mismatches fail early with
+the physical input line number.
+
 Evaluate selections:
 
 ```bash

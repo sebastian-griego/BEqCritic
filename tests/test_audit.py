@@ -2,7 +2,11 @@ import json
 import subprocess
 import sys
 
+import pytest
+
 from beqcritic.audit import build_selection_audit
+from beqcritic.jsonl import JsonlError
+from beqcritic import score_and_select
 from beqcritic.select import select_from_score_matrix
 
 
@@ -98,3 +102,63 @@ def test_score_and_select_can_emit_audit_jsonl(tmp_path):
     assert audit["selection"]["selection_method"] == selection["selection_method"]
     assert audit["candidates"][0]["label"] == 1
     assert audit["top_edges"]
+
+
+def test_score_and_select_rejects_malformed_jsonl_before_writing_outputs(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections = tmp_path / "selections.jsonl"
+    audit_path = tmp_path / "audit.jsonl"
+    candidates.write_text(
+        '{"problem_id": "p1", "candidates": ["theorem a : True"]}\n{"problem_id": bad}\n',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(JsonlError) as excinfo:
+        score_and_select.main(
+            [
+                "--similarity",
+                "bleu",
+                "--input",
+                str(candidates),
+                "--output",
+                str(selections),
+                "--audit-output",
+                str(audit_path),
+            ]
+        )
+
+    assert f"{candidates}:2" in str(excinfo.value)
+    assert not selections.exists()
+    assert not audit_path.exists()
+
+
+def test_score_and_select_rejects_bad_candidate_schema_before_writing_outputs(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections = tmp_path / "selections.jsonl"
+    candidates.write_text(
+        json.dumps(
+            {
+                "problem_id": "p1",
+                "candidates": ["theorem a : True", "theorem b : True"],
+                "labels": [1],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        score_and_select.main(
+            [
+                "--similarity",
+                "bleu",
+                "--input",
+                str(candidates),
+                "--output",
+                str(selections),
+            ]
+        )
+
+    assert f"{candidates}:1" in str(excinfo.value)
+    assert "Length mismatch" in str(excinfo.value)
+    assert not selections.exists()
