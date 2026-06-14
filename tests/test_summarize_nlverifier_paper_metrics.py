@@ -82,6 +82,28 @@ def test_nlverifier_paper_metrics_rejects_inconsistent_percentages(tmp_path):
         build_summary(results)
 
 
+def test_nlverifier_paper_metrics_rejects_inconsistent_ood_accuracy(tmp_path):
+    results = tmp_path / "results"
+    _write_summary_inputs(results)
+    ood = _ood()
+    ood["accuracy"] = 0.6
+    _write_json(results / "ood_formalalign_minif2f.json", ood)
+
+    with pytest.raises(ValueError, match="ood.accuracy"):
+        build_summary(results)
+
+
+def test_nlverifier_paper_metrics_rejects_unknown_best_confidence_signal(tmp_path):
+    results = tmp_path / "results"
+    _write_summary_inputs(results)
+    confidence = _confidence()
+    confidence["best_by_oracle_normalized_accuracy_area"] = "missing_signal"
+    _write_json(results / "exp_inductive" / "nlverifier_confidence_audit.json", confidence)
+
+    with pytest.raises(ValueError, match="confidence.best_by_oracle_normalized_accuracy_area"):
+        build_summary(results)
+
+
 def test_paper_metrics_check_cli_fails_without_rewriting_stale_outputs(tmp_path):
     results = tmp_path / "results"
     _write_summary_inputs(results)
@@ -335,12 +357,21 @@ def _abstention() -> dict:
 def _stability() -> dict:
     return {
         "policy": {"confidence_key": "chosen_probability", "target_accuracy": 0.5},
-        "full_recommendation": {"threshold": 0.7},
+        "full_recommendation": {
+            "accepted": 3,
+            "accuracy": 2 / 3,
+            "coverage": 3 / 5,
+            "risk": 1 / 3,
+            "selected_correct": 2,
+            "target_accuracy": 0.5,
+            "threshold": 0.7,
+        },
         "leave_one_out": {
             "unique_threshold_count": 2,
             "threshold_min": 0.6,
             "threshold_max": 0.8,
             "threshold_changed": 3,
+            "meets_target": 5,
             "resamples": 5,
             "applied_full_accepted_min": 2,
             "applied_full_accepted_max": 4,

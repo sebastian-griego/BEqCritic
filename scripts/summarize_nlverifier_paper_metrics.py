@@ -137,7 +137,9 @@ def build_summary(
         baselines=baselines,
         confidence=confidence,
         abstention=abstention,
+        stability=stability,
         leaderboard=leaderboard,
+        ood=ood,
     )
     proofnetverif = {
         split: {
@@ -407,7 +409,9 @@ def _validate_source_consistency(
     baselines: dict[str, dict[str, Any]],
     confidence: dict[str, Any],
     abstention: dict[str, Any],
+    stability: dict[str, Any],
     leaderboard: dict[str, Any],
+    ood: dict[str, Any],
 ) -> None:
     for split, rows in SPLITS.items():
         first_key = rows[0][1]
@@ -458,8 +462,11 @@ def _validate_source_consistency(
         int(abstention["accepted"]),
     )
     _validate_confidence_dataset(confidence["dataset"])
+    _validate_confidence_signals(confidence)
     _validate_abstention_metrics(abstention)
+    _validate_stability_metrics(stability, expected_problems=inductive_problems)
     _validate_leaderboard_metrics(leaderboard)
+    _validate_ood_metrics(ood)
 
 
 def _validate_selection_metric_row(label: str, row: dict[str, Any]) -> None:
@@ -504,6 +511,39 @@ def _validate_confidence_dataset(dataset: dict[str, Any]) -> None:
     )
 
 
+def _validate_confidence_signals(confidence: dict[str, Any]) -> None:
+    signals = confidence["signals"]
+    for label in (
+        "best_by_mean_prefix_accuracy",
+        "best_by_mean_prefix_risk",
+        "best_by_oracle_normalized_accuracy_area",
+    ):
+        if label in confidence and confidence[label] not in signals:
+            raise ValueError(
+                f"Inconsistent source artifact confidence.{label}: "
+                f"{confidence[label]!r} not in signals"
+            )
+    for key, signal in signals.items():
+        for metric in ("mean_prefix_accuracy", "mean_prefix_risk"):
+            _require_rate_bounds(f"confidence.signals.{key}.{metric}", signal[metric])
+        best = signal["best_accuracy_prefix"]
+        for metric in ("accuracy", "coverage"):
+            _require_rate_bounds(
+                f"confidence.signals.{key}.best_accuracy_prefix.{metric}",
+                best[metric],
+            )
+        ranking = signal["ranking_metrics"]
+        for metric in (
+            "area_under_accuracy_coverage",
+            "average_precision",
+            "oracle_normalized_accuracy_area",
+        ):
+            _require_rate_bounds(
+                f"confidence.signals.{key}.ranking_metrics.{metric}",
+                ranking[metric],
+            )
+
+
 def _validate_abstention_metrics(abstention: dict[str, Any]) -> None:
     accepted = int(abstention["accepted"])
     abstained = int(abstention["abstained"])
@@ -535,6 +575,62 @@ def _validate_abstention_metrics(abstention: dict[str, Any]) -> None:
     )
 
 
+def _validate_stability_metrics(stability: dict[str, Any], *, expected_problems: int) -> None:
+    recommendation = stability["full_recommendation"]
+    leave_one_out = stability["leave_one_out"]
+    accepted = int(recommendation["accepted"])
+    selected_correct = int(recommendation["selected_correct"])
+    resamples = int(leave_one_out["resamples"])
+    _require_bounds("stability.full_recommendation.accepted", accepted, expected_problems)
+    _require_bounds(
+        "stability.full_recommendation.selected_correct",
+        selected_correct,
+        accepted,
+    )
+    for metric in ("accuracy", "coverage", "risk"):
+        _require_rate_bounds(f"stability.full_recommendation.{metric}", recommendation[metric])
+    _require_equal("stability.leave_one_out.resamples", resamples, expected_problems)
+    _require_bounds(
+        "stability.leave_one_out.threshold_changed",
+        int(leave_one_out["threshold_changed"]),
+        resamples,
+    )
+    _require_bounds(
+        "stability.leave_one_out.meets_target",
+        int(leave_one_out["meets_target"]),
+        resamples,
+    )
+    _require_bounds(
+        "stability.leave_one_out.unique_threshold_count",
+        int(leave_one_out["unique_threshold_count"]),
+        resamples,
+    )
+    _require_bounds(
+        "stability.leave_one_out.applied_full_accepted_min",
+        int(leave_one_out["applied_full_accepted_min"]),
+        expected_problems,
+    )
+    _require_bounds(
+        "stability.leave_one_out.applied_full_accepted_max",
+        int(leave_one_out["applied_full_accepted_max"]),
+        expected_problems,
+    )
+    _require_order(
+        "stability.leave_one_out.applied_full_accepted",
+        float(leave_one_out["applied_full_accepted_min"]),
+        float(leave_one_out["applied_full_accepted_max"]),
+    )
+    _require_order(
+        "stability.leave_one_out.threshold",
+        float(leave_one_out["threshold_min"]),
+        float(leave_one_out["threshold_max"]),
+    )
+    _require_rate_bounds(
+        "stability.leave_one_out.accepted_set_jaccard_min",
+        leave_one_out["accepted_set_jaccard_min"],
+    )
+
+
 def _validate_leaderboard_metrics(leaderboard: dict[str, Any]) -> None:
     problems = int(leaderboard["dataset"]["problems"])
     for name, row in leaderboard["methods"].items():
@@ -558,6 +654,41 @@ def _validate_leaderboard_metrics(leaderboard: dict[str, Any]) -> None:
             row["accepted_accuracy"],
             total=accepted,
         )
+
+
+def _validate_ood_metrics(ood: dict[str, Any]) -> None:
+    pairs = int(ood["num_pairs"])
+    positives = int(ood["num_positive"])
+    negatives = int(ood["num_negative"])
+    _require_equal("ood.num_positive_plus_negative", positives + negatives, pairs)
+    _require_bounds("ood.num_positive", positives, pairs)
+    _require_bounds("ood.num_negative", negatives, pairs)
+    accuracy = float(ood["accuracy"])
+    pos_accuracy = float(ood["pos_accuracy"])
+    neg_accuracy = float(ood["neg_accuracy"])
+    for metric in (
+        "accuracy",
+        "pos_accuracy",
+        "neg_accuracy",
+        "selection_top1_accuracy",
+        "calibrated_val_accuracy",
+        "calibrated_val_balanced_accuracy",
+        "calibrated_test_accuracy",
+        "calibrated_test_balanced_accuracy",
+    ):
+        if metric in ood:
+            _require_rate_bounds(f"ood.{metric}", ood[metric])
+    expected_accuracy = 0.0 if pairs == 0 else (
+        positives * pos_accuracy + negatives * neg_accuracy
+    ) / pairs
+    _require_close("ood.accuracy", accuracy, expected_accuracy)
+    _require_bounds(
+        "ood.selection_problems",
+        int(ood["selection_problems"]),
+        positives,
+    )
+    for name, value in ood.get("per_type_accuracy", {}).items():
+        _require_rate_bounds(f"ood.per_type_accuracy.{name}", value)
 
 
 def _validate_prop(
@@ -602,6 +733,25 @@ def _require_pct_count(label: str, pct: Any, count: int, total: int) -> None:
 
 def _require_rate(label: str, actual: Any, successes: int, total: int) -> None:
     expected = 0.0 if total == 0 else float(successes) / float(total)
+    _require_rate_bounds(label, actual)
+    _require_rate_bounds(f"{label}.expected", expected)
+    _require_close(label, float(actual), expected)
+
+
+def _require_rate_bounds(label: str, value: Any) -> None:
+    numeric = float(value)
+    if numeric < -1e-12 or numeric > 1.0 + 1e-12:
+        raise ValueError(
+            f"Inconsistent source artifact {label}: {numeric} outside [0, 1]"
+        )
+
+
+def _require_order(label: str, lower: float, upper: float) -> None:
+    if lower > upper:
+        raise ValueError(f"Inconsistent source artifact {label}: {lower} > {upper}")
+
+
+def _require_close(label: str, actual: float, expected: float) -> None:
     if abs(float(actual) - expected) > 1e-9:
         raise ValueError(
             f"Inconsistent source artifact {label}: {float(actual)} != {expected}"
