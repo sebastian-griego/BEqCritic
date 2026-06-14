@@ -415,9 +415,11 @@ def _validate_source_consistency(
         split_has_any = _has_any_count(settings[first_key])
         for _, key in rows:
             row = settings[key]
+            _validate_selection_metric_row(key, row)
             _require_equal(f"{key}.problems", int(row["problems"]), split_problems)
             _require_equal(f"{key}.has_any_correct", _has_any_count(row), split_has_any)
         for name, row in baselines[split].items():
+            _validate_selection_metric_row(f"{split}_{name}", row)
             _require_equal(
                 f"{split}_{name}.problems",
                 int(row["problems"]),
@@ -455,6 +457,124 @@ def _validate_source_consistency(
         int(abstention["coverage"]["successes"]),
         int(abstention["accepted"]),
     )
+    _validate_confidence_dataset(confidence["dataset"])
+    _validate_abstention_metrics(abstention)
+    _validate_leaderboard_metrics(leaderboard)
+
+
+def _validate_selection_metric_row(label: str, row: dict[str, Any]) -> None:
+    problems = int(row["problems"])
+    has_any = _has_any_count(row)
+    selected = _pct_to_count(float(row["selected_correct_pct"]), problems)
+    selected_given_any = _pct_to_count(
+        float(row["selected_correct_given_any_pct"]),
+        has_any,
+    )
+    _require_bounds(f"{label}.has_any_correct", has_any, problems)
+    _require_bounds(f"{label}.selected_correct", selected, problems)
+    _require_bounds(f"{label}.selected_correct_given_any", selected_given_any, has_any)
+    _require_equal(f"{label}.selected_correct_given_any_count", selected_given_any, selected)
+    _require_pct_count(f"{label}.has_any_correct_pct", row["has_any_correct_pct"], has_any, problems)
+    _require_pct_count(f"{label}.selected_correct_pct", row["selected_correct_pct"], selected, problems)
+    _require_pct_count(
+        f"{label}.selected_correct_given_any_pct",
+        row["selected_correct_given_any_pct"],
+        selected_given_any,
+        has_any,
+    )
+
+
+def _validate_confidence_dataset(dataset: dict[str, Any]) -> None:
+    problems = int(dataset["problems"])
+    selected = int(dataset["selected_correct"])
+    has_any = int(dataset["has_any_correct"])
+    _require_bounds("confidence.dataset.selected_correct", selected, problems)
+    _require_bounds("confidence.dataset.has_any_correct", has_any, problems)
+    _require_rate(
+        "confidence.dataset.selected_accuracy",
+        dataset["selected_accuracy"],
+        selected,
+        problems,
+    )
+    _require_rate(
+        "confidence.dataset.has_any_correct_rate",
+        dataset["has_any_correct_rate"],
+        has_any,
+        problems,
+    )
+
+
+def _validate_abstention_metrics(abstention: dict[str, Any]) -> None:
+    accepted = int(abstention["accepted"])
+    abstained = int(abstention["abstained"])
+    total = accepted + abstained
+    _validate_prop("abstention.coverage", abstention["coverage"], successes=accepted, total=total)
+    _validate_prop(
+        "abstention.accepted_selected_correct",
+        abstention["accepted_selected_correct"],
+        total=accepted,
+    )
+    _validate_prop(
+        "abstention.accepted_selected_correct_given_any",
+        abstention["accepted_selected_correct_given_any"],
+    )
+    _validate_prop(
+        "abstention.selected_correct_counting_abstentions_incorrect",
+        abstention["selected_correct_counting_abstentions_incorrect"],
+        total=total,
+    )
+    _validate_prop(
+        "abstention.selected_correct_with_abstention_choices",
+        abstention["selected_correct_with_abstention_choices"],
+        total=total,
+    )
+    _validate_prop(
+        "abstention.accepted_has_any_correct",
+        abstention["accepted_has_any_correct"],
+        total=accepted,
+    )
+
+
+def _validate_leaderboard_metrics(leaderboard: dict[str, Any]) -> None:
+    problems = int(leaderboard["dataset"]["problems"])
+    for name, row in leaderboard["methods"].items():
+        accepted = int(row.get("accepted", problems - int(row["abstained"])))
+        abstained = int(row["abstained"])
+        _require_equal(f"leaderboard.{name}.accepted_plus_abstained", accepted + abstained, problems)
+        _require_rate(f"leaderboard.{name}.coverage", row["coverage"], accepted, problems)
+        _validate_prop(f"leaderboard.{name}.selected_correct", row["selected_correct"], total=problems)
+        _validate_prop(f"leaderboard.{name}.accepted_accuracy", row["accepted_accuracy"], total=accepted)
+        if "selected_correct_given_any" in row:
+            _validate_prop(
+                f"leaderboard.{name}.selected_correct_given_any",
+                row["selected_correct_given_any"],
+            )
+
+    for row in leaderboard.get("coverage_accuracy_frontier", []):
+        accepted = int(row["accepted"])
+        _require_rate(f"frontier.{row['method']}.coverage", row["coverage"], accepted, problems)
+        _validate_prop(
+            f"frontier.{row['method']}.accepted_accuracy",
+            row["accepted_accuracy"],
+            total=accepted,
+        )
+
+
+def _validate_prop(
+    label: str,
+    row: dict[str, Any],
+    *,
+    successes: int | None = None,
+    total: int | None = None,
+) -> None:
+    actual_successes = int(row["successes"])
+    actual_total = int(row["total"])
+    if successes is not None:
+        _require_equal(f"{label}.successes", actual_successes, int(successes))
+    if total is not None:
+        _require_equal(f"{label}.total", actual_total, int(total))
+    _require_bounds(f"{label}.successes", actual_successes, actual_total)
+    _require_rate(f"{label}.rate", row["rate"], actual_successes, actual_total)
 
 
 def _has_any_count(row: dict[str, Any]) -> int:
@@ -469,6 +589,23 @@ def _has_any_count(row: dict[str, Any]) -> int:
 def _require_equal(label: str, actual: int, expected: int) -> None:
     if actual != expected:
         raise ValueError(f"Inconsistent source artifact {label}: {actual} != {expected}")
+
+
+def _require_bounds(label: str, value: int, total: int) -> None:
+    if value < 0 or value > total:
+        raise ValueError(f"Inconsistent source artifact {label}: {value} outside [0, {total}]")
+
+
+def _require_pct_count(label: str, pct: Any, count: int, total: int) -> None:
+    _require_rate(label, float(pct) / 100.0, count, total)
+
+
+def _require_rate(label: str, actual: Any, successes: int, total: int) -> None:
+    expected = 0.0 if total == 0 else float(successes) / float(total)
+    if abs(float(actual) - expected) > 1e-9:
+        raise ValueError(
+            f"Inconsistent source artifact {label}: {float(actual)} != {expected}"
+        )
 
 
 def _split_meta(rows: dict[str, Any]) -> dict[str, int]:

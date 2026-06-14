@@ -71,6 +71,17 @@ def test_nlverifier_paper_metrics_rejects_inconsistent_denominators(tmp_path):
         build_summary(results)
 
 
+def test_nlverifier_paper_metrics_rejects_inconsistent_percentages(tmp_path):
+    results = tmp_path / "results"
+    _write_summary_inputs(results)
+    metric = _metric("random", 5, 4, 1)
+    metric["selected_correct_pct"] = 50.0
+    _write_json(results / "exp_inductive" / "metrics_random.json", metric)
+
+    with pytest.raises(ValueError, match="inductive_random.selected_correct"):
+        build_summary(results)
+
+
 def test_paper_metrics_check_cli_fails_without_rewriting_stale_outputs(tmp_path):
     results = tmp_path / "results"
     _write_summary_inputs(results)
