@@ -9,6 +9,8 @@ __all__ = [
     "evaluate_selection",
     "benchmark_selection",
     "calibrate_temperature",
+    "nlverifier_calibration",
+    "nlverifier_diagnostics",
     "debug_selection",
     "audit",
     "select",

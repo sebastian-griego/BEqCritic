@@ -194,6 +194,17 @@ python -m beqcritic.nlverifier_diagnostics \
   --failures-jsonl runs/myrun/nlverifier_failures.jsonl
 ```
 
+Check whether emitted scores are calibrated as probabilities and fit a scalar
+temperature for reporting:
+
+```bash
+python -m beqcritic.nlverifier_calibration \
+  --scores runs/myrun/nlverifier_scores.jsonl \
+  --fit-temperature \
+  --output-md runs/myrun/nlverifier_calibration.md \
+  --output-json runs/myrun/nlverifier_calibration.json
+```
+
 Prefer new output filenames containing `nlverifier` (existing `runs/` artifacts keep their original names).
 
 ## More
