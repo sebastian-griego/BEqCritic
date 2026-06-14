@@ -79,18 +79,18 @@
       "inductive_critic_global_medoid": "results/exp_inductive/metrics_critic_global_medoid.json"
     },
     "source_sha256": {
-      "proofnetverif_ablation": "04d5c913c0bedf9c5b4ada735dc37dd3ecf5fbf455cb461ec8449a4a963faf0c",
-      "confidence_audit": "f7afa35ef8494194fb9eba9d9d21a9b8fe74b1e737b92496691ea599bc2b3ea4",
-      "abstention_metrics": "8a959f0348657fb959f2c5d80bc54171452c9fc5d1dce1252857709491d57f59",
-      "threshold_stability": "55aa84d234d20fb8ee9436de3638caf945881d91c5e4d714906a7560a99f6ce7",
-      "selection_leaderboard": "023a6782ae731862776e195ca4efb100c16da518c7d337a2ed7f92ca0688912e",
-      "ood_formalalign": "72ee5d2c08d2f7a2356522cb6795e7bff7864bbc00ef4698f68b8c6bd7c07433",
-      "transductive_random": "7a55827440af465a8ac8bd1ae4d3fdd5dcb92420461f367ec34b20bb2de513d9",
-      "transductive_self_bleu": "fdf6135058cf3f3093236291054271f4a3ee0f95c68c05dcd3dc1c0ea4337bbc",
-      "transductive_critic_global_medoid": "437b9a048ca8255f031972d52c7744ce660ece7520aef144db8ab88eb3c0bd6d",
-      "inductive_random": "8fce19c812813e8d63b880721f7097ff882f82605dbce9a29fc13790ba5f8f33",
-      "inductive_self_bleu": "3e2c7228add279d9b8261f08a4ecb4f6805cf04253bc114c5cdb32259c087c26",
-      "inductive_critic_global_medoid": "063dff3f6954b5527b11b3e27b68fbe3436098ccdde96ac56b54e3d7670426cb"
+      "proofnetverif_ablation": "121e8cdd4ceb7bae5c44d774b57602913db3b64e7ac9f74f304fded489dde0d5",
+      "confidence_audit": "190498add7f603085863e267b500dd900c76e5c9898125179f5063f8cf63b6d4",
+      "abstention_metrics": "e32b9a0b7fe9a76e8aacba3c78e2464ce3a36bc4fd97b5e677c6b972afec647c",
+      "threshold_stability": "f8c88881ec12d49fb1b03bbaabe3f7039cede7dfb69179d98a2d29341d792770",
+      "selection_leaderboard": "846ec10df6d2c31f97a32b89a674cf851e8631942456822a462d6ad3741b1e0a",
+      "ood_formalalign": "d60b88ab1372aedbcbef016c13391e52b6b5c80dcc03b185a1cfefc5c538b61c",
+      "transductive_random": "03ca128c9857d7bed98f8fef95be349afb0e55697a5f1c2fdd8dbe016a92a932",
+      "transductive_self_bleu": "3355af8500c8ae78e19f4de2d85cf47863e483e5965633c6dda3f04a436fd86d",
+      "transductive_critic_global_medoid": "3686591739ea49e62ad20ff43619ee17e1d89022f89f143a669251c1e685974a",
+      "inductive_random": "3cc0d8f01b5a95e45b092346dd9daae6f41f4012b67bd0ded91b3de2a179a435",
+      "inductive_self_bleu": "ab29bf79ad44ca3c0b4fa4cd35f744c87f528b5211d315b8e435ce8c0ff57521",
+      "inductive_critic_global_medoid": "ca8d965fec4e39dc2d97dafdc85f8491a26de4d3c02536db742158a6d9ea270d"
     }
   },
   "proofnetverif": {

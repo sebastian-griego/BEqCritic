@@ -942,7 +942,8 @@ def _rel(path: Path) -> str:
 
 
 def _file_sha256(path: Path) -> str:
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    text = Path(path).read_text(encoding="utf-8").replace("\r\n", "\n")
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def _pct(value: float) -> str:

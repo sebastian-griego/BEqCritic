@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from scripts.summarize_nlverifier_paper_metrics import (
+    _file_sha256,
     _source_hash_mismatches,
     _stale_outputs,
     build_summary,
@@ -209,6 +210,16 @@ def test_stale_outputs_detects_missing_and_mismatched_files(tmp_path):
             missing: "new\n",
         }
     ) == [stale, missing]
+
+
+def test_source_hashes_are_stable_across_line_endings(tmp_path):
+    artifact = tmp_path / "artifact.json"
+    artifact.write_bytes(b'{"value": 1}\n')
+    lf_hash = _file_sha256(artifact)
+
+    artifact.write_bytes(b'{"value": 1}\r\n')
+
+    assert _file_sha256(artifact) == lf_hash
 
 
 def test_checked_in_nlverifier_paper_artifacts_are_current(monkeypatch):
