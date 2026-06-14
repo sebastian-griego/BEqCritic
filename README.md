@@ -368,6 +368,10 @@ Write a machine-readable command report:
 python scripts/verify_reproducibility.py --report-json runs/reproducibility_report.json
 ```
 
+The JSON report records `schema_version`, planned and executed command counts,
+per-command return codes, elapsed times, and the first failed command when the
+gate stops early.
+
 CI uploads this report as an artifact for each supported Python version.
 
 Verify the checked-in rollup and generated table are current without rewriting

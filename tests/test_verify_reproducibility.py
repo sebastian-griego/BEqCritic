@@ -32,7 +32,10 @@ def test_run_verification_records_successful_commands(tmp_path):
     )
 
     assert returncode == 0
+    assert report["schema_version"] == 1
     assert report["status"] == "passed"
+    assert report["planned_command_count"] == 2
+    assert report["executed_command_count"] == 2
     assert [row["returncode"] for row in report["commands"]] == [0, 0]
     assert calls[0][1]["cwd"] == tmp_path
     assert calls[0][1]["check"] is False
@@ -49,6 +52,9 @@ def test_run_verification_stops_and_reports_first_failure(tmp_path):
     )
 
     assert returncode == 2
+    assert report["schema_version"] == 1
     assert report["status"] == "failed"
+    assert report["planned_command_count"] == 3
+    assert report["executed_command_count"] == 2
     assert report["failed_command"] == ["python", "bad"]
     assert [row["command"] for row in report["commands"]] == [["python", "ok"], ["python", "bad"]]

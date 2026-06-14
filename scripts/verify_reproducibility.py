@@ -51,7 +51,9 @@ def run_verification(
     runner: Callable[..., Any] = subprocess.run,
 ) -> tuple[int, dict[str, Any]]:
     report: dict[str, Any] = {
+        "schema_version": 1,
         "status": "passed",
+        "planned_command_count": len(commands),
         "commands": [],
     }
     started = time.perf_counter()
@@ -71,9 +73,11 @@ def run_verification(
         if returncode != 0:
             report["status"] = "failed"
             report["failed_command"] = command
+            report["executed_command_count"] = len(report["commands"])
             report["elapsed_seconds"] = round(time.perf_counter() - started, 3)
             return returncode, report
 
+    report["executed_command_count"] = len(report["commands"])
     report["elapsed_seconds"] = round(time.perf_counter() - started, 3)
     return 0, report
 
