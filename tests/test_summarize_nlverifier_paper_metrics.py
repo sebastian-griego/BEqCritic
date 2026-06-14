@@ -64,6 +64,7 @@ def test_nlverifier_paper_metrics_summary_merges_source_artifacts(tmp_path):
     assert "Selective prediction and abstention" in markdown
     assert "OOD pair classification" in markdown
     assert "Candidate-only critic (best variant)" in latex
+    assert r"\resizebox{\textwidth}{!}{%" in latex
     assert r"\textbf{3/5 (60.0\%)}" in latex
 
 

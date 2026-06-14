@@ -1,8 +1,14 @@
 % main.tex
 \documentclass{article}
 
-% VerifAI asks for ICLR format
-\usepackage{iclr2026_conference,times}
+% VerifAI asks for ICLR format. Fall back to a local article build when the
+% conference style is not present in the checkout.
+\IfFileExists{iclr2026_conference.sty}{
+  \usepackage{iclr2026_conference,times}
+}{
+  \usepackage{times}
+  \usepackage[numbers]{natbib}
+}
 
 \usepackage{microtype}
 \usepackage{graphicx}
@@ -142,8 +148,16 @@ On ProofNetVerif, NLVerifier yields large gains over Self-BLEU and remains subst
 \section*{Reproducibility}
 For double-blind review, we provide code, splits, and all paper tables in supplementary material via an anonymized repository and artifact bundle.
 
-\bibliography{references}
-\bibliographystyle{iclr2026_conference}
+\IfFileExists{paper/references.bib}{
+  \bibliography{paper/references}
+}{
+  \bibliography{references}
+}
+\IfFileExists{iclr2026_conference.bst}{
+  \bibliographystyle{iclr2026_conference}
+}{
+  \bibliographystyle{plainnat}
+}
 
 \appendix
 

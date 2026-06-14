@@ -215,6 +215,7 @@ def format_latex_main_table(summary: dict[str, Any]) -> str:
         f"({trans['has_any_correct']}/{trans['problems']} transductive, "
         f"{ind['has_any_correct']}/{ind['problems']} inductive).}}",
         r"\label{tab:main}",
+        r"\resizebox{\textwidth}{!}{%",
         r"\begin{tabular}{lcccc}",
         r"\toprule",
         rf"& \multicolumn{{2}}{{c}}{{Transductive ({trans['problems']} problems)}} "
@@ -243,6 +244,7 @@ def format_latex_main_table(summary: dict[str, Any]) -> str:
         [
             r"\bottomrule",
             r"\end{tabular}",
+            r"}",
             r"\end{table}",
             "",
         ]
