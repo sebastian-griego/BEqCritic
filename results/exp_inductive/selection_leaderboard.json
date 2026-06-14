@@ -1,0 +1,1506 @@
+{
+  "best_method": "nlverifier",
+  "best_method_cases": {
+    "critic": [
+      {
+        "baseline": "critic",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {n : \u2115} {a : Fin n \u2192 \u211d} {b : Fin n \u2192 \u211d} : (\u2211 i, a i * b i) ^ 2 \u2264 (\u2211 i, i * a i ^ 2) * (\u2211 i, (b i ^ 2) / i) := sorry",
+        "baseline_index": 2,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {n : \u2115} {a b : Fin n \u2192 \u211d} : (\u2211 j, a j * b j) ^ 2 \u2264 (\u2211 j, (j + 1) * (a j) ^ 2) * (\u2211 j, (b j) ^ 2 / (j + 1)) := sorry",
+        "challenger_index": 8,
+        "problem_id": "Axler|exercise_6_3"
+      },
+      {
+        "baseline": "critic",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy : (Sylow 5 p).Normal := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {G : Type*} [Group G] [Fintype G] (hG : Fintype.card G = 200) : \u2203 P : Sylow 5 G, P.1.Normal := sorry",
+        "challenger_index": 1,
+        "problem_id": "Dummit-Foote|exercise_4_5_18"
+      },
+      {
+        "baseline": "critic",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy (G : Type*) [Group G] [Finite G] (a : G) : \u2203 (n : \u2115), a ^ n = 1 := sorry",
+        "baseline_index": 9,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {G : Type*} [Group G] [Fintype G] (a : G) : \u2203 n : \u2115, 0 < n \u2227 a ^ n = 1 := sorry",
+        "challenger_index": 3,
+        "problem_id": "Herstein|exercise_2_1_26"
+      },
+      {
+        "baseline": "critic",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {G : Type*} [Group G] [CommGroup G] (m n : \u2115) (hm : \u2203 x, x ^ m = 1) (hn : \u2203 y, y ^ n = 1) (hmn : Nat.gcd m n = 1) : \u2203 z, z ^ (m * n) = 1 := sorry",
+        "baseline_index": 5,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {G : Type*} [CommGroup G] {m n : \u2115} (hmn : Nat.Coprime m n) (hm : \u2203 x : G, orderOf x = m) (hn : \u2203 y : G, orderOf y = n) : \u2203 z : G, orderOf z = m * n := sorry",
+        "challenger_index": 4,
+        "problem_id": "Herstein|exercise_2_6_15"
+      },
+      {
+        "baseline": "critic",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {X : Type u} [MetricSpace X] [CompactSpace X] {f : X \u2192 X} (h : \u2200 x y : X, dist (f x) (f y) = dist x y) : Isometry f := sorry",
+        "baseline_index": 4,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {X : Type*} [MetricSpace X] [CompactSpace X] (f : X \u2192 X) (hf : \u2200 x y : X, dist (f x) (f y) = dist x y) : Function.Bijective f \u2227 \u2203 h : Homeomorph X X, h.toFun = f := sorry",
+        "challenger_index": 5,
+        "problem_id": "Munkres|exercise_28_6"
+      },
+      {
+        "baseline": "critic",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {X : Type*} [TopologicalSpace X] [T2Space X] [CompactSpace X] : ConnectedSpace X \u2194 ConnectedSpace (StoneCech X) := sorry",
+        "baseline_index": 4,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {X : Type*} [TopologicalSpace X] [CompletelyRegularSpace X] : ConnectedSpace X \u2194 ConnectedSpace (StoneCech X) := sorry",
+        "challenger_index": 8,
+        "problem_id": "Munkres|exercise_38_6"
+      },
+      {
+        "baseline": "critic",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy (x y : \u2102) : ||x|-|y|| \u2264 |x - y| := sorry",
+        "baseline_index": 8,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {x y : \u2102} : |abs x - abs y| \u2264 abs (x - y) := sorry",
+        "challenger_index": 6,
+        "problem_id": "Rudin|exercise_1_13"
+      },
+      {
+        "baseline": "critic",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {\u03b1 : Type*} [TopologicalSpace \u03b1] (s : Set \u03b1) (h : IsOpen s) : \u2203 t : Set (Set \u03b1), t.Countable \u2227 s = \u22c3\u2080 t \u2227 \u2200 x \u2208 t, \u2200 y \u2208 t, x \u2260 y \u2192 Disjoint x y := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy (U : Set \u211d) (hU : IsOpen U) : \u2203 (S : Set (Set \u211d)), (\u2200 s \u2208 S, \u2203 a b : \u211d, s = Set.Ioo a b) \u2227 Pairwise (Disjoint on S) \u2227 Countable S \u2227 U = \u22c3\u2080 S := sorry",
+        "challenger_index": 5,
+        "problem_id": "Rudin|exercise_2_29"
+      },
+      {
+        "baseline": "critic",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy (f : \u2102 \u2192 \u2102) {s : Set \u2102} (hs : IsOpen s) (hf : AnalyticOn \u2102 f s) : (\u2200 z \u2208 s, abs (f z) = c) \u2192 (\u2200 z \u2208 s, f z = c) := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {\u03a9 : Set \u2102} (h\u03a9 : IsOpen \u03a9) {f : \u2102 \u2192 \u2102} (hf : \u2200 z \u2208 \u03a9, DifferentiableAt \u2102 f z) (h_const : \u2203 c : \u211d, \u2200 z \u2208 \u03a9, abs (f z) = c) : \u2203 c : \u2102, \u2200 z \u2208 \u03a9, f z = c := sorry",
+        "challenger_index": 4,
+        "problem_id": "Shakarchi|exercise_1_13c"
+      }
+    ],
+    "first": [
+      {
+        "baseline": "first",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {n : \u2115} {a : Fin n \u2192 \u211d} {b : Fin n \u2192 \u211d} : \u2211 (j : Fin n), a j * b j ^ 2 \u2264 (\u2211 (j : Fin n), j * a j ^ 2) * (\u2211 (j : Fin n), (b j ^ 2) / j) := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {n : \u2115} {a b : Fin n \u2192 \u211d} : (\u2211 j, a j * b j) ^ 2 \u2264 (\u2211 j, (j + 1) * (a j) ^ 2) * (\u2211 j, (b j) ^ 2 / (j + 1)) := sorry",
+        "challenger_index": 8,
+        "problem_id": "Axler|exercise_6_3"
+      },
+      {
+        "baseline": "first",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy : (Sylow 5 p).Normal := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {G : Type*} [Group G] [Fintype G] (hG : Fintype.card G = 200) : \u2203 P : Sylow 5 G, P.1.Normal := sorry",
+        "challenger_index": 1,
+        "problem_id": "Dummit-Foote|exercise_4_5_18"
+      },
+      {
+        "baseline": "first",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {R : Type*} [Ring R] [IsDomain R] (f : R[X]) (h : f = X ^ 4 - 4 * X ^ 3 + 6) : \u00ac \u2203 (p q : R[X]), p * q = f \u2227 0 < degree p \u2227 0 < degree q := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy : Irreducible (Polynomial.X^4 - 4*Polynomial.X^3 + 6 : Polynomial \u2124) := sorry",
+        "challenger_index": 6,
+        "problem_id": "Dummit-Foote|exercise_9_4_2a"
+      },
+      {
+        "baseline": "first",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {G : Type*} [Group G] [Fintype G] {p : \u2115} {n : \u2115} [hp : Fact (Nat.Prime p)] (hG : Fintype.card G = p ^ n) {k : \u2115} (hk : n < k) : \u2203 (m : \u2115), 0 < m \u2227 a ^ m = 1 := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {G : Type*} [Group G] [Fintype G] (a : G) : \u2203 n : \u2115, 0 < n \u2227 a ^ n = 1 := sorry",
+        "challenger_index": 3,
+        "problem_id": "Herstein|exercise_2_1_26"
+      },
+      {
+        "baseline": "first",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {G : Type _} [Group G] {m n : \u2115} (hm : \u2200 g : G, g ^ m = 1) (hn : \u2200 g : G, g ^ n = 1) (hmn : m \u2223 n \u2228 n \u2223 m) : \u2203 g : G, g ^ m * g ^ n = 1 := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {G : Type*} [CommGroup G] {m n : \u2115} (hmn : Nat.Coprime m n) (hm : \u2203 x : G, orderOf x = m) (hn : \u2203 y : G, orderOf y = n) : \u2203 z : G, orderOf z = m * n := sorry",
+        "challenger_index": 4,
+        "problem_id": "Herstein|exercise_2_6_15"
+      },
+      {
+        "baseline": "first",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {X Y : Type*} [TopologicalSpace X] [TopologicalSpace Y] (p : C(X, Y)) (f : C(Y, X)) (hf : Function.Surjective f) (h : p \u2218 f = id) : QuotientMap p := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy [TopologicalSpace X] [TopologicalSpace Y] (p : ContinuousMap X Y) (f : ContinuousMap Y X) (hf : \u2200 y, p (f y) = y) : QuotientMap p := sorry",
+        "challenger_index": 6,
+        "problem_id": "Munkres|exercise_22_2a"
+      },
+      {
+        "baseline": "first",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy (X : Type*) [MetricSpace X] [DiscreteTopology X] [Nonempty X] [ConnectedSpace X] (h : 2 \u2264 Cardinal.mk X) : Uncountable X := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {X : Type*} [MetricSpace X] [ConnectedSpace X] (h_two_points : \u2203 x y : X, x \u2260 y) : Uncountable X := sorry",
+        "challenger_index": 10,
+        "problem_id": "Munkres|exercise_27_4"
+      },
+      {
+        "baseline": "first",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {X : Type*} [MetricSpace X] [CompactSpace X] (f : X \u2192 X) (hf : \u2200 x y : X, dist (f x) (f y) = dist x y) : Function.Bijective f \u2227 Isometry f \u2227 Continuous f := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {X : Type*} [MetricSpace X] [CompactSpace X] (f : X \u2192 X) (hf : \u2200 x y : X, dist (f x) (f y) = dist x y) : Function.Bijective f \u2227 \u2203 h : Homeomorph X X, h.toFun = f := sorry",
+        "challenger_index": 5,
+        "problem_id": "Munkres|exercise_28_6"
+      },
+      {
+        "baseline": "first",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {X : Type*} [TopologicalSpace X] [LocallyCompactSpace X] [T2Space X] : T3Space X := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {X : Type*} [TopologicalSpace X] (hLC : LocallyCompactSpace X) (hH : T2Space X) : CompletelyRegularSpace X := sorry",
+        "challenger_index": 4,
+        "problem_id": "Munkres|exercise_33_7"
+      },
+      {
+        "baseline": "first",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy [CompleteRegularSpace X] : IsConnected X \u2194 IsConnected (stoneCech X) := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {X : Type*} [TopologicalSpace X] [CompletelyRegularSpace X] : ConnectedSpace X \u2194 ConnectedSpace (StoneCech X) := sorry",
+        "challenger_index": 8,
+        "problem_id": "Munkres|exercise_38_6"
+      },
+      {
+        "baseline": "first",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy (n : \u2115) : \u2203 m : \u2115, m > n \u2227 \u2203 (a b c : \u2115), m = a ^ 2 + b ^ 2 \u2227 m + 1 = a ^ 2 + c ^ 2 \u2227 m + 2 = b ^ 2 + c ^ 2 := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy : \u2203\u1da0 n in at_top, \u2203 a b c d e f : \u2124, n = a^2 + b^2 \u2227 (n + 1) = c^2 + d^2 \u2227 (n + 2) = e^2 + f^2 := sorry",
+        "challenger_index": 26,
+        "problem_id": "Putnam|exercise_2000_a2"
+      },
+      {
+        "baseline": "first",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy (x y : \u2102) : abs x - abs y \u2264 abs (x - y) := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {x y : \u2102} : |abs x - abs y| \u2264 abs (x - y) := sorry",
+        "challenger_index": 6,
+        "problem_id": "Rudin|exercise_1_13"
+      },
+      {
+        "baseline": "first",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {\u03b1 : Type*} [TopologicalSpace \u03b1] (s : Set \u03b1) (h : IsOpen s) : \u2203 t : Set (Set \u03b1), t.Countable \u2227 s = \u22c3\u2080 t \u2227 \u2200 x \u2208 t, \u2200 y \u2208 t, x \u2260 y \u2192 Disjoint x y := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy (U : Set \u211d) (hU : IsOpen U) : \u2203 (S : Set (Set \u211d)), (\u2200 s \u2208 S, \u2203 a b : \u211d, s = Set.Ioo a b) \u2227 Pairwise (Disjoint on S) \u2227 Countable S \u2227 U = \u22c3\u2080 S := sorry",
+        "challenger_index": 5,
+        "problem_id": "Rudin|exercise_2_29"
+      },
+      {
+        "baseline": "first",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy (f : \u2102 \u2192 \u2102) {s : Set \u2102} (hs : IsOpen s) (hf : AnalyticOn \u2102 f s) : (\u2200 z \u2208 s, abs (f z) = c) \u2192 (\u2200 z \u2208 s, f z = c) := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {\u03a9 : Set \u2102} (h\u03a9 : IsOpen \u03a9) {f : \u2102 \u2192 \u2102} (hf : \u2200 z \u2208 \u03a9, DifferentiableAt \u2102 f z) (h_const : \u2203 c : \u211d, \u2200 z \u2208 \u03a9, abs (f z) = c) : \u2203 c : \u2102, \u2200 z \u2208 \u03a9, f z = c := sorry",
+        "challenger_index": 4,
+        "problem_id": "Shakarchi|exercise_1_13c"
+      }
+    ],
+    "hybrid": [
+      {
+        "baseline": "hybrid",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {n : \u2115} {a : Fin n \u2192 \u211d} {b : Fin n \u2192 \u211d} : (\u2211 i, a i * b i) ^ 2 \u2264 (\u2211 i, i * a i ^ 2) * (\u2211 i, b i ^ 2 / i) := sorry",
+        "baseline_index": 9,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {n : \u2115} {a b : Fin n \u2192 \u211d} : (\u2211 j, a j * b j) ^ 2 \u2264 (\u2211 j, (j + 1) * (a j) ^ 2) * (\u2211 j, (b j) ^ 2 / (j + 1)) := sorry",
+        "challenger_index": 8,
+        "problem_id": "Axler|exercise_6_3"
+      },
+      {
+        "baseline": "hybrid",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy : (Sylow 5 p).Normal := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {G : Type*} [Group G] [Fintype G] (hG : Fintype.card G = 200) : \u2203 P : Sylow 5 G, P.1.Normal := sorry",
+        "challenger_index": 1,
+        "problem_id": "Dummit-Foote|exercise_4_5_18"
+      },
+      {
+        "baseline": "hybrid",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {G : Type*} [Group G] [Finite G] (a : G) : \u2203 (n : \u2115), a ^ n = 1 := sorry",
+        "baseline_index": 2,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {G : Type*} [Group G] [Fintype G] (a : G) : \u2203 n : \u2115, 0 < n \u2227 a ^ n = 1 := sorry",
+        "challenger_index": 3,
+        "problem_id": "Herstein|exercise_2_1_26"
+      },
+      {
+        "baseline": "hybrid",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {G : Type*} [Group G] [CommGroup G] (m n : \u2115) (hm : \u2203 x, x ^ m = 1) (hn : \u2203 y, y ^ n = 1) (hmn : Nat.gcd m n = 1) : \u2203 z, z ^ (m * n) = 1 := sorry",
+        "baseline_index": 5,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {G : Type*} [CommGroup G] {m n : \u2115} (hmn : Nat.Coprime m n) (hm : \u2203 x : G, orderOf x = m) (hn : \u2203 y : G, orderOf y = n) : \u2203 z : G, orderOf z = m * n := sorry",
+        "challenger_index": 4,
+        "problem_id": "Herstein|exercise_2_6_15"
+      },
+      {
+        "baseline": "hybrid",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {X : Type u} [MetricSpace X] [CompactSpace X] {f : X \u2192 X} (h : \u2200 x y : X, dist (f x) (f y) = dist x y) : Isometry f := sorry",
+        "baseline_index": 4,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {X : Type*} [MetricSpace X] [CompactSpace X] (f : X \u2192 X) (hf : \u2200 x y : X, dist (f x) (f y) = dist x y) : Function.Bijective f \u2227 \u2203 h : Homeomorph X X, h.toFun = f := sorry",
+        "challenger_index": 5,
+        "problem_id": "Munkres|exercise_28_6"
+      },
+      {
+        "baseline": "hybrid",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {X : Type*} [TopologicalSpace X] [T2Space X] [CompactSpace X] : ConnectedSpace X \u2194 ConnectedSpace (StoneCech X) := sorry",
+        "baseline_index": 4,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {X : Type*} [TopologicalSpace X] [CompletelyRegularSpace X] : ConnectedSpace X \u2194 ConnectedSpace (StoneCech X) := sorry",
+        "challenger_index": 8,
+        "problem_id": "Munkres|exercise_38_6"
+      },
+      {
+        "baseline": "hybrid",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy (x y : \u2102) : abs x - abs y \u2264 abs (x - y) := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {x y : \u2102} : |abs x - abs y| \u2264 abs (x - y) := sorry",
+        "challenger_index": 6,
+        "problem_id": "Rudin|exercise_1_13"
+      },
+      {
+        "baseline": "hybrid",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {\u03b1 : Type*} [TopologicalSpace \u03b1] (s : Set \u03b1) (h : IsOpen s) : \u2203 t : Set (Set \u03b1), t.Countable \u2227 s = \u22c3\u2080 t \u2227 \u2200 x \u2208 t, \u2200 y \u2208 t, x \u2260 y \u2192 Disjoint x y := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy (U : Set \u211d) (hU : IsOpen U) : \u2203 (S : Set (Set \u211d)), (\u2200 s \u2208 S, \u2203 a b : \u211d, s = Set.Ioo a b) \u2227 Pairwise (Disjoint on S) \u2227 Countable S \u2227 U = \u22c3\u2080 S := sorry",
+        "challenger_index": 5,
+        "problem_id": "Rudin|exercise_2_29"
+      },
+      {
+        "baseline": "hybrid",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy (f : \u2102 \u2192 \u2102) {s : Set \u2102} (hs : IsOpen s) (hf : AnalyticOn \u2102 f s) : (\u2200 z \u2208 s, abs (f z) = c) \u2192 (\u2200 z \u2208 s, f z = c) := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {\u03a9 : Set \u2102} (h\u03a9 : IsOpen \u03a9) {f : \u2102 \u2192 \u2102} (hf : \u2200 z \u2208 \u03a9, DifferentiableAt \u2102 f z) (h_const : \u2203 c : \u211d, \u2200 z \u2208 \u03a9, abs (f z) = c) : \u2203 c : \u2102, \u2200 z \u2208 \u03a9, f z = c := sorry",
+        "challenger_index": 4,
+        "problem_id": "Shakarchi|exercise_1_13c"
+      }
+    ],
+    "nlverifier_abstain_p50": [
+      {
+        "baseline": "nlverifier_abstain_p50",
+        "baseline_accepted": false,
+        "baseline_candidate": "theorem dummy [Field \u2102] {p : Polynomial \u2102} (h : p.degree = m) : p.roots.toFinset.card = m \u2194 (p.roots \u2229 p.derivative.roots) = \u2205 := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy [Field \u2102] {p : Polynomial \u2102} (h : p.degree = m) : p.roots.toFinset.card = m \u2194 (p.roots \u2229 p.derivative.roots) = \u2205 := sorry",
+        "challenger_index": 0,
+        "problem_id": "Axler|exercise_4_4"
+      },
+      {
+        "baseline": "nlverifier_abstain_p50",
+        "baseline_accepted": false,
+        "baseline_candidate": "theorem dummy : \u00acNonempty (Units \u211d \u2243* Units \u2102) := sorry",
+        "baseline_index": 7,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy : \u00acNonempty (Units \u211d \u2243* Units \u2102) := sorry",
+        "challenger_index": 7,
+        "problem_id": "Dummit-Foote|exercise_1_6_4"
+      },
+      {
+        "baseline": "nlverifier_abstain_p50",
+        "baseline_accepted": false,
+        "baseline_candidate": "theorem dummy (f : \u211d \u2192 \u211d) (hf : \u2200 t x, abs (f t - f x) \u2264 abs (t - x)^2) : \u2203 c : \u211d, \u2200 x, f x = c := sorry",
+        "baseline_index": 9,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy (f : \u211d \u2192 \u211d) (hf : \u2200 t x, abs (f t - f x) \u2264 abs (t - x)^2) : \u2203 c : \u211d, \u2200 x, f x = c := sorry",
+        "challenger_index": 9,
+        "problem_id": "Pugh|exercise_3_1"
+      }
+    ],
+    "self_bleu": [
+      {
+        "baseline": "self_bleu",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {p : Polynomial \u2102} (hp : p.degree = m) : (\u2200 z, \u00ac p.IsRoot z) \u2194 \u2200 z, \u00ac p.derivative.IsRoot z := sorry",
+        "baseline_index": 8,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy [Field \u2102] {p : Polynomial \u2102} (h : p.degree = m) : p.roots.toFinset.card = m \u2194 (p.roots \u2229 p.derivative.roots) = \u2205 := sorry",
+        "challenger_index": 0,
+        "problem_id": "Axler|exercise_4_4"
+      },
+      {
+        "baseline": "self_bleu",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {n : \u2115} {a : Fin n \u2192 \u211d} {b : Fin n \u2192 \u211d} : (\u2211 i, a i * b i) ^ 2 \u2264 (\u2211 i, i * a i ^ 2) * (\u2211 i, b i ^ 2 / i) := sorry",
+        "baseline_index": 9,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {n : \u2115} {a b : Fin n \u2192 \u211d} : (\u2211 j, a j * b j) ^ 2 \u2264 (\u2211 j, (j + 1) * (a j) ^ 2) * (\u2211 j, (b j) ^ 2 / (j + 1)) := sorry",
+        "challenger_index": 8,
+        "problem_id": "Axler|exercise_6_3"
+      },
+      {
+        "baseline": "self_bleu",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {G : Type*} [Group G] [Finite G] (a : G) : \u2203 n : \u2115, a ^ n = 1 := sorry",
+        "baseline_index": 5,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {G : Type*} [Group G] [Fintype G] (a : G) : \u2203 n : \u2115, 0 < n \u2227 a ^ n = 1 := sorry",
+        "challenger_index": 3,
+        "problem_id": "Herstein|exercise_2_1_26"
+      },
+      {
+        "baseline": "self_bleu",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {G : Type*} [CommGroup G] {m n : \u2115} (hm : \u2203 x, x ^ m = 1) (hn : \u2203 y, y ^ n = 1) (hmn : Nat.gcd m n = 1) : \u2203 z, z ^ (m * n) = 1 := sorry",
+        "baseline_index": 10,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {G : Type*} [CommGroup G] {m n : \u2115} (hmn : Nat.Coprime m n) (hm : \u2203 x : G, orderOf x = m) (hn : \u2203 y : G, orderOf y = n) : \u2203 z : G, orderOf z = m * n := sorry",
+        "challenger_index": 4,
+        "problem_id": "Herstein|exercise_2_6_15"
+      },
+      {
+        "baseline": "self_bleu",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {X Y : Type*} [TopologicalSpace X] [TopologicalSpace Y] (p : X \u2192 Y) (f : Y \u2192 X) (hf : Continuous f) (h : p \u2218 f = id) : Continuous p := sorry",
+        "baseline_index": 2,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy [TopologicalSpace X] [TopologicalSpace Y] (p : ContinuousMap X Y) (f : ContinuousMap Y X) (hf : \u2200 y, p (f y) = y) : QuotientMap p := sorry",
+        "challenger_index": 6,
+        "problem_id": "Munkres|exercise_22_2a"
+      },
+      {
+        "baseline": "self_bleu",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {X : Type*} [MetricSpace X] [CompactSpace X] (f : X \u2192 X) (hf : \u2200 x y : X, dist (f x) (f y) = dist x y) : Function.Bijective f := sorry",
+        "baseline_index": 2,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {X : Type*} [MetricSpace X] [CompactSpace X] (f : X \u2192 X) (hf : \u2200 x y : X, dist (f x) (f y) = dist x y) : Function.Bijective f \u2227 \u2203 h : Homeomorph X X, h.toFun = f := sorry",
+        "challenger_index": 5,
+        "problem_id": "Munkres|exercise_28_6"
+      },
+      {
+        "baseline": "self_bleu",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {X : Type*} [TopologicalSpace X] [T3Space X] : ConnectedSpace X \u2194 ConnectedSpace (StoneCech X) := sorry",
+        "baseline_index": 3,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {X : Type*} [TopologicalSpace X] [CompletelyRegularSpace X] : ConnectedSpace X \u2194 ConnectedSpace (StoneCech X) := sorry",
+        "challenger_index": 8,
+        "problem_id": "Munkres|exercise_38_6"
+      },
+      {
+        "baseline": "self_bleu",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy (n : \u2115) : \u2203 m : \u2115, \u2203 a b c : \u2124, a^2 + b^2 = n \u2227 b^2 + c^2 = n+1 \u2227 c^2 + a^2 = n+2 := sorry",
+        "baseline_index": 15,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy : \u2203\u1da0 n in at_top, \u2203 a b c d e f : \u2124, n = a^2 + b^2 \u2227 (n + 1) = c^2 + d^2 \u2227 (n + 2) = e^2 + f^2 := sorry",
+        "challenger_index": 26,
+        "problem_id": "Putnam|exercise_2000_a2"
+      },
+      {
+        "baseline": "self_bleu",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy (x y : \u2102) : abs x - abs y \u2264 abs (x - y) := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {x y : \u2102} : |abs x - abs y| \u2264 abs (x - y) := sorry",
+        "challenger_index": 6,
+        "problem_id": "Rudin|exercise_1_13"
+      },
+      {
+        "baseline": "self_bleu",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {f : \u2102 \u2192 \u2102} {s : Set \u2102} (hf : AnalyticOn \u2102 f s) (h : \u2200 z \u2208 s, abs (f z) = c) : \u2203 c : \u2102, \u2200 z \u2208 s, f z = c := sorry",
+        "baseline_index": 3,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {\u03a9 : Set \u2102} (h\u03a9 : IsOpen \u03a9) {f : \u2102 \u2192 \u2102} (hf : \u2200 z \u2208 \u03a9, DifferentiableAt \u2102 f z) (h_const : \u2203 c : \u211d, \u2200 z \u2208 \u03a9, abs (f z) = c) : \u2203 c : \u2102, \u2200 z \u2208 \u03a9, f z = c := sorry",
+        "challenger_index": 4,
+        "problem_id": "Shakarchi|exercise_1_13c"
+      }
+    ],
+    "shortest": [
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {K L : Type*} [Field K] [Field L] (f : K \u2192* L) : Injective f := sorry",
+        "baseline_index": 5,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {K L : Type*} [Field K] [Field L] (\u03c6 : K \u2192+* L) : Function.Injective \u03c6 := sorry",
+        "challenger_index": 2,
+        "problem_id": "Artin|exercise_3_2_7"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {p : P} (hp : p.degree = m) : (p.hasDistinctRoots \u2194 p.roots \u2229 p.derivative.roots = \u2205) := sorry",
+        "baseline_index": 2,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy [Field \u2102] {p : Polynomial \u2102} (h : p.degree = m) : p.roots.toFinset.card = m \u2194 (p.roots \u2229 p.derivative.roots) = \u2205 := sorry",
+        "challenger_index": 0,
+        "problem_id": "Axler|exercise_4_4"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {n : \u2115} {a b : Fin n \u2192 \u211d} : (\u2211 j, a j * b j)^2 \u2264 (\u2211 j, j * a j^2) * (\u2211 j, b j^2 / j) := sorry",
+        "baseline_index": 5,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {n : \u2115} {a b : Fin n \u2192 \u211d} : (\u2211 j, a j * b j) ^ 2 \u2264 (\u2211 j, (j + 1) * (a j) ^ 2) * (\u2211 j, (b j) ^ 2 / (j + 1)) := sorry",
+        "challenger_index": 8,
+        "problem_id": "Axler|exercise_6_3"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy : (Sylow 5 p).Normal := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {G : Type*} [Group G] [Fintype G] (hG : Fintype.card G = 200) : \u2203 P : Sylow 5 G, P.1.Normal := sorry",
+        "challenger_index": 1,
+        "problem_id": "Dummit-Foote|exercise_4_5_18"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy (x : \u2124[X]) : Irreducible (x^4 - 4*x^3 + 6) := sorry",
+        "baseline_index": 7,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy : Irreducible (Polynomial.X^4 - 4*Polynomial.X^3 + 6 : Polynomial \u2124) := sorry",
+        "challenger_index": 6,
+        "problem_id": "Dummit-Foote|exercise_9_4_2a"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {G : Type _} [Group G] {m n : \u2115} (hm : IsOfOrder G m) (hn : IsOfOrder G n) (cop : m.coprime n) : IsOfOrder G (m * n) := sorry",
+        "baseline_index": 6,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {G : Type*} [CommGroup G] {m n : \u2115} (hmn : Nat.Coprime m n) (hm : \u2203 x : G, orderOf x = m) (hn : \u2203 y : G, orderOf y = n) : \u2203 z : G, orderOf z = m * n := sorry",
+        "challenger_index": 4,
+        "problem_id": "Herstein|exercise_2_6_15"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy (h : \u2200 x : R, x ^ 3 = x) : IsCommutative R := sorry",
+        "baseline_index": 6,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy (R : Type*) [Ring R] (h : \u2200 x : R, x^3 = x) : \u2200 x y : R, x * y = y * x := sorry",
+        "challenger_index": 3,
+        "problem_id": "Herstein|exercise_4_2_5"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy : IsOpenMap (@Prod.fst X Y) := sorry",
+        "baseline_index": 8,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {X Y : Type*} [TopologicalSpace X] [TopologicalSpace Y] : (\u2200 U : Set (X \u00d7 Y), IsOpen U \u2192 IsOpen (Prod.fst '' U)) \u2227 (\u2200 V : Set (X \u00d7 Y), IsOpen V \u2192 IsOpen (Prod.snd '' V)) := sorry",
+        "challenger_index": 0,
+        "problem_id": "Munkres|exercise_16_4"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy : Uncountable (\u03b1 := \u03b1) := sorry",
+        "baseline_index": 7,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {X : Type*} [MetricSpace X] [ConnectedSpace X] (h_two_points : \u2203 x y : X, x \u2260 y) : Uncountable X := sorry",
+        "challenger_index": 10,
+        "problem_id": "Munkres|exercise_27_4"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {X : Type*} [MetricSpace X] [CompactSpace X] {f : X \u2192 X} (hf : Isometry f) : Function.Bijective f := sorry",
+        "baseline_index": 3,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {X : Type*} [MetricSpace X] [CompactSpace X] (f : X \u2192 X) (hf : \u2200 x y : X, dist (f x) (f y) = dist x y) : Function.Bijective f \u2227 \u2203 h : Homeomorph X X, h.toFun = f := sorry",
+        "challenger_index": 5,
+        "problem_id": "Munkres|exercise_28_6"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {\u03b9 : Type*} (X : \u03b9 \u2192 Type*) [\u2200 i, TopologicalSpace (X i)] [\u2200 i, Countable (X i)] (hX : \u2200 i, \u2203 D : Set (X i), Dense D) : \u2203 D : Set (\u2200 i, X i), Dense D := sorry",
+        "baseline_index": 6,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {\u03b9 : Type*} [Countable \u03b9] {X : \u03b9 \u2192 Type*} [\u2200 i, TopologicalSpace (X i)] (h : \u2200 i, \u2203 D : Set (X i), D.Countable \u2227 Dense D) : \u2203 D : Set (\u03a0 i, X i), D.Countable \u2227 Dense D := sorry",
+        "challenger_index": 4,
+        "problem_id": "Munkres|exercise_30_10"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {X : Type*} [Preorder X] [TopologicalSpace X] : RegularSpace X := sorry",
+        "baseline_index": 7,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy (X : Type*) [PartialOrder X] [TopologicalSpace X] [OrderTopology X] : RegularSpace X := sorry",
+        "challenger_index": 6,
+        "problem_id": "Munkres|exercise_31_3"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {X : Type*} [TopologicalSpace X] [LocallyCompactSpace X] [T2Space X] : T3Space X := sorry",
+        "baseline_index": 0,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {X : Type*} [TopologicalSpace X] (hLC : LocallyCompactSpace X) (hH : T2Space X) : CompletelyRegularSpace X := sorry",
+        "challenger_index": 4,
+        "problem_id": "Munkres|exercise_33_7"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy : ConnectedSpace X \u2194 ConnectedSpace (StoneCech X) := sorry",
+        "baseline_index": 2,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {X : Type*} [TopologicalSpace X] [CompletelyRegularSpace X] : ConnectedSpace X \u2194 ConnectedSpace (StoneCech X) := sorry",
+        "challenger_index": 8,
+        "problem_id": "Munkres|exercise_38_6"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy : \u2203 (n : \u2115) (m : \u2115), n^2 + (n+1)^2 = m^2 \u2227 (n+2)^2 = m^2 := sorry",
+        "baseline_index": 5,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy : \u2203\u1da0 n in at_top, \u2203 a b c d e f : \u2124, n = a^2 + b^2 \u2227 (n + 1) = c^2 + d^2 \u2227 (n + 2) = e^2 + f^2 := sorry",
+        "challenger_index": 26,
+        "problem_id": "Putnam|exercise_2000_a2"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy {m n : \u2115} (hmn : m \u2223 n) : (10 ^ m - 1) \u2223 (10 ^ n - 1) := sorry",
+        "baseline_index": 15,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy (n : \u2115) (hn : 0 < n) : \u00ac Prime (10 ^ 10 ^ 10 ^ n + (10 ^ 10 ^ n) + 10 ^ n - 1) := sorry",
+        "challenger_index": 11,
+        "problem_id": "Putnam|exercise_2010_a4"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy (x y : \u2102) : |x| - |y| \u2264 |x - y| := sorry",
+        "baseline_index": 2,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {x y : \u2102} : |abs x - abs y| \u2264 abs (x - y) := sorry",
+        "challenger_index": 6,
+        "problem_id": "Rudin|exercise_1_13"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy (s : Set \u211d) (hs : IsOpen s) : s = \u22c3 (x \u2208 s) (y \u2208 s), Set.Ioo x y := sorry",
+        "baseline_index": 1,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy (U : Set \u211d) (hU : IsOpen U) : \u2203 (S : Set (Set \u211d)), (\u2200 s \u2208 S, \u2203 a b : \u211d, s = Set.Ioo a b) \u2227 Pairwise (Disjoint on S) \u2227 Countable S \u2227 U = \u22c3\u2080 S := sorry",
+        "challenger_index": 5,
+        "problem_id": "Rudin|exercise_2_29"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy [Nonempty X] {G : \u2115 \u2192 Set X} (hG : \u2200 n, IsOpen (G n)) (hG' : \u2200 n, Dense (G n)) : (\u22c2 n, G n).Nonempty := sorry",
+        "baseline_index": 1,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {X : Type*} [MetricSpace X] [CompleteSpace X] [Nonempty X] (G : \u2115 \u2192 Set X) (hg : \u2200 n, IsOpen (G n) \u2227 Dense (G n)) : \u2203 x : X, \u2200 n, x \u2208 G n := sorry",
+        "challenger_index": 17,
+        "problem_id": "Rudin|exercise_3_22"
+      },
+      {
+        "baseline": "shortest",
+        "baseline_accepted": true,
+        "baseline_candidate": "theorem dummy (f : C(X, Y)) (E : Set X) : f '' closure E \u2286 closure (f '' E) := sorry",
+        "baseline_index": 7,
+        "challenger": "nlverifier",
+        "challenger_accepted": true,
+        "challenger_candidate": "theorem dummy {X Y : Type*} [MetricSpace X] [MetricSpace Y] (f : X \u2192 Y) (hf : Continuous f) (E : Set X) : f '' closure E \u2286 closure (f '' E) := sorry",
+        "challenger_index": 9,
+        "problem_id": "Rudin|exercise_4_2a"
+      }
+    ]
+  },
+  "config": {
+    "abstention_methods": [
+      "nlverifier_abstain_p50"
+    ],
+    "derived_baselines": [
+      "first",
+      "shortest"
+    ],
+    "max_cases": 20,
+    "selection_methods": [
+      "self_bleu",
+      "critic",
+      "hybrid",
+      "nlverifier",
+      "nlverifier_abstain_p50"
+    ]
+  },
+  "coverage_accuracy_frontier": [
+    {
+      "accepted": 55,
+      "accepted_accuracy": {
+        "ci_high": 0.619237401530278,
+        "ci_low": 0.36376777849003283,
+        "rate": 0.4909090909090909,
+        "successes": 27,
+        "total": 55
+      },
+      "coverage": 1.0,
+      "method": "nlverifier"
+    },
+    {
+      "accepted": 36,
+      "accepted_accuracy": {
+        "ci_high": 0.7978538117569468,
+        "ci_low": 0.5033399787115652,
+        "rate": 0.6666666666666666,
+        "successes": 24,
+        "total": 36
+      },
+      "coverage": 0.6545454545454545,
+      "method": "nlverifier_abstain_p50"
+    }
+  ],
+  "dataset": {
+    "allow_missing_as_abstain": false,
+    "avg_candidates_per_problem": 9.854545454545455,
+    "has_any_correct": {
+      "ci_high": 0.6530690163868067,
+      "ci_low": 0.3979154435522611,
+      "rate": 0.5272727272727272,
+      "successes": 29,
+      "total": 55
+    },
+    "problems": 55,
+    "total_candidate_pairs": 3700
+  },
+  "methods": {
+    "critic": {
+      "abstained": 0,
+      "accepted": 55,
+      "accepted_accuracy": {
+        "ci_high": 0.45896776443421317,
+        "ci_low": 0.21813065595168937,
+        "rate": 0.32727272727272727,
+        "successes": 18,
+        "total": 55
+      },
+      "coverage": 1.0,
+      "missed_available_correct": 11,
+      "problems": 55,
+      "selected_correct": {
+        "ci_high": 0.45896776443421317,
+        "ci_low": 0.21813065595168937,
+        "rate": 0.32727272727272727,
+        "successes": 18,
+        "total": 55
+      },
+      "selected_correct_given_any": {
+        "ci_high": 0.7731197789919015,
+        "ci_low": 0.4400254420598852,
+        "rate": 0.6206896551724138,
+        "successes": 18,
+        "total": 29
+      }
+    },
+    "first": {
+      "abstained": 0,
+      "accepted": 55,
+      "accepted_accuracy": {
+        "ci_high": 0.3634836618916773,
+        "ci_low": 0.14366655869733186,
+        "rate": 0.23636363636363636,
+        "successes": 13,
+        "total": 55
+      },
+      "coverage": 1.0,
+      "missed_available_correct": 16,
+      "problems": 55,
+      "selected_correct": {
+        "ci_high": 0.3634836618916773,
+        "ci_low": 0.14366655869733186,
+        "rate": 0.23636363636363636,
+        "successes": 13,
+        "total": 55
+      },
+      "selected_correct_given_any": {
+        "ci_high": 0.6245203678902909,
+        "ci_low": 0.28413168023037194,
+        "rate": 0.4482758620689655,
+        "successes": 13,
+        "total": 29
+      }
+    },
+    "hybrid": {
+      "abstained": 0,
+      "accepted": 55,
+      "accepted_accuracy": {
+        "ci_high": 0.45896776443421317,
+        "ci_low": 0.21813065595168937,
+        "rate": 0.32727272727272727,
+        "successes": 18,
+        "total": 55
+      },
+      "coverage": 1.0,
+      "missed_available_correct": 11,
+      "problems": 55,
+      "selected_correct": {
+        "ci_high": 0.45896776443421317,
+        "ci_low": 0.21813065595168937,
+        "rate": 0.32727272727272727,
+        "successes": 18,
+        "total": 55
+      },
+      "selected_correct_given_any": {
+        "ci_high": 0.7731197789919015,
+        "ci_low": 0.4400254420598852,
+        "rate": 0.6206896551724138,
+        "successes": 18,
+        "total": 29
+      }
+    },
+    "nlverifier": {
+      "abstained": 0,
+      "accepted": 55,
+      "accepted_accuracy": {
+        "ci_high": 0.619237401530278,
+        "ci_low": 0.36376777849003283,
+        "rate": 0.4909090909090909,
+        "successes": 27,
+        "total": 55
+      },
+      "coverage": 1.0,
+      "missed_available_correct": 2,
+      "problems": 55,
+      "selected_correct": {
+        "ci_high": 0.619237401530278,
+        "ci_low": 0.36376777849003283,
+        "rate": 0.4909090909090909,
+        "successes": 27,
+        "total": 55
+      },
+      "selected_correct_given_any": {
+        "ci_high": 0.9808787338305667,
+        "ci_low": 0.7803541984972431,
+        "rate": 0.9310344827586207,
+        "successes": 27,
+        "total": 29
+      }
+    },
+    "nlverifier_abstain_p50": {
+      "abstained": 19,
+      "accepted": 36,
+      "accepted_accuracy": {
+        "ci_high": 0.7978538117569468,
+        "ci_low": 0.5033399787115652,
+        "rate": 0.6666666666666666,
+        "successes": 24,
+        "total": 36
+      },
+      "coverage": 0.6545454545454545,
+      "missed_available_correct": 5,
+      "problems": 55,
+      "selected_correct": {
+        "ci_high": 0.5673018365358555,
+        "ci_low": 0.3137344236063191,
+        "rate": 0.43636363636363634,
+        "successes": 24,
+        "total": 55
+      },
+      "selected_correct_given_any": {
+        "ci_high": 0.9240214274710877,
+        "ci_low": 0.6545156010980476,
+        "rate": 0.8275862068965517,
+        "successes": 24,
+        "total": 29
+      }
+    },
+    "self_bleu": {
+      "abstained": 0,
+      "accepted": 55,
+      "accepted_accuracy": {
+        "ci_high": 0.44028590157535924,
+        "ci_low": 0.20282287885116462,
+        "rate": 0.3090909090909091,
+        "successes": 17,
+        "total": 55
+      },
+      "coverage": 1.0,
+      "missed_available_correct": 12,
+      "problems": 55,
+      "selected_correct": {
+        "ci_high": 0.44028590157535924,
+        "ci_low": 0.20282287885116462,
+        "rate": 0.3090909090909091,
+        "successes": 17,
+        "total": 55
+      },
+      "selected_correct_given_any": {
+        "ci_high": 0.744868226586776,
+        "ci_low": 0.4073783598787858,
+        "rate": 0.5862068965517241,
+        "successes": 17,
+        "total": 29
+      }
+    },
+    "shortest": {
+      "abstained": 0,
+      "accepted": 55,
+      "accepted_accuracy": {
+        "ci_high": 0.21825549086553508,
+        "ci_low": 0.05096725000782336,
+        "rate": 0.10909090909090909,
+        "successes": 6,
+        "total": 55
+      },
+      "coverage": 1.0,
+      "missed_available_correct": 23,
+      "problems": 55,
+      "selected_correct": {
+        "ci_high": 0.21825549086553508,
+        "ci_low": 0.05096725000782336,
+        "rate": 0.10909090909090909,
+        "successes": 6,
+        "total": 55
+      },
+      "selected_correct_given_any": {
+        "ci_high": 0.38390090403867905,
+        "ci_low": 0.09846070197841039,
+        "rate": 0.20689655172413793,
+        "successes": 6,
+        "total": 29
+      }
+    }
+  },
+  "pairwise": {
+    "critic": {
+      "first": {
+        "a_only": 5,
+        "a_successes": 18,
+        "b_minus_a": -0.09090909090909091,
+        "b_only": 0,
+        "b_successes": 13,
+        "both_success": 13,
+        "discordant": 5,
+        "exact_sign_p": 0.0625,
+        "neither_success": 37,
+        "total": 55
+      },
+      "hybrid": {
+        "a_only": 0,
+        "a_successes": 18,
+        "b_minus_a": 0.0,
+        "b_only": 0,
+        "b_successes": 18,
+        "both_success": 18,
+        "discordant": 0,
+        "exact_sign_p": 1.0,
+        "neither_success": 37,
+        "total": 55
+      },
+      "nlverifier": {
+        "a_only": 0,
+        "a_successes": 18,
+        "b_minus_a": 0.16363636363636364,
+        "b_only": 9,
+        "b_successes": 27,
+        "both_success": 18,
+        "discordant": 9,
+        "exact_sign_p": 0.00390625,
+        "neither_success": 28,
+        "total": 55
+      },
+      "nlverifier_abstain_p50": {
+        "a_only": 3,
+        "a_successes": 18,
+        "b_minus_a": 0.10909090909090909,
+        "b_only": 9,
+        "b_successes": 24,
+        "both_success": 15,
+        "discordant": 12,
+        "exact_sign_p": 0.14599609375000028,
+        "neither_success": 28,
+        "total": 55
+      },
+      "self_bleu": {
+        "a_only": 3,
+        "a_successes": 18,
+        "b_minus_a": -0.01818181818181818,
+        "b_only": 2,
+        "b_successes": 17,
+        "both_success": 15,
+        "discordant": 5,
+        "exact_sign_p": 1.0,
+        "neither_success": 35,
+        "total": 55
+      },
+      "shortest": {
+        "a_only": 13,
+        "a_successes": 18,
+        "b_minus_a": -0.21818181818181817,
+        "b_only": 1,
+        "b_successes": 6,
+        "both_success": 5,
+        "discordant": 14,
+        "exact_sign_p": 0.0018310546875000074,
+        "neither_success": 36,
+        "total": 55
+      }
+    },
+    "first": {
+      "critic": {
+        "a_only": 0,
+        "a_successes": 13,
+        "b_minus_a": 0.09090909090909091,
+        "b_only": 5,
+        "b_successes": 18,
+        "both_success": 13,
+        "discordant": 5,
+        "exact_sign_p": 0.0625,
+        "neither_success": 37,
+        "total": 55
+      },
+      "hybrid": {
+        "a_only": 0,
+        "a_successes": 13,
+        "b_minus_a": 0.09090909090909091,
+        "b_only": 5,
+        "b_successes": 18,
+        "both_success": 13,
+        "discordant": 5,
+        "exact_sign_p": 0.0625,
+        "neither_success": 37,
+        "total": 55
+      },
+      "nlverifier": {
+        "a_only": 0,
+        "a_successes": 13,
+        "b_minus_a": 0.2545454545454545,
+        "b_only": 14,
+        "b_successes": 27,
+        "both_success": 13,
+        "discordant": 14,
+        "exact_sign_p": 0.00012207031250000005,
+        "neither_success": 28,
+        "total": 55
+      },
+      "nlverifier_abstain_p50": {
+        "a_only": 3,
+        "a_successes": 13,
+        "b_minus_a": 0.2,
+        "b_only": 14,
+        "b_successes": 24,
+        "both_success": 10,
+        "discordant": 17,
+        "exact_sign_p": 0.012725830078125012,
+        "neither_success": 28,
+        "total": 55
+      },
+      "self_bleu": {
+        "a_only": 1,
+        "a_successes": 13,
+        "b_minus_a": 0.07272727272727272,
+        "b_only": 5,
+        "b_successes": 17,
+        "both_success": 12,
+        "discordant": 6,
+        "exact_sign_p": 0.21875000000000014,
+        "neither_success": 37,
+        "total": 55
+      },
+      "shortest": {
+        "a_only": 9,
+        "a_successes": 13,
+        "b_minus_a": -0.12727272727272726,
+        "b_only": 2,
+        "b_successes": 6,
+        "both_success": 4,
+        "discordant": 11,
+        "exact_sign_p": 0.06542968750000028,
+        "neither_success": 40,
+        "total": 55
+      }
+    },
+    "hybrid": {
+      "critic": {
+        "a_only": 0,
+        "a_successes": 18,
+        "b_minus_a": 0.0,
+        "b_only": 0,
+        "b_successes": 18,
+        "both_success": 18,
+        "discordant": 0,
+        "exact_sign_p": 1.0,
+        "neither_success": 37,
+        "total": 55
+      },
+      "first": {
+        "a_only": 5,
+        "a_successes": 18,
+        "b_minus_a": -0.09090909090909091,
+        "b_only": 0,
+        "b_successes": 13,
+        "both_success": 13,
+        "discordant": 5,
+        "exact_sign_p": 0.0625,
+        "neither_success": 37,
+        "total": 55
+      },
+      "nlverifier": {
+        "a_only": 0,
+        "a_successes": 18,
+        "b_minus_a": 0.16363636363636364,
+        "b_only": 9,
+        "b_successes": 27,
+        "both_success": 18,
+        "discordant": 9,
+        "exact_sign_p": 0.00390625,
+        "neither_success": 28,
+        "total": 55
+      },
+      "nlverifier_abstain_p50": {
+        "a_only": 3,
+        "a_successes": 18,
+        "b_minus_a": 0.10909090909090909,
+        "b_only": 9,
+        "b_successes": 24,
+        "both_success": 15,
+        "discordant": 12,
+        "exact_sign_p": 0.14599609375000028,
+        "neither_success": 28,
+        "total": 55
+      },
+      "self_bleu": {
+        "a_only": 3,
+        "a_successes": 18,
+        "b_minus_a": -0.01818181818181818,
+        "b_only": 2,
+        "b_successes": 17,
+        "both_success": 15,
+        "discordant": 5,
+        "exact_sign_p": 1.0,
+        "neither_success": 35,
+        "total": 55
+      },
+      "shortest": {
+        "a_only": 13,
+        "a_successes": 18,
+        "b_minus_a": -0.21818181818181817,
+        "b_only": 1,
+        "b_successes": 6,
+        "both_success": 5,
+        "discordant": 14,
+        "exact_sign_p": 0.0018310546875000074,
+        "neither_success": 36,
+        "total": 55
+      }
+    },
+    "nlverifier": {
+      "critic": {
+        "a_only": 9,
+        "a_successes": 27,
+        "b_minus_a": -0.16363636363636364,
+        "b_only": 0,
+        "b_successes": 18,
+        "both_success": 18,
+        "discordant": 9,
+        "exact_sign_p": 0.00390625,
+        "neither_success": 28,
+        "total": 55
+      },
+      "first": {
+        "a_only": 14,
+        "a_successes": 27,
+        "b_minus_a": -0.2545454545454545,
+        "b_only": 0,
+        "b_successes": 13,
+        "both_success": 13,
+        "discordant": 14,
+        "exact_sign_p": 0.00012207031250000005,
+        "neither_success": 28,
+        "total": 55
+      },
+      "hybrid": {
+        "a_only": 9,
+        "a_successes": 27,
+        "b_minus_a": -0.16363636363636364,
+        "b_only": 0,
+        "b_successes": 18,
+        "both_success": 18,
+        "discordant": 9,
+        "exact_sign_p": 0.00390625,
+        "neither_success": 28,
+        "total": 55
+      },
+      "nlverifier_abstain_p50": {
+        "a_only": 3,
+        "a_successes": 27,
+        "b_minus_a": -0.05454545454545454,
+        "b_only": 0,
+        "b_successes": 24,
+        "both_success": 24,
+        "discordant": 3,
+        "exact_sign_p": 0.25000000000000006,
+        "neither_success": 28,
+        "total": 55
+      },
+      "self_bleu": {
+        "a_only": 10,
+        "a_successes": 27,
+        "b_minus_a": -0.18181818181818182,
+        "b_only": 0,
+        "b_successes": 17,
+        "both_success": 17,
+        "discordant": 10,
+        "exact_sign_p": 0.001953125,
+        "neither_success": 28,
+        "total": 55
+      },
+      "shortest": {
+        "a_only": 21,
+        "a_successes": 27,
+        "b_minus_a": -0.38181818181818183,
+        "b_only": 0,
+        "b_successes": 6,
+        "both_success": 6,
+        "discordant": 21,
+        "exact_sign_p": 9.536743164062499e-07,
+        "neither_success": 28,
+        "total": 55
+      }
+    },
+    "nlverifier_abstain_p50": {
+      "critic": {
+        "a_only": 9,
+        "a_successes": 24,
+        "b_minus_a": -0.10909090909090909,
+        "b_only": 3,
+        "b_successes": 18,
+        "both_success": 15,
+        "discordant": 12,
+        "exact_sign_p": 0.14599609375000028,
+        "neither_success": 28,
+        "total": 55
+      },
+      "first": {
+        "a_only": 14,
+        "a_successes": 24,
+        "b_minus_a": -0.2,
+        "b_only": 3,
+        "b_successes": 13,
+        "both_success": 10,
+        "discordant": 17,
+        "exact_sign_p": 0.012725830078125012,
+        "neither_success": 28,
+        "total": 55
+      },
+      "hybrid": {
+        "a_only": 9,
+        "a_successes": 24,
+        "b_minus_a": -0.10909090909090909,
+        "b_only": 3,
+        "b_successes": 18,
+        "both_success": 15,
+        "discordant": 12,
+        "exact_sign_p": 0.14599609375000028,
+        "neither_success": 28,
+        "total": 55
+      },
+      "nlverifier": {
+        "a_only": 0,
+        "a_successes": 24,
+        "b_minus_a": 0.05454545454545454,
+        "b_only": 3,
+        "b_successes": 27,
+        "both_success": 24,
+        "discordant": 3,
+        "exact_sign_p": 0.25000000000000006,
+        "neither_success": 28,
+        "total": 55
+      },
+      "self_bleu": {
+        "a_only": 9,
+        "a_successes": 24,
+        "b_minus_a": -0.12727272727272726,
+        "b_only": 2,
+        "b_successes": 17,
+        "both_success": 15,
+        "discordant": 11,
+        "exact_sign_p": 0.06542968750000028,
+        "neither_success": 29,
+        "total": 55
+      },
+      "shortest": {
+        "a_only": 20,
+        "a_successes": 24,
+        "b_minus_a": -0.32727272727272727,
+        "b_only": 2,
+        "b_successes": 6,
+        "both_success": 4,
+        "discordant": 22,
+        "exact_sign_p": 0.00012111663818359309,
+        "neither_success": 29,
+        "total": 55
+      }
+    },
+    "self_bleu": {
+      "critic": {
+        "a_only": 2,
+        "a_successes": 17,
+        "b_minus_a": 0.01818181818181818,
+        "b_only": 3,
+        "b_successes": 18,
+        "both_success": 15,
+        "discordant": 5,
+        "exact_sign_p": 1.0,
+        "neither_success": 35,
+        "total": 55
+      },
+      "first": {
+        "a_only": 5,
+        "a_successes": 17,
+        "b_minus_a": -0.07272727272727272,
+        "b_only": 1,
+        "b_successes": 13,
+        "both_success": 12,
+        "discordant": 6,
+        "exact_sign_p": 0.21875000000000014,
+        "neither_success": 37,
+        "total": 55
+      },
+      "hybrid": {
+        "a_only": 2,
+        "a_successes": 17,
+        "b_minus_a": 0.01818181818181818,
+        "b_only": 3,
+        "b_successes": 18,
+        "both_success": 15,
+        "discordant": 5,
+        "exact_sign_p": 1.0,
+        "neither_success": 35,
+        "total": 55
+      },
+      "nlverifier": {
+        "a_only": 0,
+        "a_successes": 17,
+        "b_minus_a": 0.18181818181818182,
+        "b_only": 10,
+        "b_successes": 27,
+        "both_success": 17,
+        "discordant": 10,
+        "exact_sign_p": 0.001953125,
+        "neither_success": 28,
+        "total": 55
+      },
+      "nlverifier_abstain_p50": {
+        "a_only": 2,
+        "a_successes": 17,
+        "b_minus_a": 0.12727272727272726,
+        "b_only": 9,
+        "b_successes": 24,
+        "both_success": 15,
+        "discordant": 11,
+        "exact_sign_p": 0.06542968750000028,
+        "neither_success": 29,
+        "total": 55
+      },
+      "shortest": {
+        "a_only": 13,
+        "a_successes": 17,
+        "b_minus_a": -0.2,
+        "b_only": 2,
+        "b_successes": 6,
+        "both_success": 4,
+        "discordant": 15,
+        "exact_sign_p": 0.0073852539062500165,
+        "neither_success": 36,
+        "total": 55
+      }
+    },
+    "shortest": {
+      "critic": {
+        "a_only": 1,
+        "a_successes": 6,
+        "b_minus_a": 0.21818181818181817,
+        "b_only": 13,
+        "b_successes": 18,
+        "both_success": 5,
+        "discordant": 14,
+        "exact_sign_p": 0.0018310546875000074,
+        "neither_success": 36,
+        "total": 55
+      },
+      "first": {
+        "a_only": 2,
+        "a_successes": 6,
+        "b_minus_a": 0.12727272727272726,
+        "b_only": 9,
+        "b_successes": 13,
+        "both_success": 4,
+        "discordant": 11,
+        "exact_sign_p": 0.06542968750000028,
+        "neither_success": 40,
+        "total": 55
+      },
+      "hybrid": {
+        "a_only": 1,
+        "a_successes": 6,
+        "b_minus_a": 0.21818181818181817,
+        "b_only": 13,
+        "b_successes": 18,
+        "both_success": 5,
+        "discordant": 14,
+        "exact_sign_p": 0.0018310546875000074,
+        "neither_success": 36,
+        "total": 55
+      },
+      "nlverifier": {
+        "a_only": 0,
+        "a_successes": 6,
+        "b_minus_a": 0.38181818181818183,
+        "b_only": 21,
+        "b_successes": 27,
+        "both_success": 6,
+        "discordant": 21,
+        "exact_sign_p": 9.536743164062499e-07,
+        "neither_success": 28,
+        "total": 55
+      },
+      "nlverifier_abstain_p50": {
+        "a_only": 2,
+        "a_successes": 6,
+        "b_minus_a": 0.32727272727272727,
+        "b_only": 20,
+        "b_successes": 24,
+        "both_success": 4,
+        "discordant": 22,
+        "exact_sign_p": 0.00012111663818359309,
+        "neither_success": 29,
+        "total": 55
+      },
+      "self_bleu": {
+        "a_only": 2,
+        "a_successes": 6,
+        "b_minus_a": 0.2,
+        "b_only": 13,
+        "b_successes": 17,
+        "both_success": 4,
+        "discordant": 15,
+        "exact_sign_p": 0.0073852539062500165,
+        "neither_success": 36,
+        "total": 55
+      }
+    }
+  }
+}

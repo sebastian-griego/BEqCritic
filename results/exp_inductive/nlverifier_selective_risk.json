@@ -1,0 +1,706 @@
+{
+  "best_accuracy_prefix": {
+    "accepted": 19,
+    "accuracy": 0.7894736842105263,
+    "coverage": 0.34545454545454546,
+    "risk": 0.21052631578947367,
+    "selected_correct": 15,
+    "threshold": 0.9142266561302389
+  },
+  "confidence_key": "chosen_probability",
+  "coverage_table": [
+    {
+      "accepted": 14,
+      "accuracy": 0.7142857142857143,
+      "coverage": 0.2545454545454545,
+      "risk": 0.2857142857142857,
+      "selected_correct": 10,
+      "threshold": 0.9327259654344926
+    },
+    {
+      "accepted": 28,
+      "accuracy": 0.7142857142857143,
+      "coverage": 0.509090909090909,
+      "risk": 0.2857142857142857,
+      "selected_correct": 20,
+      "threshold": 0.7783226815293719
+    },
+    {
+      "accepted": 42,
+      "accuracy": 0.5952380952380952,
+      "coverage": 0.7636363636363637,
+      "risk": 0.40476190476190477,
+      "selected_correct": 25,
+      "threshold": 0.34237218437561673
+    },
+    {
+      "accepted": 55,
+      "accuracy": 0.4909090909090909,
+      "coverage": 1.0,
+      "risk": 0.509090909090909,
+      "selected_correct": 27,
+      "threshold": 0.07014415616326267
+    }
+  ],
+  "dataset": {
+    "has_any_correct": 29,
+    "has_any_correct_rate": 0.5272727272727272,
+    "problems": 55,
+    "selected_accuracy": 0.4909090909090909,
+    "selected_correct": 27
+  },
+  "high_confidence_errors": [
+    {
+      "chosen_index": 0,
+      "chosen_probability": 0.9673796852533771,
+      "chosen_score": 8.065494537353516,
+      "has_any_correct": false,
+      "n_candidates": 5,
+      "probability_margin": 0.010393270467239146,
+      "problem_id": "Dummit-Foote|exercise_8_3_6b",
+      "runner_up_index": 3,
+      "runner_up_probability": 0.956986414786138,
+      "runner_up_score": 7.381683826446533,
+      "score_margin": 0.6838107109069824,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 0,
+      "chosen_probability": 0.9637240008162034,
+      "chosen_score": 7.803738594055176,
+      "has_any_correct": false,
+      "n_candidates": 2,
+      "probability_margin": 0.031486234940070745,
+      "problem_id": "Axler|exercise_7_10",
+      "runner_up_index": 1,
+      "runner_up_probability": 0.9322377658761326,
+      "runner_up_score": 6.237908363342285,
+      "score_margin": 1.5658302307128906,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 3,
+      "chosen_probability": 0.9502472289722269,
+      "chosen_score": 7.018539905548096,
+      "has_any_correct": true,
+      "n_candidates": 21,
+      "probability_margin": 0.03736340668936444,
+      "problem_id": "Herstein|exercise_4_3_25",
+      "runner_up_index": 9,
+      "runner_up_probability": 0.9128838222828625,
+      "runner_up_score": 5.590183734893799,
+      "score_margin": 1.4283561706542969,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 0,
+      "chosen_probability": 0.9495543413736579,
+      "chosen_score": 6.983895301818848,
+      "has_any_correct": false,
+      "n_candidates": 4,
+      "probability_margin": 0.2480323985351527,
+      "problem_id": "Dummit-Foote|exercise_2_4_16b",
+      "runner_up_index": 1,
+      "runner_up_probability": 0.7015219428385052,
+      "runner_up_score": 2.033367156982422,
+      "score_margin": 4.950528144836426,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 8,
+      "chosen_probability": 0.9039552644964457,
+      "chosen_score": 5.334630966186523,
+      "has_any_correct": false,
+      "n_candidates": 16,
+      "probability_margin": 0.2338264155457077,
+      "problem_id": "Herstein|exercise_5_6_14",
+      "runner_up_index": 11,
+      "runner_up_probability": 0.670128848950738,
+      "runner_up_score": 1.6864731311798096,
+      "score_margin": 3.648157835006714,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 5,
+      "chosen_probability": 0.8838113067171269,
+      "chosen_score": 4.827957630157471,
+      "has_any_correct": false,
+      "n_candidates": 6,
+      "probability_margin": 0.013978014013470985,
+      "problem_id": "Axler|exercise_6_2",
+      "runner_up_index": 4,
+      "runner_up_probability": 0.869833292703656,
+      "runner_up_score": 4.519718647003174,
+      "score_margin": 0.3082389831542969,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 1,
+      "chosen_probability": 0.8397006266464543,
+      "chosen_score": 3.940363883972168,
+      "has_any_correct": false,
+      "n_candidates": 3,
+      "probability_margin": 0.31405547408661905,
+      "problem_id": "Dummit-Foote|exercise_4_4_7",
+      "runner_up_index": 0,
+      "runner_up_probability": 0.5256451525598352,
+      "runner_up_score": 0.24429914355278015,
+      "score_margin": 3.696064740419388,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 0,
+      "chosen_probability": 0.7878946999019798,
+      "chosen_score": 3.122499942779541,
+      "has_any_correct": false,
+      "n_candidates": 5,
+      "probability_margin": 0.24649823899836687,
+      "problem_id": "Putnam|exercise_2018_b2",
+      "runner_up_index": 2,
+      "runner_up_probability": 0.5413964609036129,
+      "runner_up_score": 0.3949061334133148,
+      "score_margin": 2.727593809366226,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 1,
+      "chosen_probability": 0.7272815456184614,
+      "chosen_score": 2.3339335918426514,
+      "has_any_correct": false,
+      "n_candidates": 3,
+      "probability_margin": 0.6246316823528052,
+      "problem_id": "Herstein|exercise_2_5_43",
+      "runner_up_index": 2,
+      "runner_up_probability": 0.10264986326565616,
+      "runner_up_score": -5.158924579620361,
+      "score_margin": 7.492858171463013,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 7,
+      "chosen_probability": 0.6303154073381068,
+      "chosen_score": 1.2696000337600708,
+      "has_any_correct": false,
+      "n_candidates": 18,
+      "probability_margin": 0.17134374909374123,
+      "problem_id": "Dummit-Foote|exercise_9_4_11",
+      "runner_up_index": 11,
+      "runner_up_probability": 0.45897165824436553,
+      "runner_up_score": -0.3913784921169281,
+      "score_margin": 1.660978525876999,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 15,
+      "chosen_probability": 0.6005773057060484,
+      "chosen_score": 0.9705063104629517,
+      "has_any_correct": false,
+      "n_candidates": 16,
+      "probability_margin": 0.1582390581967777,
+      "problem_id": "Pugh|exercise_2_29",
+      "runner_up_index": 9,
+      "runner_up_probability": 0.4423382475092707,
+      "runner_up_score": -0.5512641072273254,
+      "score_margin": 1.521770417690277,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 4,
+      "chosen_probability": 0.5412837391475258,
+      "chosen_score": 0.393825888633728,
+      "has_any_correct": false,
+      "n_candidates": 5,
+      "probability_margin": 0.02361020564995464,
+      "problem_id": "Dummit-Foote|exercise_8_2_4",
+      "runner_up_index": 1,
+      "runner_up_probability": 0.5176735334975712,
+      "runner_up_score": 0.16828280687332153,
+      "score_margin": 0.2255430817604065,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 4,
+      "chosen_probability": 0.5131508738355837,
+      "chosen_score": 0.1251959204673767,
+      "has_any_correct": false,
+      "n_candidates": 17,
+      "probability_margin": 0.15741242632231972,
+      "problem_id": "Ireland-Rosen|exercise_4_11",
+      "runner_up_index": 7,
+      "runner_up_probability": 0.35573844751326394,
+      "runner_up_score": -1.413172960281372,
+      "score_margin": 1.5383688807487488,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 6,
+      "chosen_probability": 0.4405987786131045,
+      "chosen_score": -0.5680500268936157,
+      "has_any_correct": false,
+      "n_candidates": 21,
+      "probability_margin": 0.31965946133170675,
+      "problem_id": "Munkres|exercise_13_4b1",
+      "runner_up_index": 13,
+      "runner_up_probability": 0.1209393172813977,
+      "runner_up_score": -4.719780921936035,
+      "score_margin": 4.151730895042419,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 3,
+      "chosen_probability": 0.39533285565602944,
+      "chosen_score": -1.0111446380615234,
+      "has_any_correct": false,
+      "n_candidates": 12,
+      "probability_margin": 0.07253531864190405,
+      "problem_id": "Ireland-Rosen|exercise_5_37",
+      "runner_up_index": 0,
+      "runner_up_probability": 0.3227975370141254,
+      "runner_up_score": -1.7630367279052734,
+      "score_margin": 0.75189208984375,
+      "selected_correct": false
+    }
+  ],
+  "risk_coverage_curve": [
+    {
+      "accepted": 1,
+      "accuracy": 0.0,
+      "coverage": 0.01818181818181818,
+      "risk": 1.0,
+      "selected_correct": 0,
+      "threshold": 0.9673796852533771
+    },
+    {
+      "accepted": 2,
+      "accuracy": 0.5,
+      "coverage": 0.03636363636363636,
+      "risk": 0.5,
+      "selected_correct": 1,
+      "threshold": 0.9668796498096474
+    },
+    {
+      "accepted": 3,
+      "accuracy": 0.6666666666666666,
+      "coverage": 0.05454545454545454,
+      "risk": 0.33333333333333337,
+      "selected_correct": 2,
+      "threshold": 0.9650377490996785
+    },
+    {
+      "accepted": 4,
+      "accuracy": 0.75,
+      "coverage": 0.07272727272727272,
+      "risk": 0.25,
+      "selected_correct": 3,
+      "threshold": 0.9649461515498863
+    },
+    {
+      "accepted": 5,
+      "accuracy": 0.6,
+      "coverage": 0.09090909090909091,
+      "risk": 0.4,
+      "selected_correct": 3,
+      "threshold": 0.9637240008162034
+    },
+    {
+      "accepted": 6,
+      "accuracy": 0.6666666666666666,
+      "coverage": 0.10909090909090909,
+      "risk": 0.33333333333333337,
+      "selected_correct": 4,
+      "threshold": 0.9591954650307224
+    },
+    {
+      "accepted": 7,
+      "accuracy": 0.7142857142857143,
+      "coverage": 0.12727272727272726,
+      "risk": 0.2857142857142857,
+      "selected_correct": 5,
+      "threshold": 0.9568295497738631
+    },
+    {
+      "accepted": 8,
+      "accuracy": 0.625,
+      "coverage": 0.14545454545454545,
+      "risk": 0.375,
+      "selected_correct": 5,
+      "threshold": 0.9502472289722269
+    },
+    {
+      "accepted": 9,
+      "accuracy": 0.5555555555555556,
+      "coverage": 0.16363636363636364,
+      "risk": 0.4444444444444444,
+      "selected_correct": 5,
+      "threshold": 0.9495543413736579
+    },
+    {
+      "accepted": 10,
+      "accuracy": 0.6,
+      "coverage": 0.18181818181818182,
+      "risk": 0.4,
+      "selected_correct": 6,
+      "threshold": 0.9492737673117805
+    },
+    {
+      "accepted": 11,
+      "accuracy": 0.6363636363636364,
+      "coverage": 0.2,
+      "risk": 0.36363636363636365,
+      "selected_correct": 7,
+      "threshold": 0.9454286625089946
+    },
+    {
+      "accepted": 12,
+      "accuracy": 0.6666666666666666,
+      "coverage": 0.21818181818181817,
+      "risk": 0.33333333333333337,
+      "selected_correct": 8,
+      "threshold": 0.9361861865434721
+    },
+    {
+      "accepted": 13,
+      "accuracy": 0.6923076923076923,
+      "coverage": 0.23636363636363636,
+      "risk": 0.3076923076923077,
+      "selected_correct": 9,
+      "threshold": 0.9338708856197341
+    },
+    {
+      "accepted": 14,
+      "accuracy": 0.7142857142857143,
+      "coverage": 0.2545454545454545,
+      "risk": 0.2857142857142857,
+      "selected_correct": 10,
+      "threshold": 0.9327259654344926
+    },
+    {
+      "accepted": 15,
+      "accuracy": 0.7333333333333333,
+      "coverage": 0.2727272727272727,
+      "risk": 0.2666666666666667,
+      "selected_correct": 11,
+      "threshold": 0.9319721102575946
+    },
+    {
+      "accepted": 16,
+      "accuracy": 0.75,
+      "coverage": 0.2909090909090909,
+      "risk": 0.25,
+      "selected_correct": 12,
+      "threshold": 0.9313561932324301
+    },
+    {
+      "accepted": 17,
+      "accuracy": 0.7647058823529411,
+      "coverage": 0.3090909090909091,
+      "risk": 0.23529411764705888,
+      "selected_correct": 13,
+      "threshold": 0.9275935915660566
+    },
+    {
+      "accepted": 18,
+      "accuracy": 0.7777777777777778,
+      "coverage": 0.32727272727272727,
+      "risk": 0.2222222222222222,
+      "selected_correct": 14,
+      "threshold": 0.9151501388085287
+    },
+    {
+      "accepted": 19,
+      "accuracy": 0.7894736842105263,
+      "coverage": 0.34545454545454546,
+      "risk": 0.21052631578947367,
+      "selected_correct": 15,
+      "threshold": 0.9142266561302389
+    },
+    {
+      "accepted": 20,
+      "accuracy": 0.75,
+      "coverage": 0.36363636363636365,
+      "risk": 0.25,
+      "selected_correct": 15,
+      "threshold": 0.9039552644964457
+    },
+    {
+      "accepted": 21,
+      "accuracy": 0.7619047619047619,
+      "coverage": 0.38181818181818183,
+      "risk": 0.23809523809523814,
+      "selected_correct": 16,
+      "threshold": 0.8988652591888905
+    },
+    {
+      "accepted": 22,
+      "accuracy": 0.7727272727272727,
+      "coverage": 0.4,
+      "risk": 0.2272727272727273,
+      "selected_correct": 17,
+      "threshold": 0.8867971721565803
+    },
+    {
+      "accepted": 23,
+      "accuracy": 0.7391304347826086,
+      "coverage": 0.41818181818181815,
+      "risk": 0.26086956521739135,
+      "selected_correct": 17,
+      "threshold": 0.8838113067171269
+    },
+    {
+      "accepted": 24,
+      "accuracy": 0.75,
+      "coverage": 0.43636363636363634,
+      "risk": 0.25,
+      "selected_correct": 18,
+      "threshold": 0.8399796279708917
+    },
+    {
+      "accepted": 25,
+      "accuracy": 0.72,
+      "coverage": 0.45454545454545453,
+      "risk": 0.28,
+      "selected_correct": 18,
+      "threshold": 0.8397006266464543
+    },
+    {
+      "accepted": 26,
+      "accuracy": 0.7307692307692307,
+      "coverage": 0.4727272727272727,
+      "risk": 0.2692307692307693,
+      "selected_correct": 19,
+      "threshold": 0.8144625885609039
+    },
+    {
+      "accepted": 27,
+      "accuracy": 0.7037037037037037,
+      "coverage": 0.4909090909090909,
+      "risk": 0.2962962962962963,
+      "selected_correct": 19,
+      "threshold": 0.7878946999019798
+    },
+    {
+      "accepted": 28,
+      "accuracy": 0.7142857142857143,
+      "coverage": 0.509090909090909,
+      "risk": 0.2857142857142857,
+      "selected_correct": 20,
+      "threshold": 0.7783226815293719
+    },
+    {
+      "accepted": 29,
+      "accuracy": 0.7241379310344828,
+      "coverage": 0.5272727272727272,
+      "risk": 0.27586206896551724,
+      "selected_correct": 21,
+      "threshold": 0.7692481580682093
+    },
+    {
+      "accepted": 30,
+      "accuracy": 0.7333333333333333,
+      "coverage": 0.5454545454545454,
+      "risk": 0.2666666666666667,
+      "selected_correct": 22,
+      "threshold": 0.7636746568179812
+    },
+    {
+      "accepted": 31,
+      "accuracy": 0.7419354838709677,
+      "coverage": 0.5636363636363636,
+      "risk": 0.25806451612903225,
+      "selected_correct": 23,
+      "threshold": 0.7635730484299885
+    },
+    {
+      "accepted": 32,
+      "accuracy": 0.75,
+      "coverage": 0.5818181818181818,
+      "risk": 0.25,
+      "selected_correct": 24,
+      "threshold": 0.7526592967517888
+    },
+    {
+      "accepted": 33,
+      "accuracy": 0.7272727272727273,
+      "coverage": 0.6,
+      "risk": 0.2727272727272727,
+      "selected_correct": 24,
+      "threshold": 0.7272815456184614
+    },
+    {
+      "accepted": 34,
+      "accuracy": 0.7058823529411765,
+      "coverage": 0.6181818181818182,
+      "risk": 0.2941176470588235,
+      "selected_correct": 24,
+      "threshold": 0.6303154073381068
+    },
+    {
+      "accepted": 35,
+      "accuracy": 0.6857142857142857,
+      "coverage": 0.6363636363636364,
+      "risk": 0.3142857142857143,
+      "selected_correct": 24,
+      "threshold": 0.6005773057060484
+    },
+    {
+      "accepted": 36,
+      "accuracy": 0.6666666666666666,
+      "coverage": 0.6545454545454545,
+      "risk": 0.33333333333333337,
+      "selected_correct": 24,
+      "threshold": 0.5412837391475258
+    },
+    {
+      "accepted": 37,
+      "accuracy": 0.6486486486486487,
+      "coverage": 0.6727272727272727,
+      "risk": 0.3513513513513513,
+      "selected_correct": 24,
+      "threshold": 0.5131508738355837
+    },
+    {
+      "accepted": 38,
+      "accuracy": 0.631578947368421,
+      "coverage": 0.6909090909090909,
+      "risk": 0.368421052631579,
+      "selected_correct": 24,
+      "threshold": 0.4405987786131045
+    },
+    {
+      "accepted": 39,
+      "accuracy": 0.6153846153846154,
+      "coverage": 0.7090909090909091,
+      "risk": 0.3846153846153846,
+      "selected_correct": 24,
+      "threshold": 0.39533285565602944
+    },
+    {
+      "accepted": 40,
+      "accuracy": 0.625,
+      "coverage": 0.7272727272727273,
+      "risk": 0.375,
+      "selected_correct": 25,
+      "threshold": 0.3805591212372207
+    },
+    {
+      "accepted": 41,
+      "accuracy": 0.6097560975609756,
+      "coverage": 0.7454545454545455,
+      "risk": 0.3902439024390244,
+      "selected_correct": 25,
+      "threshold": 0.3480560932687527
+    },
+    {
+      "accepted": 42,
+      "accuracy": 0.5952380952380952,
+      "coverage": 0.7636363636363637,
+      "risk": 0.40476190476190477,
+      "selected_correct": 25,
+      "threshold": 0.34237218437561673
+    },
+    {
+      "accepted": 43,
+      "accuracy": 0.5813953488372093,
+      "coverage": 0.7818181818181819,
+      "risk": 0.41860465116279066,
+      "selected_correct": 25,
+      "threshold": 0.2762723453033884
+    },
+    {
+      "accepted": 44,
+      "accuracy": 0.5909090909090909,
+      "coverage": 0.8,
+      "risk": 0.40909090909090906,
+      "selected_correct": 26,
+      "threshold": 0.25865987227457604
+    },
+    {
+      "accepted": 45,
+      "accuracy": 0.5777777777777777,
+      "coverage": 0.8181818181818182,
+      "risk": 0.4222222222222223,
+      "selected_correct": 26,
+      "threshold": 0.2501290326946287
+    },
+    {
+      "accepted": 46,
+      "accuracy": 0.5652173913043478,
+      "coverage": 0.8363636363636363,
+      "risk": 0.4347826086956522,
+      "selected_correct": 26,
+      "threshold": 0.24783850739257376
+    },
+    {
+      "accepted": 47,
+      "accuracy": 0.5531914893617021,
+      "coverage": 0.8545454545454545,
+      "risk": 0.44680851063829785,
+      "selected_correct": 26,
+      "threshold": 0.17438692663245084
+    },
+    {
+      "accepted": 48,
+      "accuracy": 0.5416666666666666,
+      "coverage": 0.8727272727272727,
+      "risk": 0.45833333333333337,
+      "selected_correct": 26,
+      "threshold": 0.12806065563120758
+    },
+    {
+      "accepted": 49,
+      "accuracy": 0.5306122448979592,
+      "coverage": 0.8909090909090909,
+      "risk": 0.4693877551020408,
+      "selected_correct": 26,
+      "threshold": 0.1150104570989819
+    },
+    {
+      "accepted": 50,
+      "accuracy": 0.54,
+      "coverage": 0.9090909090909091,
+      "risk": 0.45999999999999996,
+      "selected_correct": 27,
+      "threshold": 0.1062089716117875
+    },
+    {
+      "accepted": 51,
+      "accuracy": 0.5294117647058824,
+      "coverage": 0.9272727272727272,
+      "risk": 0.47058823529411764,
+      "selected_correct": 27,
+      "threshold": 0.09282547967225108
+    },
+    {
+      "accepted": 52,
+      "accuracy": 0.5192307692307693,
+      "coverage": 0.9454545454545454,
+      "risk": 0.4807692307692307,
+      "selected_correct": 27,
+      "threshold": 0.09249795969821056
+    },
+    {
+      "accepted": 53,
+      "accuracy": 0.5094339622641509,
+      "coverage": 0.9636363636363636,
+      "risk": 0.49056603773584906,
+      "selected_correct": 27,
+      "threshold": 0.08508068209171857
+    },
+    {
+      "accepted": 54,
+      "accuracy": 0.5,
+      "coverage": 0.9818181818181818,
+      "risk": 0.5,
+      "selected_correct": 27,
+      "threshold": 0.07454928178155283
+    },
+    {
+      "accepted": 55,
+      "accuracy": 0.4909090909090909,
+      "coverage": 1.0,
+      "risk": 0.509090909090909,
+      "selected_correct": 27,
+      "threshold": 0.07014415616326267
+    }
+  ]
+}
