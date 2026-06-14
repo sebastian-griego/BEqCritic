@@ -2,6 +2,7 @@ import pytest
 
 from beqcritic.jsonl import (
     JsonlError,
+    load_jsonl_map_by_key,
     load_jsonl_map_by_problem_id,
     load_jsonl_objects,
 )
@@ -45,6 +46,18 @@ def test_load_jsonl_map_by_problem_id_reports_physical_line(tmp_path):
 
     assert f"{path}:3" in str(excinfo.value)
     assert "missing problem_id" in str(excinfo.value)
+
+
+def test_load_jsonl_map_by_key_rejects_missing_key(tmp_path):
+    path = tmp_path / "rows.jsonl"
+    path.write_text('{"id": "p1"}\n{"missing": true}\n', encoding="utf-8")
+
+    with pytest.raises(JsonlError) as excinfo:
+        load_jsonl_map_by_key(path, "id")
+
+    message = str(excinfo.value)
+    assert f"{path}:2" in message
+    assert "missing id" in message
 
 
 def test_load_jsonl_map_by_problem_id_rejects_duplicates(tmp_path):

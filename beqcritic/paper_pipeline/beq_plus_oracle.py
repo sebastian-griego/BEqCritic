@@ -13,35 +13,41 @@ import argparse
 import json
 import random
 from dataclasses import dataclass
+from pathlib import Path
 
 from .beq_plus_eval import _load_dataset_rows, _require_lean_interact, beq_plus, _load_jsonl_map
+from ..jsonl import JsonlError, iter_jsonl_objects, load_jsonl_map_by_key
 
 
 def _load_done_stats(path: str) -> tuple[set[str], int, int, int, int, int]:
     done: set[str] = set()
+    first_lines: dict[str, int] = {}
     oracle_hits = 0
     a_hits = 0
     b_hits = 0
     a_missing = 0
     b_missing = 0
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            obj = json.loads(line)
-            pid = str(obj.get("problem_id"))
-            if pid:
-                done.add(pid)
-            if "oracle_ok" in obj:
-                oracle_hits += int(bool(obj.get("oracle_ok")))
-            if "a_ok" in obj:
-                a_hits += int(bool(obj.get("a_ok")))
-            if "b_ok" in obj:
-                b_hits += int(bool(obj.get("b_ok")))
-            if obj.get("a_in_pool") is False:
-                a_missing += 1
-            if obj.get("b_in_pool") is False:
-                b_missing += 1
+    for line_no, obj in iter_jsonl_objects(path):
+        if obj.get("problem_id") is None:
+            raise JsonlError(f"missing problem_id at {Path(path)}:{line_no}")
+        pid = str(obj["problem_id"])
+        if pid in done:
+            raise JsonlError(
+                f"duplicate problem_id {pid!r} at {Path(path)}:{line_no}; "
+                f"first seen at line {first_lines[pid]}"
+            )
+        done.add(pid)
+        first_lines[pid] = line_no
+        if "oracle_ok" in obj:
+            oracle_hits += int(bool(obj.get("oracle_ok")))
+        if "a_ok" in obj:
+            a_hits += int(bool(obj.get("a_ok")))
+        if "b_ok" in obj:
+            b_hits += int(bool(obj.get("b_ok")))
+        if obj.get("a_in_pool") is False:
+            a_missing += 1
+        if obj.get("b_in_pool") is False:
+            b_missing += 1
     return done, oracle_hits, a_hits, b_hits, a_missing, b_missing
 
 
@@ -56,19 +62,13 @@ def _load_grouped_candidates(
     problem_id_key: str,
     candidates_key: str,
 ) -> dict[str, list[str]]:
+    rows = load_jsonl_map_by_key(path, problem_id_key, encoding="utf-8-sig")
     out: dict[str, list[str]] = {}
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            obj = json.loads(line)
-            if problem_id_key not in obj:
-                raise ValueError(f"Missing {problem_id_key!r} in {path}: {obj}")
-            pid = str(obj[problem_id_key])
-            cands = obj.get(candidates_key) or []
-            if not isinstance(cands, list):
-                raise ValueError(f"Expected {candidates_key!r} to be a list for problem_id={pid!r}")
-            out[pid] = ["" if c is None else str(c) for c in cands]
+    for pid, obj in rows.items():
+        cands = obj.get(candidates_key) or []
+        if not isinstance(cands, list):
+            raise ValueError(f"Expected {candidates_key!r} to be a list for problem_id={pid!r}")
+        out[pid] = ["" if c is None else str(c) for c in cands]
     return out
 
 

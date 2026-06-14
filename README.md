@@ -109,9 +109,10 @@ python -m beqcritic.evaluate_selection \
   --selections runs/myrun/proofnetverif_test_selection.jsonl
 ```
 
-Metric and comparison CLIs reject duplicate `problem_id` rows rather than
-silently keeping the last row, so accidental concatenation or partial reruns
-cannot overwrite earlier records inside reported scores.
+Metric, comparison, and BEq+ paper-pipeline CLIs reject duplicate `problem_id`
+rows rather than silently keeping the last row, so accidental concatenation,
+partial reruns, or corrupted resume ledgers cannot overwrite earlier records
+inside reported scores.
 
 Compare two selectors with Wilson confidence intervals and a paired exact
 sign test:
