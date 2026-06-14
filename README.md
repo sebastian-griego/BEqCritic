@@ -228,6 +228,17 @@ python -m beqcritic.nlverifier_confidence_audit \
   --output-json runs/myrun/nlverifier_confidence_audit.json
 ```
 
+Choose abstention thresholds with Wilson lower-bound accuracy checks:
+
+```bash
+python -m beqcritic.nlverifier_thresholds \
+  --scores runs/myrun/nlverifier_scores.jsonl \
+  --calibration-json runs/myrun/nlverifier_calibration.json \
+  --confidence-keys chosen_probability,probability_margin,score_margin \
+  --output-md runs/myrun/nlverifier_thresholds.md \
+  --output-json runs/myrun/nlverifier_thresholds.json
+```
+
 Prefer new output filenames containing `nlverifier` (existing `runs/` artifacts keep their original names).
 
 ## More
