@@ -351,7 +351,8 @@ component reports:
 python scripts/summarize_nlverifier_paper_metrics.py \
   --results-dir results \
   --output-json results/nlverifier_paper_metrics.json \
-  --output-md results/nlverifier_paper_metrics.md
+  --output-md results/nlverifier_paper_metrics.md \
+  --output-tex paper/generated/nlverifier_main_table.tex
 ```
 
 Prefer new output filenames containing `nlverifier` (existing `runs/` artifacts keep their original names).

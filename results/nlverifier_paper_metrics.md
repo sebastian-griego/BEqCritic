@@ -90,3 +90,9 @@ See `results/exp_inductive/nlverifier_failure_cases.md` and `results/exp_inducti
 - `threshold_stability`: `results/exp_inductive/nlverifier_threshold_stability_p50.json`
 - `selection_leaderboard`: `results/exp_inductive/selection_leaderboard.json`
 - `ood_formalalign`: `results/ood_formalalign_minif2f.json`
+- `transductive_random`: `results/exp_transductive/metrics_random.json`
+- `transductive_self_bleu`: `results/exp_transductive/metrics_self_bleu.json`
+- `transductive_critic_global_medoid`: `results/exp_transductive/metrics_critic_global_medoid.json`
+- `inductive_random`: `results/exp_inductive/metrics_random.json`
+- `inductive_self_bleu`: `results/exp_inductive/metrics_self_bleu.json`
+- `inductive_critic_global_medoid`: `results/exp_inductive/metrics_critic_global_medoid.json`

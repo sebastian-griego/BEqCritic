@@ -70,7 +70,13 @@
       "abstention_metrics": "results/exp_inductive/metrics_nlverifier_abstain_p50.json",
       "threshold_stability": "results/exp_inductive/nlverifier_threshold_stability_p50.json",
       "selection_leaderboard": "results/exp_inductive/selection_leaderboard.json",
-      "ood_formalalign": "results/ood_formalalign_minif2f.json"
+      "ood_formalalign": "results/ood_formalalign_minif2f.json",
+      "transductive_random": "results/exp_transductive/metrics_random.json",
+      "transductive_self_bleu": "results/exp_transductive/metrics_self_bleu.json",
+      "transductive_critic_global_medoid": "results/exp_transductive/metrics_critic_global_medoid.json",
+      "inductive_random": "results/exp_inductive/metrics_random.json",
+      "inductive_self_bleu": "results/exp_inductive/metrics_self_bleu.json",
+      "inductive_critic_global_medoid": "results/exp_inductive/metrics_critic_global_medoid.json"
     }
   },
   "proofnetverif": {
@@ -138,6 +144,224 @@
         "hit_at_5": 100.0
       }
     }
+  },
+  "main_table": {
+    "splits": {
+      "transductive": {
+        "problems": 178,
+        "has_any_correct": 120
+      },
+      "inductive": {
+        "problems": 55,
+        "has_any_correct": 29
+      }
+    },
+    "rows": [
+      {
+        "key": "random",
+        "label": "Random selection",
+        "bold": false,
+        "midrule_before": false,
+        "transductive": {
+          "problems": 178,
+          "has_any_correct": 120,
+          "selected_correct": {
+            "successes": 63,
+            "total": 178,
+            "pct": 35.39325842696629
+          },
+          "selected_correct_given_any": {
+            "successes": 63,
+            "total": 120,
+            "pct": 52.5
+          }
+        },
+        "inductive": {
+          "problems": 55,
+          "has_any_correct": 29,
+          "selected_correct": {
+            "successes": 12,
+            "total": 55,
+            "pct": 21.818181818181817
+          },
+          "selected_correct_given_any": {
+            "successes": 12,
+            "total": 29,
+            "pct": 41.37931034482759
+          }
+        }
+      },
+      {
+        "key": "self_bleu",
+        "label": "Self-BLEU consensus \\citep{zhu2018texygen,poiroux2025reliable}",
+        "bold": false,
+        "midrule_before": false,
+        "transductive": {
+          "problems": 178,
+          "has_any_correct": 120,
+          "selected_correct": {
+            "successes": 84,
+            "total": 178,
+            "pct": 47.19101123595505
+          },
+          "selected_correct_given_any": {
+            "successes": 84,
+            "total": 120,
+            "pct": 70.0
+          }
+        },
+        "inductive": {
+          "problems": 55,
+          "has_any_correct": 29,
+          "selected_correct": {
+            "successes": 17,
+            "total": 55,
+            "pct": 30.909090909090907
+          },
+          "selected_correct_given_any": {
+            "successes": 17,
+            "total": 29,
+            "pct": 58.620689655172406
+          }
+        }
+      },
+      {
+        "key": "critic_global_medoid",
+        "label": "Candidate-only critic (best variant)",
+        "bold": false,
+        "midrule_before": false,
+        "transductive": {
+          "problems": 178,
+          "has_any_correct": 120,
+          "selected_correct": {
+            "successes": 87,
+            "total": 178,
+            "pct": 48.87640449438202
+          },
+          "selected_correct_given_any": {
+            "successes": 87,
+            "total": 120,
+            "pct": 72.5
+          }
+        },
+        "inductive": {
+          "problems": 55,
+          "has_any_correct": 29,
+          "selected_correct": {
+            "successes": 20,
+            "total": 55,
+            "pct": 36.36363636363637
+          },
+          "selected_correct_given_any": {
+            "successes": 20,
+            "total": 29,
+            "pct": 68.96551724137932
+          }
+        }
+      },
+      {
+        "key": "nl_full",
+        "label": "NLVerifier (full input)",
+        "bold": true,
+        "midrule_before": true,
+        "transductive": {
+          "problems": 178,
+          "has_any_correct": 120,
+          "selected_correct": {
+            "successes": 111,
+            "total": 178,
+            "pct": 62.359550561797754
+          },
+          "selected_correct_given_any": {
+            "successes": 111,
+            "total": 120,
+            "pct": 92.5
+          }
+        },
+        "inductive": {
+          "problems": 55,
+          "has_any_correct": 29,
+          "selected_correct": {
+            "successes": 27,
+            "total": 55,
+            "pct": 49.09090909090909
+          },
+          "selected_correct_given_any": {
+            "successes": 27,
+            "total": 29,
+            "pct": 93.10344827586206
+          }
+        }
+      },
+      {
+        "key": "nl_blank",
+        "label": "NLVerifier (blank NL)",
+        "bold": false,
+        "midrule_before": false,
+        "transductive": {
+          "problems": 178,
+          "has_any_correct": 120,
+          "selected_correct": {
+            "successes": 101,
+            "total": 178,
+            "pct": 56.741573033707866
+          },
+          "selected_correct_given_any": {
+            "successes": 101,
+            "total": 120,
+            "pct": 84.16666666666667
+          }
+        },
+        "inductive": {
+          "problems": 55,
+          "has_any_correct": 29,
+          "selected_correct": {
+            "successes": 23,
+            "total": 55,
+            "pct": 41.81818181818182
+          },
+          "selected_correct_given_any": {
+            "successes": 23,
+            "total": 29,
+            "pct": 79.3103448275862
+          }
+        }
+      },
+      {
+        "key": "nl_const",
+        "label": "NLVerifier (constant NL)",
+        "bold": false,
+        "midrule_before": false,
+        "transductive": {
+          "problems": 178,
+          "has_any_correct": 120,
+          "selected_correct": {
+            "successes": 104,
+            "total": 178,
+            "pct": 58.42696629213483
+          },
+          "selected_correct_given_any": {
+            "successes": 104,
+            "total": 120,
+            "pct": 86.66666666666667
+          }
+        },
+        "inductive": {
+          "problems": 55,
+          "has_any_correct": 29,
+          "selected_correct": {
+            "successes": 25,
+            "total": 55,
+            "pct": 45.45454545454545
+          },
+          "selected_correct_given_any": {
+            "successes": 25,
+            "total": 29,
+            "pct": 86.20689655172414
+          }
+        }
+      }
+    ]
   },
   "selective_prediction": {
     "confidence_signals": {

@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import json
 
-from scripts.summarize_nlverifier_paper_metrics import build_summary, format_markdown
+from scripts.summarize_nlverifier_paper_metrics import (
+    build_summary,
+    format_latex_main_table,
+    format_markdown,
+)
 
 
 def _write_json(path, payload):
@@ -13,6 +17,24 @@ def _write_json(path, payload):
 def test_nlverifier_paper_metrics_summary_merges_source_artifacts(tmp_path):
     results = tmp_path / "results"
     _write_json(results / "nlverifier_proofnetverif_ablation_metrics.json", _ablation())
+    _write_json(results / "exp_transductive" / "metrics_random.json", _metric("random", 10, 8, 4))
+    _write_json(
+        results / "exp_transductive" / "metrics_self_bleu.json",
+        _metric("self_bleu", 10, 8, 5),
+    )
+    _write_json(
+        results / "exp_transductive" / "metrics_critic_global_medoid.json",
+        _metric("critic_global_medoid", 10, 8, 6),
+    )
+    _write_json(results / "exp_inductive" / "metrics_random.json", _metric("random", 5, 4, 1))
+    _write_json(
+        results / "exp_inductive" / "metrics_self_bleu.json",
+        _metric("self_bleu", 5, 4, 2),
+    )
+    _write_json(
+        results / "exp_inductive" / "metrics_critic_global_medoid.json",
+        _metric("critic_global_medoid", 5, 4, 2),
+    )
     _write_json(results / "exp_inductive" / "nlverifier_confidence_audit.json", _confidence())
     _write_json(results / "exp_inductive" / "metrics_nlverifier_abstain_p50.json", _abstention())
     _write_json(
@@ -24,9 +46,12 @@ def test_nlverifier_paper_metrics_summary_merges_source_artifacts(tmp_path):
 
     summary = build_summary(results)
     markdown = format_markdown(summary)
+    latex = format_latex_main_table(summary)
 
-    assert summary["transductive_nl"]["selected_correct_pct"] == 62.0
+    assert summary["transductive_nl"]["selected_correct_pct"] == 60.0
     assert summary["proofnetverif"]["inductive"]["inductive_nl"]["problems"] == 5
+    assert summary["main_table"]["rows"][2]["key"] == "critic_global_medoid"
+    assert summary["main_table"]["rows"][2]["transductive"]["selected_correct"]["successes"] == 6
     assert (
         summary["selective_prediction"]["confidence_signals"][
             "best_by_oracle_normalized_accuracy_area"
@@ -38,15 +63,29 @@ def test_nlverifier_paper_metrics_summary_merges_source_artifacts(tmp_path):
     assert summary["ood_formalalign_minif2f"]["num_pairs"] == 12
     assert "Selective prediction and abstention" in markdown
     assert "OOD pair classification" in markdown
+    assert "Candidate-only critic (best variant)" in latex
+    assert r"\textbf{3/5 (60.0\%)}" in latex
 
 
-def _setting(problems: int, selected: float) -> dict:
+def _metric(name: str, problems: int, has_any: int, selected: int) -> dict:
+    return {
+        "avg_candidates_per_problem": 2.0,
+        "has_any_correct": has_any,
+        "has_any_correct_pct": 100.0 * has_any / problems,
+        "name": name,
+        "problems": problems,
+        "selected_correct_given_any_pct": 100.0 * selected / has_any,
+        "selected_correct_pct": 100.0 * selected / problems,
+    }
+
+
+def _setting(problems: int, selected: float, given_any: float) -> dict:
     return {
         "problems": problems,
         "avg_candidates_per_problem": 2.0,
         "selected_correct_pct": selected,
         "has_any_correct_pct": 80.0,
-        "selected_correct_given_any_pct": 75.0,
+        "selected_correct_given_any_pct": given_any,
         "mrr": 0.8,
         "hit_at_3": 90.0,
         "hit_at_5": 100.0,
@@ -61,12 +100,12 @@ def _ablation() -> dict:
             "nl_const": "constant",
         },
         "settings": {
-            "transductive_nl": _setting(10, 62.0),
-            "transductive_nl_blank": _setting(10, 55.0),
-            "transductive_nl_const": _setting(10, 58.0),
-            "inductive_nl": _setting(5, 50.0),
-            "inductive_nl_blank": _setting(5, 40.0),
-            "inductive_nl_const": _setting(5, 45.0),
+            "transductive_nl": _setting(10, 60.0, 75.0),
+            "transductive_nl_blank": _setting(10, 50.0, 62.5),
+            "transductive_nl_const": _setting(10, 60.0, 75.0),
+            "inductive_nl": _setting(5, 60.0, 75.0),
+            "inductive_nl_blank": _setting(5, 40.0, 50.0),
+            "inductive_nl_const": _setting(5, 40.0, 50.0),
         },
     }
 
