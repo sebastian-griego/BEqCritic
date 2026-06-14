@@ -368,6 +368,8 @@ Write a machine-readable command report:
 python scripts/verify_reproducibility.py --report-json runs/reproducibility_report.json
 ```
 
+CI uploads this report as an artifact for each supported Python version.
+
 Verify the checked-in rollup and generated table are current without rewriting
 them:
 
