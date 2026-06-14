@@ -218,6 +218,16 @@ python -m beqcritic.nlverifier_selective \
   --output-json runs/myrun/nlverifier_selective_risk.json
 ```
 
+Compare all emitted confidence signals for abstention:
+
+```bash
+python -m beqcritic.nlverifier_confidence_audit \
+  --scores runs/myrun/nlverifier_scores.jsonl \
+  --calibration-json runs/myrun/nlverifier_calibration.json \
+  --output-md runs/myrun/nlverifier_confidence_audit.md \
+  --output-json runs/myrun/nlverifier_confidence_audit.json
+```
+
 Prefer new output filenames containing `nlverifier` (existing `runs/` artifacts keep their original names).
 
 ## More
