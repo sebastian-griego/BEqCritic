@@ -17,25 +17,16 @@ from __future__ import annotations
 import argparse
 import json
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from .features import extract_features
+from .jsonl import load_jsonl_map_by_problem_id
 from .textnorm import normalize_lean_statement
 
 
-def _load_jsonl_map(path: str) -> dict[str, dict[str, Any]]:
-    out: dict[str, dict[str, Any]] = {}
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            s = line.strip()
-            if not s:
-                continue
-            obj = json.loads(s)
-            pid = obj.get("problem_id")
-            if pid is None:
-                raise ValueError(f"Missing problem_id in {path}: {obj}")
-            out[str(pid)] = obj
-    return out
+def _load_jsonl_map(path: str | Path) -> dict[str, dict[str, Any]]:
+    return load_jsonl_map_by_problem_id(path, encoding="utf-8-sig")
 
 
 @dataclass(frozen=True)
@@ -70,6 +61,17 @@ def _summarize_feats(rows: list[_Row], *, which: str) -> dict[str, float]:
         "avg_binders": _mean_int(n_binders),
         "avg_prop_assumptions": _mean_int(n_prop),
     }
+
+
+def _chosen_index(record: dict[str, Any], *, problem_id: str, method_name: str) -> int:
+    raw_indices = record.get("chosen_indices")
+    if isinstance(raw_indices, list) and raw_indices:
+        return int(raw_indices[0])
+    if "chosen_index" in record:
+        return int(record["chosen_index"])
+    raise ValueError(
+        f"{method_name} selection has no chosen_index/chosen_indices for {problem_id}: {record!r}"
+    )
 
 
 def main() -> None:
@@ -123,8 +125,8 @@ def main() -> None:
                 raise ValueError(f"Candidates/labels length mismatch for {pid}: {len(candidates)} vs {len(labels)}")
             labels01 = [1 if int(x) else 0 for x in labels]
 
-            a_idx = int(sel_a[pid].get("chosen_index"))
-            b_idx = int(sel_b[pid].get("chosen_index"))
+            a_idx = _chosen_index(sel_a[pid], problem_id=pid, method_name=str(args.name_a))
+            b_idx = _chosen_index(sel_b[pid], problem_id=pid, method_name=str(args.name_b))
             if a_idx < 0 or a_idx >= len(labels01):
                 raise ValueError(f"A chosen_index out of range for {pid}: {a_idx} (n={len(labels01)})")
             if b_idx < 0 or b_idx >= len(labels01):
