@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from scripts.summarize_nlverifier_paper_metrics import (
+    _stale_outputs,
     build_summary,
     format_latex_main_table,
     format_markdown,
 )
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _write_json(path, payload):
@@ -66,6 +71,37 @@ def test_nlverifier_paper_metrics_summary_merges_source_artifacts(tmp_path):
     assert "Candidate-only critic (best variant)" in latex
     assert r"\resizebox{\textwidth}{!}{%" in latex
     assert r"\textbf{3/5 (60.0\%)}" in latex
+
+
+def test_stale_outputs_detects_missing_and_mismatched_files(tmp_path):
+    matching = tmp_path / "matching.txt"
+    stale = tmp_path / "stale.txt"
+    missing = tmp_path / "missing.txt"
+    matching.write_text("expected\n", encoding="utf-8")
+    stale.write_text("old\n", encoding="utf-8")
+
+    assert _stale_outputs(
+        {
+            matching: "expected\n",
+            stale: "new\n",
+            missing: "new\n",
+        }
+    ) == [stale, missing]
+
+
+def test_checked_in_nlverifier_paper_artifacts_are_current(monkeypatch):
+    monkeypatch.chdir(ROOT)
+    summary = build_summary(Path("results"))
+
+    assert Path("results/nlverifier_paper_metrics.json").read_text(encoding="utf-8") == (
+        json.dumps(summary, indent=2, ensure_ascii=True) + "\n"
+    )
+    assert Path("results/nlverifier_paper_metrics.md").read_text(
+        encoding="utf-8"
+    ) == format_markdown(summary)
+    assert Path("paper/generated/nlverifier_main_table.tex").read_text(
+        encoding="utf-8"
+    ) == format_latex_main_table(summary)
 
 
 def _metric(name: str, problems: int, has_any: int, selected: int) -> dict:

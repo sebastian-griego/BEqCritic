@@ -588,6 +588,18 @@ def _latex_prop(row: dict[str, Any], *, bold: bool = False) -> str:
     return rf"\textbf{{{text}}}" if bold else text
 
 
+def _stale_outputs(expected: dict[Path, str]) -> list[Path]:
+    stale = []
+    for path, expected_text in expected.items():
+        if not path.exists() or path.read_text(encoding="utf-8") != expected_text:
+            stale.append(path)
+    return stale
+
+
+def _display_paths(paths: list[Path]) -> str:
+    return ", ".join(str(path).replace("\\", "/") for path in paths)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results-dir", default="results")
@@ -595,21 +607,44 @@ def main() -> None:
     parser.add_argument("--output-json", default="results/nlverifier_paper_metrics.json")
     parser.add_argument("--output-md", default="results/nlverifier_paper_metrics.md")
     parser.add_argument("--output-tex", default="paper/generated/nlverifier_main_table.tex")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="fail if generated paper artifacts differ from the checked-in files",
+    )
     args = parser.parse_args()
 
     summary = build_summary(
         Path(args.results_dir),
         ablation_json=Path(args.ablation_json) if args.ablation_json else None,
     )
+    json_text = json.dumps(summary, indent=2, ensure_ascii=True) + "\n"
     markdown = format_markdown(summary)
     latex = format_latex_main_table(summary)
     output_json = Path(args.output_json)
     output_md = Path(args.output_md)
     output_tex = Path(args.output_tex)
+    expected = {
+        output_json: json_text,
+        output_md: markdown,
+        output_tex: latex,
+    }
+
+    if args.check:
+        stale = _stale_outputs(expected)
+        if stale:
+            raise SystemExit(
+                "Stale NLVerifier paper artifacts: "
+                + _display_paths(stale)
+                + "; rerun scripts/summarize_nlverifier_paper_metrics.py without --check"
+            )
+        print(f"NLVerifier paper artifacts are up to date: {_display_paths(list(expected))}")
+        return
+
     output_json.parent.mkdir(parents=True, exist_ok=True)
     output_md.parent.mkdir(parents=True, exist_ok=True)
     output_tex.parent.mkdir(parents=True, exist_ok=True)
-    output_json.write_text(json.dumps(summary, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    output_json.write_text(json_text, encoding="utf-8")
     output_md.write_text(markdown, encoding="utf-8")
     output_tex.write_text(latex, encoding="utf-8")
     print(f"Wrote {output_json}, {output_md}, and {output_tex}")
