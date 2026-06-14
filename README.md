@@ -319,6 +319,11 @@ On `results/exp_inductive`, the certified 50% Wilson-LCB threshold accepts
 bucket's oracle ceiling is `25/36`, so only one accepted problem still has a
 correct candidate that NLVerifier missed. The abstention-aware evaluator writes
 the same operational split to `results/exp_inductive/metrics_nlverifier_abstain_p50.json`.
+The confidence audit in
+`results/exp_inductive/nlverifier_confidence_audit.md` shows
+`chosen_probability` is the strongest selective-prediction signal: its
+area-under-accuracy-coverage is `+15.2` points over full coverage, with
+`69.8%` average precision and `71.8%` oracle-normalized accuracy area.
 The multi-method leaderboard in `results/exp_inductive/selection_leaderboard.md`
 shows full-coverage NLVerifier at `27/55` selected correct, ahead of `critic`
 and `hybrid` at `18/55`, `self_bleu` at `17/55`, `first` at `13/55`, and

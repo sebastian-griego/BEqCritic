@@ -51,12 +51,14 @@ def analyze_confidence_signals(
         curve = selective["risk_coverage_curve"]
         mean_risk = sum(float(row["risk"]) for row in curve) / float(len(curve))
         mean_accuracy = sum(float(row["accuracy"]) for row in curve) / float(len(curve))
+        ranking_metrics = _ranking_metrics(curve, selective["dataset"])
         per_key[key] = {
             "dataset": selective["dataset"],
             "coverage_table": selective["coverage_table"],
             "best_accuracy_prefix": selective["best_accuracy_prefix"],
             "mean_prefix_risk": float(mean_risk),
             "mean_prefix_accuracy": float(mean_accuracy),
+            "ranking_metrics": ranking_metrics,
         }
 
     coverage_comparison = _coverage_comparison(per_key, coverage_targets)
@@ -75,6 +77,14 @@ def analyze_confidence_signals(
                 key,
             ),
         ),
+        "best_by_oracle_normalized_accuracy_area": max(
+            keys,
+            key=lambda key: (
+                per_key[key]["ranking_metrics"]["oracle_normalized_accuracy_area"],
+                per_key[key]["ranking_metrics"]["area_under_accuracy_coverage"],
+                key,
+            ),
+        ),
     }
 
 
@@ -90,19 +100,25 @@ def format_markdown(summary: dict[str, Any]) -> str:
         f"- Full-coverage selected accuracy: {_pct(dataset['selected_accuracy'])} "
         f"({dataset['selected_correct']}/{dataset['problems']})",
         f"- Best mean prefix risk: `{summary['best_by_mean_prefix_risk']}`",
+        "- Best oracle-normalized accuracy area: "
+        f"`{summary['best_by_oracle_normalized_accuracy_area']}`",
         "",
         "## Signal Summary",
         "",
-        "| confidence key | mean prefix risk | mean prefix accuracy | best prefix accuracy | best prefix coverage |",
-        "|---|---:|---:|---:|---:|",
+        "| confidence key | mean prefix risk | mean prefix accuracy | lift over full | average precision | oracle-normalized area | best prefix accuracy | best prefix coverage |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for key in keys:
         row = summary["signals"][key]
         best = row["best_accuracy_prefix"]
+        ranking = row["ranking_metrics"]
         lines.append(
             f"| `{key}` | {_pct(row['mean_prefix_risk'])} | "
-            f"{_pct(row['mean_prefix_accuracy'])} | {_pct(best['accuracy'])} | "
-            f"{_pct(best['coverage'])} |"
+            f"{_pct(row['mean_prefix_accuracy'])} | "
+            f"{_pp(ranking['accuracy_lift_over_full'])} | "
+            f"{_pct(ranking['average_precision'])} | "
+            f"{_pct(ranking['oracle_normalized_accuracy_area'])} | "
+            f"{_pct(best['accuracy'])} | {_pct(best['coverage'])} |"
         )
 
     lines.extend(["", "## Coverage Comparison", ""])
@@ -167,6 +183,64 @@ def _coverage_comparison(
     return rows
 
 
+def _ranking_metrics(
+    curve: list[dict[str, Any]],
+    dataset: dict[str, Any],
+) -> dict[str, Any]:
+    n = int(dataset["problems"])
+    positives = int(dataset["selected_correct"])
+    full_accuracy = float(dataset["selected_accuracy"])
+    area_accuracy = sum(float(row["accuracy"]) for row in curve) / float(len(curve))
+    area_risk = sum(float(row["risk"]) for row in curve) / float(len(curve))
+    oracle_area = _mean_prefix_accuracy_from_order(
+        [True] * positives + [False] * max(0, n - positives)
+    )
+    worst_area = _mean_prefix_accuracy_from_order(
+        [False] * max(0, n - positives) + [True] * positives
+    )
+    denom = oracle_area - worst_area
+    normalized = (area_accuracy - worst_area) / denom if denom > 0 else 1.0
+    normalized = min(1.0, max(0.0, normalized))
+    return {
+        "area_under_accuracy_coverage": float(area_accuracy),
+        "area_under_risk_coverage": float(area_risk),
+        "full_coverage_accuracy": float(full_accuracy),
+        "accuracy_lift_over_full": float(area_accuracy - full_accuracy),
+        "risk_reduction_over_full": float((1.0 - full_accuracy) - area_risk),
+        "average_precision": float(_average_precision_from_curve(curve, positives)),
+        "oracle_area_under_accuracy_coverage": float(oracle_area),
+        "worst_area_under_accuracy_coverage": float(worst_area),
+        "oracle_normalized_accuracy_area": float(normalized),
+    }
+
+
+def _mean_prefix_accuracy_from_order(correct_flags: list[bool]) -> float:
+    if not correct_flags:
+        return 0.0
+    correct = 0
+    total = 0.0
+    for idx, flag in enumerate(correct_flags, start=1):
+        correct += int(bool(flag))
+        total += correct / float(idx)
+    return total / float(len(correct_flags))
+
+
+def _average_precision_from_curve(
+    curve: list[dict[str, Any]],
+    positives: int,
+) -> float:
+    if positives <= 0:
+        return 0.0
+    previous_correct = 0
+    precision_sum = 0.0
+    for row in curve:
+        selected_correct = int(row["selected_correct"])
+        if selected_correct > previous_correct:
+            precision_sum += float(row["accuracy"])
+        previous_correct = selected_correct
+    return precision_sum / float(positives)
+
+
 def _parse_floats(raw: str, *, default: Iterable[float]) -> list[float]:
     values = []
     for part in str(raw).split(","):
@@ -183,6 +257,10 @@ def _parse_keys(raw: str) -> list[str]:
 
 def _pct(value: float) -> str:
     return f"{100.0 * float(value):.1f}%"
+
+
+def _pp(value: float) -> str:
+    return f"{100.0 * float(value):+.1f} pp"
 
 
 def main() -> None:

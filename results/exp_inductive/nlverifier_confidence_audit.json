@@ -1,6 +1,7 @@
 {
   "best_by_mean_prefix_accuracy": "chosen_probability",
   "best_by_mean_prefix_risk": "chosen_probability",
+  "best_by_oracle_normalized_accuracy_area": "chosen_probability",
   "confidence_keys": [
     "chosen_probability",
     "probability_margin",
@@ -181,7 +182,18 @@
         "selected_correct": 27
       },
       "mean_prefix_accuracy": 0.6424711798280951,
-      "mean_prefix_risk": 0.35752882017190507
+      "mean_prefix_risk": 0.35752882017190507,
+      "ranking_metrics": {
+        "accuracy_lift_over_full": 0.1515620889190042,
+        "area_under_accuracy_coverage": 0.6424711798280951,
+        "area_under_risk_coverage": 0.35752882017190507,
+        "average_precision": 0.6984272686574883,
+        "full_coverage_accuracy": 0.4909090909090909,
+        "oracle_area_under_accuracy_coverage": 0.8356035888036027,
+        "oracle_normalized_accuracy_area": 0.7176317952303987,
+        "risk_reduction_over_full": 0.15156208891900397,
+        "worst_area_under_accuracy_coverage": 0.15162994831141544
+      }
     },
     "probability_margin": {
       "best_accuracy_prefix": {
@@ -234,7 +246,18 @@
         "selected_correct": 27
       },
       "mean_prefix_accuracy": 0.5158005113498221,
-      "mean_prefix_risk": 0.48419948865017787
+      "mean_prefix_risk": 0.48419948865017787,
+      "ranking_metrics": {
+        "accuracy_lift_over_full": 0.02489142044073117,
+        "area_under_accuracy_coverage": 0.5158005113498221,
+        "area_under_risk_coverage": 0.48419948865017787,
+        "average_precision": 0.5561711060173392,
+        "full_coverage_accuracy": 0.4909090909090909,
+        "oracle_area_under_accuracy_coverage": 0.8356035888036027,
+        "oracle_normalized_accuracy_area": 0.5324336224073629,
+        "risk_reduction_over_full": 0.02489142044073117,
+        "worst_area_under_accuracy_coverage": 0.15162994831141544
+      }
     },
     "score_margin": {
       "best_accuracy_prefix": {
@@ -287,7 +310,18 @@
         "selected_correct": 27
       },
       "mean_prefix_accuracy": 0.523547221956116,
-      "mean_prefix_risk": 0.47645277804388386
+      "mean_prefix_risk": 0.47645277804388386,
+      "ranking_metrics": {
+        "accuracy_lift_over_full": 0.03263813104702512,
+        "area_under_accuracy_coverage": 0.523547221956116,
+        "area_under_risk_coverage": 0.47645277804388386,
+        "average_precision": 0.5597581663660145,
+        "full_coverage_accuracy": 0.4909090909090909,
+        "oracle_area_under_accuracy_coverage": 0.8356035888036027,
+        "oracle_normalized_accuracy_area": 0.5437596591837501,
+        "risk_reduction_over_full": 0.032638131047025176,
+        "worst_area_under_accuracy_coverage": 0.15162994831141544
+      }
     }
   }
 }

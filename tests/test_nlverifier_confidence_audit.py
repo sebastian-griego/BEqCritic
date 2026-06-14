@@ -58,7 +58,22 @@ def test_confidence_audit_compares_signal_quality(tmp_path):
     assert summary["coverage_comparison"][1]["best_key"] == "probability_margin"
     assert summary["coverage_comparison"][1]["by_key"]["chosen_probability"]["accuracy"] == 0.5
     assert summary["coverage_comparison"][1]["by_key"]["probability_margin"]["accuracy"] == 1.0
-    assert "Confidence Signal Audit" in format_markdown(summary)
+    assert summary["best_by_oracle_normalized_accuracy_area"] == "probability_margin"
+    assert (
+        summary["signals"]["probability_margin"]["ranking_metrics"]["average_precision"]
+        > summary["signals"]["chosen_probability"]["ranking_metrics"]["average_precision"]
+    )
+    assert (
+        summary["signals"]["probability_margin"]["ranking_metrics"][
+            "area_under_accuracy_coverage"
+        ]
+        > summary["signals"]["chosen_probability"]["ranking_metrics"][
+            "area_under_accuracy_coverage"
+        ]
+    )
+    markdown = format_markdown(summary)
+    assert "Confidence Signal Audit" in markdown
+    assert "oracle-normalized area" in markdown
 
 
 def test_nlverifier_confidence_audit_cli_writes_outputs(tmp_path):
@@ -105,4 +120,7 @@ def test_nlverifier_confidence_audit_cli_writes_outputs(tmp_path):
     payload = json.loads(output_json.read_text(encoding="utf-8"))
     assert payload["dataset"]["problems"] == 2
     assert payload["confidence_keys"] == ["chosen_probability", "probability_margin"]
-    assert "Coverage Comparison" in output_md.read_text(encoding="utf-8")
+    assert "ranking_metrics" in payload["signals"]["chosen_probability"]
+    text = output_md.read_text(encoding="utf-8")
+    assert "Coverage Comparison" in text
+    assert "average precision" in text

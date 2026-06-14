@@ -4,14 +4,15 @@
 - Any-correct ceiling: 52.7% (29/55)
 - Full-coverage selected accuracy: 49.1% (27/55)
 - Best mean prefix risk: `chosen_probability`
+- Best oracle-normalized accuracy area: `chosen_probability`
 
 ## Signal Summary
 
-| confidence key | mean prefix risk | mean prefix accuracy | best prefix accuracy | best prefix coverage |
-|---|---:|---:|---:|---:|
-| `chosen_probability` | 35.8% | 64.2% | 78.9% | 34.5% |
-| `probability_margin` | 48.4% | 51.6% | 100.0% | 3.6% |
-| `score_margin` | 47.6% | 52.4% | 100.0% | 3.6% |
+| confidence key | mean prefix risk | mean prefix accuracy | lift over full | average precision | oracle-normalized area | best prefix accuracy | best prefix coverage |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `chosen_probability` | 35.8% | 64.2% | +15.2 pp | 69.8% | 71.8% | 78.9% | 34.5% |
+| `probability_margin` | 48.4% | 51.6% | +2.5 pp | 55.6% | 53.2% | 100.0% | 3.6% |
+| `score_margin` | 47.6% | 52.4% | +3.3 pp | 56.0% | 54.4% | 100.0% | 3.6% |
 
 ## Coverage Comparison
 
