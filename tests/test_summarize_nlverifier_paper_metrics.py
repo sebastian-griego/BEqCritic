@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 from scripts.summarize_nlverifier_paper_metrics import (
@@ -21,33 +23,7 @@ def _write_json(path, payload):
 
 def test_nlverifier_paper_metrics_summary_merges_source_artifacts(tmp_path):
     results = tmp_path / "results"
-    _write_json(results / "nlverifier_proofnetverif_ablation_metrics.json", _ablation())
-    _write_json(results / "exp_transductive" / "metrics_random.json", _metric("random", 10, 8, 4))
-    _write_json(
-        results / "exp_transductive" / "metrics_self_bleu.json",
-        _metric("self_bleu", 10, 8, 5),
-    )
-    _write_json(
-        results / "exp_transductive" / "metrics_critic_global_medoid.json",
-        _metric("critic_global_medoid", 10, 8, 6),
-    )
-    _write_json(results / "exp_inductive" / "metrics_random.json", _metric("random", 5, 4, 1))
-    _write_json(
-        results / "exp_inductive" / "metrics_self_bleu.json",
-        _metric("self_bleu", 5, 4, 2),
-    )
-    _write_json(
-        results / "exp_inductive" / "metrics_critic_global_medoid.json",
-        _metric("critic_global_medoid", 5, 4, 2),
-    )
-    _write_json(results / "exp_inductive" / "nlverifier_confidence_audit.json", _confidence())
-    _write_json(results / "exp_inductive" / "metrics_nlverifier_abstain_p50.json", _abstention())
-    _write_json(
-        results / "exp_inductive" / "nlverifier_threshold_stability_p50.json",
-        _stability(),
-    )
-    _write_json(results / "exp_inductive" / "selection_leaderboard.json", _leaderboard())
-    _write_json(results / "ood_formalalign_minif2f.json", _ood())
+    _write_summary_inputs(results)
 
     summary = build_summary(results)
     markdown = format_markdown(summary)
@@ -71,6 +47,42 @@ def test_nlverifier_paper_metrics_summary_merges_source_artifacts(tmp_path):
     assert "Candidate-only critic (best variant)" in latex
     assert r"\resizebox{\textwidth}{!}{%" in latex
     assert r"\textbf{3/5 (60.0\%)}" in latex
+
+
+def test_paper_metrics_check_cli_fails_without_rewriting_stale_outputs(tmp_path):
+    results = tmp_path / "results"
+    _write_summary_inputs(results)
+    output_json = tmp_path / "paper_metrics.json"
+    output_md = tmp_path / "paper_metrics.md"
+    output_tex = tmp_path / "main_table.tex"
+    for output in (output_json, output_md, output_tex):
+        output.write_text("stale\n", encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "summarize_nlverifier_paper_metrics.py"),
+            "--results-dir",
+            str(results),
+            "--output-json",
+            str(output_json),
+            "--output-md",
+            str(output_md),
+            "--output-tex",
+            str(output_tex),
+            "--check",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode != 0
+    assert "Stale NLVerifier paper artifacts" in completed.stderr + completed.stdout
+    assert output_json.read_text(encoding="utf-8") == "stale\n"
+    assert output_md.read_text(encoding="utf-8") == "stale\n"
+    assert output_tex.read_text(encoding="utf-8") == "stale\n"
 
 
 def test_stale_outputs_detects_missing_and_mismatched_files(tmp_path):
@@ -102,6 +114,36 @@ def test_checked_in_nlverifier_paper_artifacts_are_current(monkeypatch):
     assert Path("paper/generated/nlverifier_main_table.tex").read_text(
         encoding="utf-8"
     ) == format_latex_main_table(summary)
+
+
+def _write_summary_inputs(results: Path) -> None:
+    _write_json(results / "nlverifier_proofnetverif_ablation_metrics.json", _ablation())
+    _write_json(results / "exp_transductive" / "metrics_random.json", _metric("random", 10, 8, 4))
+    _write_json(
+        results / "exp_transductive" / "metrics_self_bleu.json",
+        _metric("self_bleu", 10, 8, 5),
+    )
+    _write_json(
+        results / "exp_transductive" / "metrics_critic_global_medoid.json",
+        _metric("critic_global_medoid", 10, 8, 6),
+    )
+    _write_json(results / "exp_inductive" / "metrics_random.json", _metric("random", 5, 4, 1))
+    _write_json(
+        results / "exp_inductive" / "metrics_self_bleu.json",
+        _metric("self_bleu", 5, 4, 2),
+    )
+    _write_json(
+        results / "exp_inductive" / "metrics_critic_global_medoid.json",
+        _metric("critic_global_medoid", 5, 4, 2),
+    )
+    _write_json(results / "exp_inductive" / "nlverifier_confidence_audit.json", _confidence())
+    _write_json(results / "exp_inductive" / "metrics_nlverifier_abstain_p50.json", _abstention())
+    _write_json(
+        results / "exp_inductive" / "nlverifier_threshold_stability_p50.json",
+        _stability(),
+    )
+    _write_json(results / "exp_inductive" / "selection_leaderboard.json", _leaderboard())
+    _write_json(results / "ood_formalalign_minif2f.json", _ood())
 
 
 def _metric(name: str, problems: int, has_any: int, selected: int) -> dict:
