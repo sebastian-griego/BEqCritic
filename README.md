@@ -266,12 +266,29 @@ python -m beqcritic.evaluate_selection \
   --summary-json runs/myrun/metrics_nlverifier_abstain_p50.json
 ```
 
+Build an inspectable casebook that joins accepted/abstained rows back to the
+scored candidates:
+
+```bash
+python -m beqcritic.nlverifier_abstention_cases \
+  --scores runs/myrun/nlverifier_scores.jsonl \
+  --accepted runs/myrun/sel_nlverifier_abstain_p50.jsonl \
+  --abstained runs/myrun/nlverifier_abstentions_p50.jsonl \
+  --output-md runs/myrun/nlverifier_abstention_cases_p50.md \
+  --output-json runs/myrun/nlverifier_abstention_cases_p50.json \
+  --cases-jsonl runs/myrun/nlverifier_abstention_cases_p50.jsonl
+```
+
 On `results/exp_inductive`, the certified 50% Wilson-LCB threshold accepts
 `36/55` problems and raises accepted-selection accuracy from full-coverage
 `49.1%` to `66.7%` (`24/36`), while abstaining on `19/55`; the accepted
 bucket's oracle ceiling is `25/36`, so only one accepted problem still has a
 correct candidate that NLVerifier missed. The abstention-aware evaluator writes
 the same operational split to `results/exp_inductive/metrics_nlverifier_abstain_p50.json`.
+The casebook in `results/exp_inductive/nlverifier_abstention_cases_p50.md`
+shows that the 12 accepted errors include 11 problems with no correct candidate
+available, and that the abstained bucket contains 3 correct selections plus 1
+miss with an available correct candidate.
 
 Prefer new output filenames containing `nlverifier` (existing `runs/` artifacts keep their original names).
 
