@@ -11,6 +11,7 @@ __all__ = [
     "calibrate_temperature",
     "nlverifier_calibration",
     "nlverifier_diagnostics",
+    "nlverifier_selective",
     "debug_selection",
     "audit",
     "select",

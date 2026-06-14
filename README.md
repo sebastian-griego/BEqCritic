@@ -207,6 +207,17 @@ python -m beqcritic.nlverifier_calibration \
   --output-json runs/myrun/nlverifier_calibration.json
 ```
 
+Measure selective-prediction behavior by abstaining on low-confidence cases:
+
+```bash
+python -m beqcritic.nlverifier_selective \
+  --scores runs/myrun/nlverifier_scores.jsonl \
+  --calibration-json runs/myrun/nlverifier_calibration.json \
+  --confidence-key chosen_probability \
+  --output-md runs/myrun/nlverifier_selective_risk.md \
+  --output-json runs/myrun/nlverifier_selective_risk.json
+```
+
 Prefer new output filenames containing `nlverifier` (existing `runs/` artifacts keep their original names).
 
 ## More
