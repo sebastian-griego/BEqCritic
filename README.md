@@ -344,6 +344,16 @@ shows that the 12 accepted errors include 11 problems with no correct candidate
 available, and that the abstained bucket contains 3 correct selections plus 1
 miss with an available correct candidate.
 
+Regenerate the paper-ready NLVerifier rollup after refreshing any of the
+component reports:
+
+```bash
+python scripts/summarize_nlverifier_paper_metrics.py \
+  --results-dir results \
+  --output-json results/nlverifier_paper_metrics.json \
+  --output-md results/nlverifier_paper_metrics.md
+```
+
 Prefer new output filenames containing `nlverifier` (existing `runs/` artifacts keep their original names).
 
 ## More
