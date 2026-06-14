@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -102,6 +103,19 @@ def build_summary(
         }
         for split, split_paths in BASELINE_METRICS.items()
     }
+    source_paths = {
+        "proofnetverif_ablation": ablation_path,
+        "confidence_audit": confidence_path,
+        "abstention_metrics": abstention_path,
+        "threshold_stability": stability_path,
+        "selection_leaderboard": leaderboard_path,
+        "ood_formalalign": ood_path,
+        **{
+            f"{split}_{name}": path
+            for split, split_paths in baseline_paths.items()
+            for name, path in split_paths.items()
+        },
+    }
 
     ablation = _load_json(ablation_path)
     confidence = _load_json(confidence_path)
@@ -136,17 +150,12 @@ def build_summary(
             **dict(ablation.get("provenance", {})),
             "generator": "scripts/summarize_nlverifier_paper_metrics.py",
             "sources": {
-                "proofnetverif_ablation": _rel(ablation_path),
-                "confidence_audit": _rel(confidence_path),
-                "abstention_metrics": _rel(abstention_path),
-                "threshold_stability": _rel(stability_path),
-                "selection_leaderboard": _rel(leaderboard_path),
-                "ood_formalalign": _rel(ood_path),
-                **{
-                    f"{split}_{name}": _rel(path)
-                    for split, split_paths in baseline_paths.items()
-                    for name, path in split_paths.items()
-                },
+                name: _rel(path)
+                for name, path in source_paths.items()
+            },
+            "source_sha256": {
+                name: _file_sha256(path)
+                for name, path in source_paths.items()
             },
         },
         "proofnetverif": proofnetverif,
@@ -196,8 +205,13 @@ def format_markdown(summary: dict[str, Any]) -> str:
             "",
         ]
     )
+    source_hashes = provenance.get("source_sha256", {})
     for name, path in provenance["sources"].items():
-        lines.append(f"- `{name}`: `{path}`")
+        digest = source_hashes.get(name)
+        if digest:
+            lines.append(f"- `{name}`: `{path}` (`sha256:{digest}`)")
+        else:
+            lines.append(f"- `{name}`: `{path}`")
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -561,6 +575,10 @@ def _rel(path: Path) -> str:
         return str(Path(path).relative_to(Path.cwd())).replace("\\", "/")
     except ValueError:
         return str(path).replace("\\", "/")
+
+
+def _file_sha256(path: Path) -> str:
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 def _pct(value: float) -> str:

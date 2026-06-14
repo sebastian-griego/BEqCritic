@@ -30,6 +30,11 @@ def test_nlverifier_paper_metrics_summary_merges_source_artifacts(tmp_path):
     latex = format_latex_main_table(summary)
 
     assert summary["transductive_nl"]["selected_correct_pct"] == 60.0
+    assert set(summary["provenance"]["source_sha256"]) == set(summary["provenance"]["sources"])
+    assert all(
+        len(digest) == 64
+        for digest in summary["provenance"]["source_sha256"].values()
+    )
     assert summary["proofnetverif"]["inductive"]["inductive_nl"]["problems"] == 5
     assert summary["main_table"]["rows"][2]["key"] == "critic_global_medoid"
     assert summary["main_table"]["rows"][2]["transductive"]["selected_correct"]["successes"] == 6
@@ -44,6 +49,7 @@ def test_nlverifier_paper_metrics_summary_merges_source_artifacts(tmp_path):
     assert summary["ood_formalalign_minif2f"]["num_pairs"] == 12
     assert "Selective prediction and abstention" in markdown
     assert "OOD pair classification" in markdown
+    assert "sha256:" in markdown
     assert "Candidate-only critic (best variant)" in latex
     assert r"\resizebox{\textwidth}{!}{%" in latex
     assert r"\textbf{3/5 (60.0\%)}" in latex

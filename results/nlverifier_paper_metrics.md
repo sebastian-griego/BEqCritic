@@ -84,15 +84,15 @@ See `results/exp_inductive/nlverifier_failure_cases.md` and `results/exp_inducti
 
 ## Sources
 
-- `proofnetverif_ablation`: `results/nlverifier_proofnetverif_ablation_metrics.json`
-- `confidence_audit`: `results/exp_inductive/nlverifier_confidence_audit.json`
-- `abstention_metrics`: `results/exp_inductive/metrics_nlverifier_abstain_p50.json`
-- `threshold_stability`: `results/exp_inductive/nlverifier_threshold_stability_p50.json`
-- `selection_leaderboard`: `results/exp_inductive/selection_leaderboard.json`
-- `ood_formalalign`: `results/ood_formalalign_minif2f.json`
-- `transductive_random`: `results/exp_transductive/metrics_random.json`
-- `transductive_self_bleu`: `results/exp_transductive/metrics_self_bleu.json`
-- `transductive_critic_global_medoid`: `results/exp_transductive/metrics_critic_global_medoid.json`
-- `inductive_random`: `results/exp_inductive/metrics_random.json`
-- `inductive_self_bleu`: `results/exp_inductive/metrics_self_bleu.json`
-- `inductive_critic_global_medoid`: `results/exp_inductive/metrics_critic_global_medoid.json`
+- `proofnetverif_ablation`: `results/nlverifier_proofnetverif_ablation_metrics.json` (`sha256:121e8cdd4ceb7bae5c44d774b57602913db3b64e7ac9f74f304fded489dde0d5`)
+- `confidence_audit`: `results/exp_inductive/nlverifier_confidence_audit.json` (`sha256:f7afa35ef8494194fb9eba9d9d21a9b8fe74b1e737b92496691ea599bc2b3ea4`)
+- `abstention_metrics`: `results/exp_inductive/metrics_nlverifier_abstain_p50.json` (`sha256:8a959f0348657fb959f2c5d80bc54171452c9fc5d1dce1252857709491d57f59`)
+- `threshold_stability`: `results/exp_inductive/nlverifier_threshold_stability_p50.json` (`sha256:55aa84d234d20fb8ee9436de3638caf945881d91c5e4d714906a7560a99f6ce7`)
+- `selection_leaderboard`: `results/exp_inductive/selection_leaderboard.json` (`sha256:023a6782ae731862776e195ca4efb100c16da518c7d337a2ed7f92ca0688912e`)
+- `ood_formalalign`: `results/ood_formalalign_minif2f.json` (`sha256:72ee5d2c08d2f7a2356522cb6795e7bff7864bbc00ef4698f68b8c6bd7c07433`)
+- `transductive_random`: `results/exp_transductive/metrics_random.json` (`sha256:7a55827440af465a8ac8bd1ae4d3fdd5dcb92420461f367ec34b20bb2de513d9`)
+- `transductive_self_bleu`: `results/exp_transductive/metrics_self_bleu.json` (`sha256:fdf6135058cf3f3093236291054271f4a3ee0f95c68c05dcd3dc1c0ea4337bbc`)
+- `transductive_critic_global_medoid`: `results/exp_transductive/metrics_critic_global_medoid.json` (`sha256:437b9a048ca8255f031972d52c7744ce660ece7520aef144db8ab88eb3c0bd6d`)
+- `inductive_random`: `results/exp_inductive/metrics_random.json` (`sha256:8fce19c812813e8d63b880721f7097ff882f82605dbce9a29fc13790ba5f8f33`)
+- `inductive_self_bleu`: `results/exp_inductive/metrics_self_bleu.json` (`sha256:3e2c7228add279d9b8261f08a4ecb4f6805cf04253bc114c5cdb32259c087c26`)
+- `inductive_critic_global_medoid`: `results/exp_inductive/metrics_critic_global_medoid.json` (`sha256:063dff3f6954b5527b11b3e27b68fbe3436098ccdde96ac56b54e3d7670426cb`)

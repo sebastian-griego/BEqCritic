@@ -345,7 +345,8 @@ available, and that the abstained bucket contains 3 correct selections plus 1
 miss with an available correct candidate.
 
 Regenerate the paper-ready NLVerifier rollup after refreshing any of the
-component reports:
+component reports. The rollup records each source path and SHA-256 digest so
+reported tables can be traced to exact checked-in result bytes:
 
 ```bash
 python scripts/summarize_nlverifier_paper_metrics.py \
