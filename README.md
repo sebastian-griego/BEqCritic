@@ -356,6 +356,12 @@ python scripts/summarize_nlverifier_paper_metrics.py \
   --output-tex paper/generated/nlverifier_main_table.tex
 ```
 
+Run the full local reproducibility gate used by CI:
+
+```bash
+python scripts/verify_reproducibility.py
+```
+
 Verify the checked-in rollup and generated table are current without rewriting
 them:
 

@@ -20,22 +20,6 @@ jobs:
         run: |
           python -m pip install -U pip
           python -m pip install -e '.[dev]'
-      - name: Compile Python sources
-        run: python -m compileall -q beqcritic scripts tests
-      - name: Check generated NLVerifier paper artifacts
-        run: |
-          python scripts/summarize_nlverifier_paper_metrics.py \
-            --results-dir results \
-            --output-json results/nlverifier_paper_metrics.json \
-            --output-md results/nlverifier_paper_metrics.md \
-            --output-tex paper/generated/nlverifier_main_table.tex \
-            --check
-      - name: Verify NLVerifier source hashes
-        run: |
-          python scripts/summarize_nlverifier_paper_metrics.py \
-            --output-json results/nlverifier_paper_metrics.json \
-            --verify-source-hashes
-      - name: Tests
-        run: |
-          python -m pytest -q
+      - name: Verify reproducibility
+        run: python scripts/verify_reproducibility.py
 
