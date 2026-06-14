@@ -180,7 +180,9 @@ python -m beqcritic.verifier_select \
   --dataset <hf_dataset> --split test \
   --input runs/myrun/proofnetverif_test_candidates.jsonl \
   --output runs/myrun/proofnetverif_test_selection_nlverifier.jsonl \
-  --emit-scores
+  --emit-scores \
+  --emit-confidence \
+  --calibration-json runs/myrun/nlverifier_calibration.json
 ```
 
 Turn emitted scores into a ranking-quality and failure-analysis report:
