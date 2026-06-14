@@ -11,9 +11,9 @@ import argparse
 import json
 from math import exp, isfinite
 from pathlib import Path
-from typing import Iterable
 
 from .hf_datasets import load_dataset_split
+from .jsonl import iter_jsonl_objects
 from .verifier import NLVerifier
 
 
@@ -30,14 +30,6 @@ def _load_nl_map(dataset: str, split: str, id_key: str, nl_key: str) -> dict[str
             raise ValueError(f"Missing {nl_key!r} in dataset row for id={pid!r}")
         out[pid] = "" if r[nl_key] is None else str(r[nl_key])
     return out
-
-
-def _iter_jsonl(path: str) -> Iterable[dict]:
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            yield json.loads(line)
 
 
 def _load_score_temperature(path: str, fallback: float) -> float:
@@ -129,7 +121,41 @@ def _mean(values: list[float]) -> float:
     return sum(values) / len(values) if values else 0.0
 
 
-def main() -> None:
+def _load_input_rows(
+    path: str | Path,
+    *,
+    problem_id_key: str,
+    candidates_key: str,
+    typechecks_key: str,
+) -> list[dict]:
+    rows: list[dict] = []
+    for line_no, obj in iter_jsonl_objects(path):
+        if problem_id_key not in obj:
+            raise ValueError(f"Missing {problem_id_key!r} at {Path(path)}:{line_no}")
+        pid = str(obj[problem_id_key])
+        cands = obj.get(candidates_key) or []
+        if not isinstance(cands, list):
+            raise ValueError(
+                f"Expected {candidates_key!r} to be a list at {Path(path)}:{line_no} "
+                f"for problem_id={pid!r}"
+            )
+        typechecks = obj.get(typechecks_key)
+        if typechecks is not None:
+            if not isinstance(typechecks, list):
+                raise ValueError(
+                    f"Expected {typechecks_key!r} to be a list at {Path(path)}:{line_no} "
+                    f"for problem_id={pid!r}"
+                )
+            if len(typechecks) != len(cands):
+                raise ValueError(
+                    f"Length mismatch at {Path(path)}:{line_no} for {pid}: "
+                    f"candidates={len(cands)} {typechecks_key}={len(typechecks)}"
+                )
+        rows.append(obj)
+    return rows
+
+
+def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(description="NLVerifier-Select: choose the top-scoring candidate with NLVerifier.")
     p.add_argument("--model", type=str, action="append", required=True)
     p.add_argument("--dataset", type=str, required=True)
@@ -164,9 +190,27 @@ def main() -> None:
     )
     p.add_argument("--stats-md", type=str, default="", help="Optional NLVerifier-Select markdown summary path")
     p.add_argument("--stats-json", type=str, default="", help="Optional NLVerifier-Select JSON summary path")
-    args = p.parse_args()
+    args = p.parse_args(argv)
+
+    input_rows = _load_input_rows(
+        args.input,
+        problem_id_key=str(args.problem_id_key),
+        candidates_key=str(args.candidates_key),
+        typechecks_key=str(args.typechecks_key),
+    )
 
     nl_map = _load_nl_map(str(args.dataset), str(args.split), str(args.dataset_id_key), str(args.dataset_nl_key))
+    missing_nl = sorted(
+        {
+            str(obj[args.problem_id_key])
+            for obj in input_rows
+            if obj.get(args.candidates_key) and str(obj[args.problem_id_key]) not in nl_map
+        }
+    )
+    if missing_nl:
+        preview = ", ".join(repr(pid) for pid in missing_nl[:5])
+        suffix = "" if len(missing_nl) <= 5 else f", ... ({len(missing_nl)} total)"
+        raise ValueError(f"Missing nl_statement for problem_id={preview}{suffix}")
     score_temperature = (
         _load_score_temperature(str(args.calibration_json), float(args.score_temperature))
         if args.emit_confidence
@@ -192,17 +236,11 @@ def main() -> None:
     probability_margins: list[float] = []
 
     with open(args.output, "w", encoding="utf-8") as fout:
-        for obj in _iter_jsonl(str(args.input)):
-            if args.problem_id_key not in obj:
-                raise ValueError(f"Missing {args.problem_id_key!r} in input row: {obj}")
+        for obj in input_rows:
             pid = str(obj[args.problem_id_key])
             cands = obj.get(args.candidates_key) or []
-            if not isinstance(cands, list):
-                raise ValueError(f"Expected {args.candidates_key!r} to be a list for problem_id={pid!r}")
             if not cands:
                 continue
-            if pid not in nl_map:
-                raise ValueError(f"Missing nl_statement for problem_id={pid!r}")
             nl = nl_map[pid]
 
             all_scores: list[list[float]] = []
@@ -224,12 +262,6 @@ def main() -> None:
             typechecks = obj.get(args.typechecks_key)
             typecheck_mask = None
             if typechecks is not None:
-                if not isinstance(typechecks, list):
-                    raise ValueError(f"Expected {args.typechecks_key!r} to be a list for problem_id={pid!r}")
-                if len(typechecks) != len(cands):
-                    raise ValueError(
-                        f"Length mismatch for {pid}: candidates={len(cands)} {args.typechecks_key}={len(typechecks)}"
-                    )
                 typecheck_mask = [bool(x) for x in typechecks]
 
             best_idx = raw_idx
