@@ -117,8 +117,9 @@ python -m beqcritic.compare_selection_methods \
   --output-md runs/myrun/selection_comparison.md
 ```
 
-Build a multi-method leaderboard with pairwise sign tests and deterministic
-`first` / `shortest` baselines:
+Build a multi-method leaderboard with pairwise sign tests, deterministic
+`first` / `shortest` baselines, and optional explicit abstention rows for
+selective methods:
 
 ```bash
 python -m beqcritic.selection_leaderboard \
@@ -128,9 +129,15 @@ python -m beqcritic.selection_leaderboard \
   --selection self_bleu=runs/myrun/proofnetverif_test_selection_selfbleu.jsonl \
   --selection critic=runs/myrun/proofnetverif_test_selection_beqcritic.jsonl \
   --selection nlverifier=runs/myrun/proofnetverif_test_selection_nlverifier.jsonl \
+  --selection nlverifier_abstain_p50=runs/myrun/sel_nlverifier_abstain_p50.jsonl \
+  --abstention nlverifier_abstain_p50=runs/myrun/nlverifier_abstentions_p50.jsonl \
   --output-md runs/myrun/selection_leaderboard.md \
   --output-json runs/myrun/selection_leaderboard.json
 ```
+
+Accepted and abstained files that share a method name are joined before
+scoring, so the leaderboard reports both selected-correct rate and accepted
+accuracy for the operational selective policy.
 
 For reproducible error analysis, ask the selector to write a compact audit JSONL alongside the selections:
 
@@ -313,11 +320,14 @@ bucket's oracle ceiling is `25/36`, so only one accepted problem still has a
 correct candidate that NLVerifier missed. The abstention-aware evaluator writes
 the same operational split to `results/exp_inductive/metrics_nlverifier_abstain_p50.json`.
 The multi-method leaderboard in `results/exp_inductive/selection_leaderboard.md`
-shows NLVerifier at `27/55` selected correct, ahead of `critic` and `hybrid`
-at `18/55`, `self_bleu` at `17/55`, `first` at `13/55`, and `shortest` at
-`6/55`; paired sign tests have NLVerifier beating `critic` and `hybrid` by
-`9` wins to `0` losses (`p = 0.00390625`) and `self_bleu` by `10` to `0`
-(`p = 0.00195312`).
+shows full-coverage NLVerifier at `27/55` selected correct, ahead of `critic`
+and `hybrid` at `18/55`, `self_bleu` at `17/55`, `first` at `13/55`, and
+`shortest` at `6/55`. The certified abstention policy is also on the
+coverage/accuracy frontier: it covers `36/55` problems, raises accepted
+accuracy to `66.7%` (`24/36`), and abstains on `19/55` problems while giving
+up three full-coverage correct selections. Paired sign tests have full
+NLVerifier beating `critic` and `hybrid` by `9` wins to `0` losses
+(`p = 0.00390625`) and `self_bleu` by `10` to `0` (`p = 0.00195312`).
 The leave-one-out stability report in
 `results/exp_inductive/nlverifier_threshold_stability_p50.md` finds three
 nearby recommended thresholds (`0.5132`, `0.5413`, `0.6006`); although the exact

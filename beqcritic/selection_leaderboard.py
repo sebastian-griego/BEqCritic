@@ -20,6 +20,7 @@ def analyze_leaderboard(
     *,
     candidates_path: str | Path,
     selections: dict[str, str | Path],
+    abstentions: dict[str, str | Path] | None = None,
     include_baselines: Iterable[str] = (),
     allow_missing_as_abstain: bool = False,
     max_cases: int = 20,
@@ -33,6 +34,22 @@ def analyze_leaderboard(
         if method_name in methods:
             raise ValueError(f"duplicate selection method name: {method_name}")
         methods[method_name] = _load_jsonl_map(path)
+
+    abstentions = abstentions or {}
+    for name, path in abstentions.items():
+        method_name = str(name).strip()
+        if method_name not in methods:
+            raise ValueError(
+                f"abstention file supplied for unknown selection method: {method_name!r}"
+            )
+        abstention_rows = _load_jsonl_map(path)
+        duplicate = sorted(set(methods[method_name]) & set(abstention_rows))
+        if duplicate:
+            raise ValueError(
+                f"method {method_name!r} has problem_ids in both selection and "
+                f"abstention files: {', '.join(duplicate[:5])}"
+            )
+        methods[method_name] = {**methods[method_name], **abstention_rows}
 
     for baseline in include_baselines:
         name = str(baseline).strip()
@@ -136,10 +153,12 @@ def analyze_leaderboard(
         },
         "methods": {name: method_summaries[name] for name in ordered_names},
         "best_method": best_name,
+        "coverage_accuracy_frontier": _coverage_accuracy_frontier(method_summaries),
         "pairwise": pairwise,
         "best_method_cases": best_cases,
         "config": {
             "selection_methods": list(selections),
+            "abstention_methods": list(abstentions),
             "derived_baselines": [str(name) for name in include_baselines],
             "max_cases": int(max(0, max_cases)),
         },
@@ -170,6 +189,24 @@ def format_markdown(summary: dict[str, Any]) -> str:
             f"{_fmt_prop(row['accepted_accuracy'])} | "
             f"{_fmt_prop(row['selected_correct_given_any'])} | "
             f"{row['missed_available_correct']} | {row['abstained']} |"
+        )
+
+    frontier = summary.get("coverage_accuracy_frontier", [])
+    lines.extend(
+        [
+            "",
+            "## Coverage/Accuracy Frontier",
+            "",
+            "| method | coverage | accepted accuracy | selected correct | abstained |",
+            "|---|---:|---:|---:|---:|",
+        ]
+    )
+    for row in frontier:
+        method = methods[row["method"]]
+        lines.append(
+            f"| `{_md(row['method'])}` | {_pct(row['coverage'])} | "
+            f"{_fmt_prop(row['accepted_accuracy'])} | "
+            f"{_fmt_prop(method['selected_correct'])} | {method['abstained']} |"
         )
 
     lines.extend(
@@ -294,6 +331,43 @@ def _method_summary(
     }
 
 
+def _coverage_accuracy_frontier(
+    method_summaries: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    frontier = []
+    for name, row in method_summaries.items():
+        if int(row["accepted"]) == 0:
+            continue
+        coverage = float(row["coverage"])
+        accuracy = float(row["accepted_accuracy"]["rate"])
+        dominated = False
+        for other_name, other in method_summaries.items():
+            if other_name == name or int(other["accepted"]) == 0:
+                continue
+            other_coverage = float(other["coverage"])
+            other_accuracy = float(other["accepted_accuracy"]["rate"])
+            if (
+                other_coverage >= coverage
+                and other_accuracy >= accuracy
+                and (other_coverage > coverage or other_accuracy > accuracy)
+            ):
+                dominated = True
+                break
+        if not dominated:
+            frontier.append(
+                {
+                    "method": name,
+                    "coverage": coverage,
+                    "accepted_accuracy": row["accepted_accuracy"],
+                    "accepted": int(row["accepted"]),
+                }
+            )
+    return sorted(
+        frontier,
+        key=lambda row: (-float(row["coverage"]), -float(row["accepted_accuracy"]["rate"]), row["method"]),
+    )
+
+
 def _top_disagreements(
     *,
     challenger: str,
@@ -312,6 +386,8 @@ def _top_disagreements(
                     "problem_id": problem_id,
                     "challenger": challenger,
                     "baseline": baseline,
+                    "challenger_accepted": bool(left["accepted"]),
+                    "baseline_accepted": bool(right["accepted"]),
                     "challenger_index": left.get("chosen_index"),
                     "baseline_index": right.get("chosen_index"),
                     "challenger_candidate": _candidate_text(
@@ -440,11 +516,15 @@ def _append_case_table(
     if not cases:
         lines.append("No cases.")
         return
-    lines.append("| problem_id | best index | baseline index | best candidate | baseline candidate |")
-    lines.append("|---|---:|---:|---|---|")
+    lines.append(
+        "| problem_id | best status | baseline status | best index | baseline index | best candidate | baseline candidate |"
+    )
+    lines.append("|---|---|---|---:|---:|---|---|")
     for row in cases:
         lines.append(
-            f"| {_md(row['problem_id'])} | {_fmt_index(row['challenger_index'])} | "
+            f"| {_md(row['problem_id'])} | {_status(row['challenger_accepted'])} | "
+            f"{_status(row['baseline_accepted'])} | "
+            f"{_fmt_index(row['challenger_index'])} | "
             f"{_fmt_index(row['baseline_index'])} | "
             f"{_md(_short(row['challenger_candidate']))} | "
             f"{_md(_short(row['baseline_candidate']))} |"
@@ -457,6 +537,10 @@ def _fmt_prop(row: dict[str, Any]) -> str:
 
 def _fmt_index(value: Any) -> str:
     return "-" if value is None else str(int(value))
+
+
+def _status(accepted: bool) -> str:
+    return "accepted" if accepted else "abstained"
 
 
 def _pct(value: float) -> str:
@@ -498,6 +582,13 @@ def main() -> None:
         help="Selection file as NAME=PATH. Repeat for multiple methods.",
     )
     parser.add_argument(
+        "--abstention",
+        action="append",
+        default=[],
+        type=_parse_selection,
+        help="Optional abstention file as NAME=PATH for an existing --selection method.",
+    )
+    parser.add_argument(
         "--include-baseline",
         action="append",
         default=[],
@@ -513,6 +604,7 @@ def main() -> None:
     summary = analyze_leaderboard(
         candidates_path=args.candidates,
         selections=dict(args.selection),
+        abstentions=dict(args.abstention),
         include_baselines=list(args.include_baseline),
         allow_missing_as_abstain=bool(args.allow_missing_as_abstain),
         max_cases=int(args.max_cases),
