@@ -147,6 +147,7 @@ def format_markdown(report: dict[str, Any]) -> str:
     threshold = report["threshold"]
     dataset = report["dataset"]
     accepted_accuracy = dataset["accepted_accuracy"]
+    accepted_oracle = dataset["accepted_oracle_ceiling"]
     lines = [
         "# NLVerifier Abstention Policy",
         "",
@@ -168,13 +169,21 @@ def format_markdown(report: dict[str, Any]) -> str:
             f"- Accepted accuracy: {_pct(accepted_accuracy['rate'])} "
             f"[{_pct(accepted_accuracy['ci_low'])}, {_pct(accepted_accuracy['ci_high'])}] "
             f"({accepted_accuracy['successes']}/{accepted_accuracy['total']})",
+            f"- Accepted oracle ceiling: {_pct(accepted_oracle['rate'])} "
+            f"({accepted_oracle['successes']}/{accepted_oracle['total']})",
             "",
             "## Outcome Counts",
             "",
-            "| bucket | count | selected correct | accuracy |",
-            "|---|---:|---:|---:|",
-            f"| accepted | {dataset['accepted']} | {dataset['accepted_correct']} | {_pct(dataset['accepted_accuracy']['rate'])} |",
-            f"| abstained | {dataset['abstained']} | {dataset['abstained_correct']} | {_pct(dataset['abstained_accuracy']['rate'])} |",
+            "| bucket | count | selected correct | has any correct | missed available correct | no correct candidate | accuracy | oracle ceiling |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|",
+            f"| accepted | {dataset['accepted']} | {dataset['accepted_correct']} | "
+            f"{dataset['accepted_has_any_correct']} | {dataset['accepted_missed_available_correct']} | "
+            f"{dataset['accepted_no_correct_candidate']} | {_pct(dataset['accepted_accuracy']['rate'])} | "
+            f"{_pct(dataset['accepted_oracle_ceiling']['rate'])} |",
+            f"| abstained | {dataset['abstained']} | {dataset['abstained_correct']} | "
+            f"{dataset['abstained_has_any_correct']} | {dataset['abstained_missed_available_correct']} | "
+            f"{dataset['abstained_no_correct_candidate']} | {_pct(dataset['abstained_accuracy']['rate'])} | "
+            f"{_pct(dataset['abstained_oracle_ceiling']['rate'])} |",
             "",
             "## Accepted Errors",
             "",
@@ -184,13 +193,14 @@ def format_markdown(report: dict[str, Any]) -> str:
     if accepted_errors:
         lines.extend(
             [
-                "| problem_id | confidence | chosen |",
-                "|---|---:|---:|",
+                "| problem_id | confidence | has any correct | chosen |",
+                "|---|---:|---:|---:|",
             ]
         )
         for row in accepted_errors:
             lines.append(
-                f"| {_md(row['problem_id'])} | {row['confidence']:.4f} | {row['chosen_index']} |"
+                f"| {_md(row['problem_id'])} | {row['confidence']:.4f} | "
+                f"{_yes_no(row['has_any_correct'])} | {row['chosen_index']} |"
             )
     else:
         lines.append("No accepted errors.")
@@ -200,14 +210,15 @@ def format_markdown(report: dict[str, Any]) -> str:
     if abstentions:
         lines.extend(
             [
-                "| problem_id | confidence | selected correct | chosen |",
-                "|---|---:|---:|---:|",
+                "| problem_id | confidence | selected correct | has any correct | chosen |",
+                "|---|---:|---:|---:|---:|",
             ]
         )
         for row in abstentions:
             lines.append(
                 f"| {_md(row['problem_id'])} | {row['confidence']:.4f} | "
-                f"{_yes_no(row['selected_correct'])} | {row['chosen_index']} |"
+                f"{_yes_no(row['selected_correct'])} | {_yes_no(row['has_any_correct'])} | "
+                f"{row['chosen_index']} |"
             )
     else:
         lines.append("No abstentions.")
@@ -260,6 +271,14 @@ def _report(
     total = len(annotated)
     accepted_correct = sum(1 for row in accepted if row["selected_correct"])
     abstained_correct = sum(1 for row in abstained if row["selected_correct"])
+    accepted_any_correct = sum(1 for row in accepted if row["has_any_correct"])
+    abstained_any_correct = sum(1 for row in abstained if row["has_any_correct"])
+    accepted_missed_available = sum(
+        1 for row in accepted if row["has_any_correct"] and not row["selected_correct"]
+    )
+    abstained_missed_available = sum(
+        1 for row in abstained if row["has_any_correct"] and not row["selected_correct"]
+    )
     full_correct = accepted_correct + abstained_correct
     any_correct = sum(1 for row in annotated if row["has_any_correct"])
     accepted_errors = sorted(
@@ -284,12 +303,22 @@ def _report(
             "abstention_rate": _rate(len(abstained), total),
             "has_any_correct": int(any_correct),
             "has_any_correct_rate": _rate(any_correct, total),
+            "oracle_ceiling": proportion_summary(any_correct, total).to_json_dict(),
             "full_selected_correct": int(full_correct),
             "full_accuracy": proportion_summary(full_correct, total).to_json_dict(),
             "accepted_correct": int(accepted_correct),
             "accepted_accuracy": proportion_summary(accepted_correct, len(accepted)).to_json_dict(),
+            "accepted_has_any_correct": int(accepted_any_correct),
+            "accepted_oracle_ceiling": proportion_summary(accepted_any_correct, len(accepted)).to_json_dict(),
+            "accepted_missed_available_correct": int(accepted_missed_available),
+            "accepted_no_correct_candidate": int(len(accepted) - accepted_any_correct),
             "abstained_correct": int(abstained_correct),
             "abstained_accuracy": proportion_summary(abstained_correct, len(abstained)).to_json_dict(),
+            "abstained_has_any_correct": int(abstained_any_correct),
+            "abstained_oracle_ceiling": proportion_summary(abstained_any_correct, len(abstained)).to_json_dict(),
+            "abstained_missed_available_correct": int(abstained_missed_available),
+            "abstained_no_correct_candidate": int(len(abstained) - abstained_any_correct),
+            "rejected_correct_selections": int(abstained_correct),
         },
         "accepted_errors": [_compact_example(row) for row in accepted_errors],
         "highest_confidence_abstentions": [

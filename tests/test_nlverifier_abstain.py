@@ -55,7 +55,12 @@ def test_apply_abstention_splits_accepted_and_abstained(tmp_path):
     assert accepted[0]["chosen"] == "a"
     assert report["dataset"]["accepted"] == 1
     assert report["dataset"]["accepted_correct"] == 1
+    assert report["dataset"]["accepted_has_any_correct"] == 1
+    assert report["dataset"]["accepted_missed_available_correct"] == 0
     assert report["dataset"]["abstained_correct"] == 0
+    assert report["dataset"]["abstained_has_any_correct"] == 1
+    assert report["dataset"]["abstained_missed_available_correct"] == 1
+    assert report["dataset"]["rejected_correct_selections"] == 0
 
 
 def test_resolve_threshold_from_target_recommendation(tmp_path):
@@ -153,4 +158,6 @@ def test_nlverifier_abstain_cli_writes_outputs(tmp_path):
     assert len(accepted) == 1
     assert len(abstained) == 1
     assert payload["dataset"]["accepted"] == 1
+    assert payload["dataset"]["accepted_oracle_ceiling"]["successes"] == 1
+    assert payload["dataset"]["abstained_oracle_ceiling"]["successes"] == 1
     assert "Abstention Policy" in output_md.read_text(encoding="utf-8")

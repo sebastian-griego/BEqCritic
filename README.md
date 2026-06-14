@@ -258,7 +258,9 @@ python -m beqcritic.nlverifier_abstain \
 
 On `results/exp_inductive`, the certified 50% Wilson-LCB threshold accepts
 `36/55` problems and raises accepted-selection accuracy from full-coverage
-`49.1%` to `66.7%` (`24/36`), while abstaining on `19/55`.
+`49.1%` to `66.7%` (`24/36`), while abstaining on `19/55`; the accepted
+bucket's oracle ceiling is `25/36`, so only one accepted problem still has a
+correct candidate that NLVerifier missed.
 
 Prefer new output filenames containing `nlverifier` (existing `runs/` artifacts keep their original names).
 

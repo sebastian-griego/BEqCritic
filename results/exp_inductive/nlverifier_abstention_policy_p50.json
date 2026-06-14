@@ -143,6 +143,16 @@
       "total": 19
     },
     "abstained_correct": 3,
+    "abstained_has_any_correct": 4,
+    "abstained_missed_available_correct": 1,
+    "abstained_no_correct_candidate": 15,
+    "abstained_oracle_ceiling": {
+      "ci_high": 0.43334278443814167,
+      "ci_low": 0.08507676632916253,
+      "rate": 0.21052631578947367,
+      "successes": 4,
+      "total": 19
+    },
     "abstention_rate": 0.34545454545454546,
     "accepted": 36,
     "accepted_accuracy": {
@@ -153,6 +163,16 @@
       "total": 36
     },
     "accepted_correct": 24,
+    "accepted_has_any_correct": 25,
+    "accepted_missed_available_correct": 1,
+    "accepted_no_correct_candidate": 11,
+    "accepted_oracle_ceiling": {
+      "ci_high": 0.8199554840517008,
+      "ci_low": 0.5314372714948966,
+      "rate": 0.6944444444444444,
+      "successes": 25,
+      "total": 36
+    },
     "coverage": 0.6545454545454545,
     "full_accuracy": {
       "ci_high": 0.619237401530278,
@@ -164,7 +184,15 @@
     "full_selected_correct": 27,
     "has_any_correct": 29,
     "has_any_correct_rate": 0.5272727272727272,
-    "problems": 55
+    "oracle_ceiling": {
+      "ci_high": 0.6530690163868067,
+      "ci_low": 0.3979154435522611,
+      "rate": 0.5272727272727272,
+      "successes": 29,
+      "total": 55
+    },
+    "problems": 55,
+    "rejected_correct_selections": 3
   },
   "highest_confidence_abstentions": [
     {
