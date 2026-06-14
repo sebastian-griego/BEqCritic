@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from scripts.summarize_nlverifier_paper_metrics import (
+    _source_hash_mismatches,
     _stale_outputs,
     build_summary,
     format_latex_main_table,
@@ -35,6 +36,7 @@ def test_nlverifier_paper_metrics_summary_merges_source_artifacts(tmp_path):
         len(digest) == 64
         for digest in summary["provenance"]["source_sha256"].values()
     )
+    assert _source_hash_mismatches(summary, base_dir=ROOT) == []
     assert summary["proofnetverif"]["inductive"]["inductive_nl"]["problems"] == 5
     assert summary["main_table"]["rows"][2]["key"] == "critic_global_medoid"
     assert summary["main_table"]["rows"][2]["transductive"]["selected_correct"]["successes"] == 6
@@ -89,6 +91,61 @@ def test_paper_metrics_check_cli_fails_without_rewriting_stale_outputs(tmp_path)
     assert output_json.read_text(encoding="utf-8") == "stale\n"
     assert output_md.read_text(encoding="utf-8") == "stale\n"
     assert output_tex.read_text(encoding="utf-8") == "stale\n"
+
+
+def test_paper_metrics_verify_source_hashes_cli_detects_changed_source(tmp_path):
+    results = tmp_path / "results"
+    _write_summary_inputs(results)
+    output_json = tmp_path / "paper_metrics.json"
+    output_md = tmp_path / "paper_metrics.md"
+    output_tex = tmp_path / "main_table.tex"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "summarize_nlverifier_paper_metrics.py"),
+            "--results-dir",
+            str(results),
+            "--output-json",
+            str(output_json),
+            "--output-md",
+            str(output_md),
+            "--output-tex",
+            str(output_tex),
+        ],
+        cwd=ROOT,
+        check=True,
+    )
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "summarize_nlverifier_paper_metrics.py"),
+            "--output-json",
+            str(output_json),
+            "--verify-source-hashes",
+        ],
+        cwd=ROOT,
+        check=True,
+    )
+
+    _write_json(results / "ood_formalalign_minif2f.json", {**_ood(), "num_pairs": 13})
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "summarize_nlverifier_paper_metrics.py"),
+            "--output-json",
+            str(output_json),
+            "--verify-source-hashes",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode != 0
+    assert "Source hash verification failed" in completed.stderr + completed.stdout
+    assert "ood_formalalign" in completed.stderr + completed.stdout
 
 
 def test_stale_outputs_detects_missing_and_mismatched_files(tmp_path):

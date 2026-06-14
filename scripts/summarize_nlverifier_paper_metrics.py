@@ -614,8 +614,74 @@ def _stale_outputs(expected: dict[Path, str]) -> list[Path]:
     return stale
 
 
+def _source_hash_mismatches(
+    summary: dict[str, Any],
+    *,
+    base_dir: Path,
+) -> list[dict[str, str]]:
+    provenance = summary.get("provenance", {})
+    sources = provenance.get("sources", {})
+    expected_hashes = provenance.get("source_sha256", {})
+    mismatches = []
+    for name, path_text in sources.items():
+        expected = expected_hashes.get(name)
+        if not expected:
+            mismatches.append(
+                {
+                    "name": str(name),
+                    "path": str(path_text),
+                    "expected": "<missing from source_sha256>",
+                    "actual": "<not checked>",
+                }
+            )
+            continue
+        path = _resolve_source_path(str(path_text), base_dir=base_dir)
+        if not path.exists():
+            mismatches.append(
+                {
+                    "name": str(name),
+                    "path": str(path_text),
+                    "expected": expected,
+                    "actual": "<missing file>",
+                }
+            )
+            continue
+        actual = _file_sha256(path)
+        if actual != expected:
+            mismatches.append(
+                {
+                    "name": str(name),
+                    "path": str(path_text),
+                    "expected": expected,
+                    "actual": actual,
+                }
+            )
+    for name in sorted(set(expected_hashes) - set(sources)):
+        mismatches.append(
+            {
+                "name": str(name),
+                "path": "<missing from sources>",
+                "expected": str(expected_hashes[name]),
+                "actual": "<not checked>",
+            }
+        )
+    return mismatches
+
+
+def _resolve_source_path(path_text: str, *, base_dir: Path) -> Path:
+    path = Path(path_text)
+    return path if path.is_absolute() else base_dir / path
+
+
 def _display_paths(paths: list[Path]) -> str:
     return ", ".join(str(path).replace("\\", "/") for path in paths)
+
+
+def _display_hash_mismatches(mismatches: list[dict[str, str]]) -> str:
+    return "; ".join(
+        f"{row['name']} {row['path']} expected {row['expected']} got {row['actual']}"
+        for row in mismatches
+    )
 
 
 def main() -> None:
@@ -630,7 +696,26 @@ def main() -> None:
         action="store_true",
         help="fail if generated paper artifacts differ from the checked-in files",
     )
+    parser.add_argument(
+        "--verify-source-hashes",
+        action="store_true",
+        help="validate source_sha256 entries in --output-json against current source files",
+    )
     args = parser.parse_args()
+
+    output_json = Path(args.output_json)
+    if args.verify_source_hashes:
+        summary = _load_json(output_json)
+        mismatches = _source_hash_mismatches(summary, base_dir=Path.cwd())
+        if mismatches:
+            raise SystemExit(
+                "Source hash verification failed for "
+                + str(output_json).replace("\\", "/")
+                + ": "
+                + _display_hash_mismatches(mismatches)
+            )
+        print(f"Source hashes verified for {output_json}")
+        return
 
     summary = build_summary(
         Path(args.results_dir),
@@ -639,7 +724,6 @@ def main() -> None:
     json_text = json.dumps(summary, indent=2, ensure_ascii=True) + "\n"
     markdown = format_markdown(summary)
     latex = format_latex_main_table(summary)
-    output_json = Path(args.output_json)
     output_md = Path(args.output_md)
     output_tex = Path(args.output_tex)
     expected = {

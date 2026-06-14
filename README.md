@@ -368,6 +368,15 @@ python scripts/summarize_nlverifier_paper_metrics.py \
   --check
 ```
 
+Verify that the source hashes embedded in the checked-in rollup still match the
+current source result files:
+
+```bash
+python scripts/summarize_nlverifier_paper_metrics.py \
+  --output-json results/nlverifier_paper_metrics.json \
+  --verify-source-hashes
+```
+
 Prefer new output filenames containing `nlverifier` (existing `runs/` artifacts keep their original names).
 
 ## More
