@@ -8,6 +8,7 @@ from pathlib import Path
 import sys
 from typing import Any, Iterable
 
+from .jsonl import load_jsonl_map_by_problem_id
 from .schema import validate_grouped_candidates
 from .statistics import paired_comparison, proportion_summary
 from .textnorm import normalize_lean_statement
@@ -431,17 +432,7 @@ def _decision(
 
 
 def _load_jsonl_map(path: str | Path) -> dict[str, dict[str, Any]]:
-    records: dict[str, dict[str, Any]] = {}
-    with Path(path).open("r", encoding="utf-8-sig") as handle:
-        for line_no, line in enumerate(handle, start=1):
-            if not line.strip():
-                continue
-            record = json.loads(line)
-            problem_id = record.get("problem_id")
-            if problem_id is None:
-                raise ValueError(f"missing problem_id at {path}:{line_no}")
-            records[str(problem_id)] = record
-    return records
+    return load_jsonl_map_by_problem_id(path, encoding="utf-8-sig")
 
 
 def _derived_selection_map(

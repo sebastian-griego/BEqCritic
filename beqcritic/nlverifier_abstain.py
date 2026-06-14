@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .jsonl import load_jsonl_map_by_problem_id
 from .nlverifier_selective import SelectiveExample, load_selective_examples
 from .statistics import proportion_summary
 
@@ -353,17 +354,7 @@ def _find_target_row(signal: dict[str, Any], target_accuracy: float) -> dict[str
 
 
 def _load_jsonl_map(path: str | Path) -> dict[str, dict[str, Any]]:
-    out: dict[str, dict[str, Any]] = {}
-    with Path(path).open("r", encoding="utf-8") as handle:
-        for line in handle:
-            if not line.strip():
-                continue
-            row = json.loads(line)
-            problem_id = row.get("problem_id")
-            if problem_id is None:
-                raise ValueError(f"missing problem_id in {path}: {row}")
-            out[str(problem_id)] = row
-    return out
+    return load_jsonl_map_by_problem_id(path)
 
 
 def _validate_confidence_key(confidence_key: str) -> None:
