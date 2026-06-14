@@ -131,3 +131,39 @@ def test_evaluate_selection_cli_merges_abstentions_and_writes_summary(tmp_path):
     assert payload["coverage"]["successes"] == 1
     assert payload["accepted_selected_correct"]["successes"] == 1
     assert "Accepted: 1 (50.0%)" in proc.stdout
+
+
+def test_evaluate_selection_cli_rejects_duplicate_problem_ids(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections = tmp_path / "selections.jsonl"
+    summary_json = tmp_path / "summary.json"
+    _write_jsonl(
+        candidates,
+        [
+            {"problem_id": "p1", "candidates": ["a"], "labels": [1]},
+            {"problem_id": "p1", "candidates": ["b"], "labels": [0]},
+        ],
+    )
+    _write_jsonl(selections, [{"problem_id": "p1", "chosen_index": 0}])
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "beqcritic.evaluate_selection",
+            "--candidates",
+            str(candidates),
+            "--selections",
+            str(selections),
+            "--summary-json",
+            str(summary_json),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode != 0
+    assert "duplicate problem_id 'p1'" in proc.stderr
+    assert f"{candidates}:2" in proc.stderr
+    assert not summary_json.exists()

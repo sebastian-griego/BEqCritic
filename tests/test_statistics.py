@@ -139,3 +139,40 @@ def test_compare_selection_methods_cli_and_markdown(tmp_path):
     assert "Selection comparison: baseline vs critic" in summary_md.read_text(
         encoding="utf-8"
     )
+
+
+def test_compare_selection_methods_rejects_duplicate_problem_ids(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections_a = tmp_path / "a.jsonl"
+    selections_b = tmp_path / "b.jsonl"
+
+    candidates.write_text(
+        json.dumps({"problem_id": "p1", "candidates": ["a"], "labels": [1]})
+        + "\n"
+        + json.dumps({"problem_id": "p1", "candidates": ["b"], "labels": [0]})
+        + "\n",
+        encoding="utf-8",
+    )
+    selections_a.write_text(json.dumps({"problem_id": "p1", "chosen_index": 0}) + "\n", encoding="utf-8")
+    selections_b.write_text(json.dumps({"problem_id": "p1", "chosen_index": 0}) + "\n", encoding="utf-8")
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "beqcritic.compare_selection_methods",
+            "--candidates",
+            str(candidates),
+            "--selections-a",
+            str(selections_a),
+            "--selections-b",
+            str(selections_b),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode != 0
+    assert "duplicate problem_id 'p1'" in proc.stderr
+    assert f"{candidates}:2" in proc.stderr

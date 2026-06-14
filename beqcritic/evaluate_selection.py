@@ -16,22 +16,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .jsonl import load_jsonl_map_by_problem_id
 from .statistics import proportion_summary
 from .textnorm import normalize_lean_statement
 
 
 def _load_jsonl(path: str | Path) -> dict[str, dict[str, Any]]:
-    out: dict[str, dict[str, Any]] = {}
-    with Path(path).open("r", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            obj = json.loads(line)
-            pid = obj.get("problem_id")
-            if pid is None:
-                raise ValueError(f"Missing problem_id in {path}: {obj}")
-            out[str(pid)] = obj
-    return out
+    return load_jsonl_map_by_problem_id(path, encoding="utf-8-sig")
 
 
 def _merge_selection_maps(

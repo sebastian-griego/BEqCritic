@@ -45,3 +45,19 @@ def test_load_jsonl_map_by_problem_id_reports_physical_line(tmp_path):
 
     assert f"{path}:3" in str(excinfo.value)
     assert "missing problem_id" in str(excinfo.value)
+
+
+def test_load_jsonl_map_by_problem_id_rejects_duplicates(tmp_path):
+    path = tmp_path / "rows.jsonl"
+    path.write_text(
+        '{"problem_id": "p1", "value": 1}\n\n{"problem_id": "p1", "value": 2}\n',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(JsonlError) as excinfo:
+        load_jsonl_map_by_problem_id(path)
+
+    message = str(excinfo.value)
+    assert f"{path}:3" in message
+    assert "first seen at line 1" in message
+    assert "duplicate problem_id 'p1'" in message

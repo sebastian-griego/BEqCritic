@@ -19,11 +19,19 @@ def load_jsonl_map_by_problem_id(
     encoding: str = "utf-8",
 ) -> dict[str, dict[str, Any]]:
     records: dict[str, dict[str, Any]] = {}
+    first_lines: dict[str, int] = {}
     for line_no, record in iter_jsonl_objects(path, encoding=encoding):
         problem_id = record.get("problem_id")
         if problem_id is None:
             raise JsonlError(f"missing problem_id at {Path(path)}:{line_no}")
-        records[str(problem_id)] = record
+        key = str(problem_id)
+        if key in records:
+            raise JsonlError(
+                f"duplicate problem_id {key!r} at {Path(path)}:{line_no}; "
+                f"first seen at line {first_lines[key]}"
+            )
+        records[key] = record
+        first_lines[key] = line_no
     return records
 
 
