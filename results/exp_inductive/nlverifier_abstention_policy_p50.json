@@ -1,0 +1,352 @@
+{
+  "accepted_errors": [
+    {
+      "chosen_index": 0,
+      "chosen_probability": 0.9673796852533771,
+      "confidence": 0.9673796852533771,
+      "has_any_correct": false,
+      "n_candidates": 5,
+      "probability_margin": 0.010393270467239146,
+      "problem_id": "Dummit-Foote|exercise_8_3_6b",
+      "score_margin": 0.6838107109069824,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 0,
+      "chosen_probability": 0.9637240008162034,
+      "confidence": 0.9637240008162034,
+      "has_any_correct": false,
+      "n_candidates": 2,
+      "probability_margin": 0.031486234940070745,
+      "problem_id": "Axler|exercise_7_10",
+      "score_margin": 1.5658302307128906,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 3,
+      "chosen_probability": 0.9502472289722269,
+      "confidence": 0.9502472289722269,
+      "has_any_correct": true,
+      "n_candidates": 21,
+      "probability_margin": 0.03736340668936444,
+      "problem_id": "Herstein|exercise_4_3_25",
+      "score_margin": 1.4283561706542969,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 0,
+      "chosen_probability": 0.9495543413736579,
+      "confidence": 0.9495543413736579,
+      "has_any_correct": false,
+      "n_candidates": 4,
+      "probability_margin": 0.2480323985351527,
+      "problem_id": "Dummit-Foote|exercise_2_4_16b",
+      "score_margin": 4.950528144836426,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 8,
+      "chosen_probability": 0.9039552644964457,
+      "confidence": 0.9039552644964457,
+      "has_any_correct": false,
+      "n_candidates": 16,
+      "probability_margin": 0.2338264155457077,
+      "problem_id": "Herstein|exercise_5_6_14",
+      "score_margin": 3.648157835006714,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 5,
+      "chosen_probability": 0.8838113067171269,
+      "confidence": 0.8838113067171269,
+      "has_any_correct": false,
+      "n_candidates": 6,
+      "probability_margin": 0.013978014013470985,
+      "problem_id": "Axler|exercise_6_2",
+      "score_margin": 0.3082389831542969,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 1,
+      "chosen_probability": 0.8397006266464543,
+      "confidence": 0.8397006266464543,
+      "has_any_correct": false,
+      "n_candidates": 3,
+      "probability_margin": 0.31405547408661905,
+      "problem_id": "Dummit-Foote|exercise_4_4_7",
+      "score_margin": 3.696064740419388,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 0,
+      "chosen_probability": 0.7878946999019798,
+      "confidence": 0.7878946999019798,
+      "has_any_correct": false,
+      "n_candidates": 5,
+      "probability_margin": 0.24649823899836687,
+      "problem_id": "Putnam|exercise_2018_b2",
+      "score_margin": 2.727593809366226,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 1,
+      "chosen_probability": 0.7272815456184614,
+      "confidence": 0.7272815456184614,
+      "has_any_correct": false,
+      "n_candidates": 3,
+      "probability_margin": 0.6246316823528052,
+      "problem_id": "Herstein|exercise_2_5_43",
+      "score_margin": 7.492858171463013,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 7,
+      "chosen_probability": 0.6303154073381068,
+      "confidence": 0.6303154073381068,
+      "has_any_correct": false,
+      "n_candidates": 18,
+      "probability_margin": 0.17134374909374123,
+      "problem_id": "Dummit-Foote|exercise_9_4_11",
+      "score_margin": 1.660978525876999,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 15,
+      "chosen_probability": 0.6005773057060484,
+      "confidence": 0.6005773057060484,
+      "has_any_correct": false,
+      "n_candidates": 16,
+      "probability_margin": 0.1582390581967777,
+      "problem_id": "Pugh|exercise_2_29",
+      "score_margin": 1.521770417690277,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 4,
+      "chosen_probability": 0.5412837391475258,
+      "confidence": 0.5412837391475258,
+      "has_any_correct": false,
+      "n_candidates": 5,
+      "probability_margin": 0.02361020564995464,
+      "problem_id": "Dummit-Foote|exercise_8_2_4",
+      "score_margin": 0.2255430817604065,
+      "selected_correct": false
+    }
+  ],
+  "dataset": {
+    "abstained": 19,
+    "abstained_accuracy": {
+      "ci_high": 0.37565475270329074,
+      "ci_low": 0.05520471638534141,
+      "rate": 0.15789473684210525,
+      "successes": 3,
+      "total": 19
+    },
+    "abstained_correct": 3,
+    "abstention_rate": 0.34545454545454546,
+    "accepted": 36,
+    "accepted_accuracy": {
+      "ci_high": 0.7978538117569468,
+      "ci_low": 0.5033399787115652,
+      "rate": 0.6666666666666666,
+      "successes": 24,
+      "total": 36
+    },
+    "accepted_correct": 24,
+    "coverage": 0.6545454545454545,
+    "full_accuracy": {
+      "ci_high": 0.619237401530278,
+      "ci_low": 0.36376777849003283,
+      "rate": 0.4909090909090909,
+      "successes": 27,
+      "total": 55
+    },
+    "full_selected_correct": 27,
+    "has_any_correct": 29,
+    "has_any_correct_rate": 0.5272727272727272,
+    "problems": 55
+  },
+  "highest_confidence_abstentions": [
+    {
+      "chosen_index": 4,
+      "chosen_probability": 0.5131508738355837,
+      "confidence": 0.5131508738355837,
+      "has_any_correct": false,
+      "n_candidates": 17,
+      "probability_margin": 0.15741242632231972,
+      "problem_id": "Ireland-Rosen|exercise_4_11",
+      "score_margin": 1.5383688807487488,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 6,
+      "chosen_probability": 0.4405987786131045,
+      "confidence": 0.4405987786131045,
+      "has_any_correct": false,
+      "n_candidates": 21,
+      "probability_margin": 0.31965946133170675,
+      "problem_id": "Munkres|exercise_13_4b1",
+      "score_margin": 4.151730895042419,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 3,
+      "chosen_probability": 0.39533285565602944,
+      "confidence": 0.39533285565602944,
+      "has_any_correct": false,
+      "n_candidates": 12,
+      "probability_margin": 0.07253531864190405,
+      "problem_id": "Ireland-Rosen|exercise_5_37",
+      "score_margin": 0.75189208984375,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 9,
+      "chosen_probability": 0.3805591212372207,
+      "confidence": 0.3805591212372207,
+      "has_any_correct": true,
+      "n_candidates": 16,
+      "probability_margin": 0.07939587682580962,
+      "problem_id": "Pugh|exercise_3_1",
+      "score_margin": 0.8437244892120361,
+      "selected_correct": true
+    },
+    {
+      "chosen_index": 0,
+      "chosen_probability": 0.3480560932687527,
+      "confidence": 0.3480560932687527,
+      "has_any_correct": false,
+      "n_candidates": 2,
+      "probability_margin": 0.15907729664160222,
+      "problem_id": "Axler|exercise_7_14",
+      "score_margin": 1.9727121591567993,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 1,
+      "chosen_probability": 0.34237218437561673,
+      "confidence": 0.34237218437561673,
+      "has_any_correct": false,
+      "n_candidates": 2,
+      "probability_margin": 0.2121511480634007,
+      "problem_id": "Dummit-Foote|exercise_4_5_28",
+      "score_margin": 2.9654173851013184,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 2,
+      "chosen_probability": 0.2762723453033884,
+      "confidence": 0.2762723453033884,
+      "has_any_correct": false,
+      "n_candidates": 5,
+      "probability_margin": 0.11141746367285324,
+      "problem_id": "Dummit-Foote|exercise_5_4_2",
+      "score_margin": 1.5692713260650635,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 0,
+      "chosen_probability": 0.25865987227457604,
+      "confidence": 0.25865987227457604,
+      "has_any_correct": true,
+      "n_candidates": 9,
+      "probability_margin": 0.12553358330227005,
+      "problem_id": "Axler|exercise_4_4",
+      "score_margin": 1.9526891708374023,
+      "selected_correct": true
+    },
+    {
+      "chosen_index": 0,
+      "chosen_probability": 0.2501290326946287,
+      "confidence": 0.2501290326946287,
+      "has_any_correct": false,
+      "n_candidates": 7,
+      "probability_margin": 0.129722645029,
+      "problem_id": "Munkres|exercise_20_2",
+      "score_margin": 2.1192827224731445,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 1,
+      "chosen_probability": 0.24783850739257376,
+      "confidence": 0.24783850739257376,
+      "has_any_correct": false,
+      "n_candidates": 2,
+      "probability_margin": 0.1406647608982664,
+      "problem_id": "Rudin|exercise_3_21",
+      "score_margin": 2.4026834964752197,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 5,
+      "chosen_probability": 0.17438692663245084,
+      "confidence": 0.17438692663245084,
+      "has_any_correct": true,
+      "n_candidates": 6,
+      "probability_margin": 0.03707932942925746,
+      "problem_id": "Axler|exercise_1_6",
+      "score_margin": 0.6733465194702148,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 2,
+      "chosen_probability": 0.12806065563120758,
+      "confidence": 0.12806065563120758,
+      "has_any_correct": false,
+      "n_candidates": 7,
+      "probability_margin": 0.006041710988954188,
+      "problem_id": "Herstein|exercise_5_4_3",
+      "score_margin": 0.1314234733581543,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 1,
+      "chosen_probability": 0.1150104570989819,
+      "confidence": 0.1150104570989819,
+      "has_any_correct": false,
+      "n_candidates": 2,
+      "probability_margin": 0.04557341974808474,
+      "problem_id": "Axler|exercise_1_7",
+      "score_margin": 1.3201546669006348,
+      "selected_correct": false
+    },
+    {
+      "chosen_index": 7,
+      "chosen_probability": 0.1062089716117875,
+      "confidence": 0.1062089716117875,
+      "has_any_correct": true,
+      "n_candidates": 9,
+      "probability_margin": 0.010946693944535582,
+      "problem_id": "Dummit-Foote|exercise_1_6_4",
+      "score_margin": 0.28778839111328125,
+      "selected_correct": true
+    },
+    {
+      "chosen_index": 0,
+      "chosen_probability": 0.09282547967225108,
+      "confidence": 0.09282547967225108,
+      "has_any_correct": false,
+      "n_candidates": 1,
+      "probability_margin": null,
+      "problem_id": "Herstein|exercise_2_8_15",
+      "score_margin": null,
+      "selected_correct": false
+    }
+  ],
+  "threshold": {
+    "accepted": 36,
+    "accuracy": 0.6666666666666666,
+    "accuracy_ci95": {
+      "high": 0.7978538117569468,
+      "low": 0.5033399787115652
+    },
+    "calibration_json": "results\\exp_inductive\\nlverifier_calibration.json",
+    "confidence_key": "chosen_probability",
+    "coverage": 0.6545454545454545,
+    "meets_target": true,
+    "source": "target_recommendation",
+    "target_accuracy": 0.5,
+    "threshold": 0.5412837391475258,
+    "thresholds_json": "results\\exp_inductive\\nlverifier_thresholds.json"
+  }
+}

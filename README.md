@@ -239,6 +239,27 @@ python -m beqcritic.nlverifier_thresholds \
   --output-json runs/myrun/nlverifier_thresholds.json
 ```
 
+Apply a recommended threshold to produce accepted selections, abstentions, and
+an audit report:
+
+```bash
+python -m beqcritic.nlverifier_abstain \
+  --scores runs/myrun/nlverifier_scores.jsonl \
+  --calibration-json runs/myrun/nlverifier_calibration.json \
+  --thresholds-json runs/myrun/nlverifier_thresholds.json \
+  --confidence-key chosen_probability \
+  --target-accuracy 0.5 \
+  --require-certified \
+  --output-accepted runs/myrun/sel_nlverifier_abstain_p50.jsonl \
+  --output-abstained runs/myrun/nlverifier_abstentions_p50.jsonl \
+  --output-md runs/myrun/nlverifier_abstention_policy_p50.md \
+  --output-json runs/myrun/nlverifier_abstention_policy_p50.json
+```
+
+On `results/exp_inductive`, the certified 50% Wilson-LCB threshold accepts
+`36/55` problems and raises accepted-selection accuracy from full-coverage
+`49.1%` to `66.7%` (`24/36`), while abstaining on `19/55`.
+
 Prefer new output filenames containing `nlverifier` (existing `runs/` artifacts keep their original names).
 
 ## More
