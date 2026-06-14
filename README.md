@@ -344,6 +344,57 @@ shows that the 12 accepted errors include 11 problems with no correct candidate
 available, and that the abstained bucket contains 3 correct selections plus 1
 miss with an available correct candidate.
 
+Regenerate the paper-ready NLVerifier rollup after refreshing any of the
+component reports. The rollup records each source path and SHA-256 digest so
+reported tables can be traced to exact checked-in result bytes:
+
+```bash
+python scripts/summarize_nlverifier_paper_metrics.py \
+  --results-dir results \
+  --output-json results/nlverifier_paper_metrics.json \
+  --output-md results/nlverifier_paper_metrics.md \
+  --output-tex paper/generated/nlverifier_main_table.tex
+```
+
+Run the full local reproducibility gate used by CI:
+
+```bash
+python scripts/verify_reproducibility.py
+```
+
+Write a machine-readable command report:
+
+```bash
+python scripts/verify_reproducibility.py --report-json runs/reproducibility_report.json
+```
+
+The JSON report records `schema_version`, planned and executed command counts,
+per-command return codes, elapsed times, and the first failed command when the
+gate stops early.
+
+CI uploads this report as an artifact for each supported Python version.
+
+Verify the checked-in rollup and generated table are current without rewriting
+them:
+
+```bash
+python scripts/summarize_nlverifier_paper_metrics.py \
+  --results-dir results \
+  --output-json results/nlverifier_paper_metrics.json \
+  --output-md results/nlverifier_paper_metrics.md \
+  --output-tex paper/generated/nlverifier_main_table.tex \
+  --check
+```
+
+Verify that the source hashes embedded in the checked-in rollup still match the
+current source result files:
+
+```bash
+python scripts/summarize_nlverifier_paper_metrics.py \
+  --output-json results/nlverifier_paper_metrics.json \
+  --verify-source-hashes
+```
+
 Prefer new output filenames containing `nlverifier` (existing `runs/` artifacts keep their original names).
 
 ## More

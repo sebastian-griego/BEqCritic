@@ -1,4 +1,4 @@
-.PHONY: setup dev smoke quickstart eval results test
+.PHONY: setup dev smoke quickstart eval results test verify
 
 VENV ?= .venv
 PYTHON ?= python
@@ -30,3 +30,6 @@ results: quickstart
 
 test: dev
 	$(PY) -m pytest -q
+
+verify: dev
+	$(PY) scripts/verify_reproducibility.py
