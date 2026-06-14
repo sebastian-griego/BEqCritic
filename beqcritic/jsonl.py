@@ -81,6 +81,37 @@ def matching_problem_ids(
     return common
 
 
+def matching_problem_ids_many(
+    named_maps: Mapping[str, Mapping[str, Any]],
+    *,
+    allow_partial_overlap: bool = False,
+) -> list[str]:
+    items = [(str(name), mapping) for name, mapping in named_maps.items()]
+    if not items:
+        raise ValueError("at least one problem_id map is required")
+
+    id_sets = {name: set(mapping) for name, mapping in items}
+    common = sorted(set.intersection(*(ids for _name, ids in id_sets.items())))
+    names = ", ".join(name for name, _mapping in items)
+    if not common:
+        raise ValueError(f"no overlapping problem_ids across {names}")
+    if allow_partial_overlap:
+        return common
+
+    union_ids = set.union(*(ids for _name, ids in id_sets.items()))
+    parts = []
+    for name, ids in id_sets.items():
+        missing = sorted(union_ids - ids)
+        if missing:
+            parts.append(
+                f"{len(missing)} problem_ids missing from {name}: "
+                f"{_preview_ids(missing)}"
+            )
+    if parts:
+        raise ValueError(f"problem_id mismatch across {names}; " + "; ".join(parts))
+    return common
+
+
 def iter_jsonl_objects(
     path: str | Path,
     *,
@@ -117,4 +148,5 @@ __all__ = [
     "load_jsonl_map_by_problem_id",
     "load_jsonl_objects",
     "matching_problem_ids",
+    "matching_problem_ids_many",
 ]

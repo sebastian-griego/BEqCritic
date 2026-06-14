@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .jsonl import load_jsonl_map_by_problem_id
+from .jsonl import load_jsonl_map_by_problem_id, matching_problem_ids_many
 
 
 @dataclass(frozen=True)
@@ -65,6 +65,11 @@ def main() -> None:
     p.add_argument("--b-name", type=str, default="B")
     p.add_argument("--max-problems", type=int, default=0, help="Limit number of problems (0 = no limit).")
     p.add_argument(
+        "--allow-partial-overlap",
+        action="store_true",
+        help="Evaluate only overlapping candidate/selection IDs instead of failing on mismatches.",
+    )
+    p.add_argument(
         "--timing",
         type=str,
         default="",
@@ -78,11 +83,16 @@ def main() -> None:
     sel_a = _load_jsonl_map(args.selections_a)
     sel_b = _load_jsonl_map(args.selections_b)
 
-    pids = sorted(set(cand.keys()) & set(sel_a.keys()) & set(sel_b.keys()))
+    pids = matching_problem_ids_many(
+        {
+            "candidates": cand,
+            f"selections_a:{args.a_name}": sel_a,
+            f"selections_b:{args.b_name}": sel_b,
+        },
+        allow_partial_overlap=bool(args.allow_partial_overlap),
+    )
     if int(args.max_problems) > 0:
         pids = pids[: int(args.max_problems)]
-    if not pids:
-        raise SystemExit("No overlapping problem_ids across candidates and both selection files.")
 
     probs: list[_Problem] = []
     total_pairs = 0

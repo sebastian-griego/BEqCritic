@@ -6,6 +6,7 @@ from beqcritic.jsonl import (
     load_jsonl_map_by_problem_id,
     load_jsonl_objects,
     matching_problem_ids,
+    matching_problem_ids_many,
 )
 
 
@@ -98,5 +99,33 @@ def test_matching_problem_ids_can_return_partial_overlap():
         {"p1": {}, "right_only": {}},
         left_name="left",
         right_name="right",
+        allow_partial_overlap=True,
+    ) == ["p1"]
+
+
+def test_matching_problem_ids_many_rejects_unmatched_ids_by_default():
+    with pytest.raises(ValueError) as excinfo:
+        matching_problem_ids_many(
+            {
+                "candidates": {"p1": {}, "candidate_only": {}},
+                "selection_a": {"p1": {}, "a_only": {}},
+                "selection_b": {"p1": {}, "b_only": {}},
+            }
+        )
+
+    message = str(excinfo.value)
+    assert "problem_id mismatch across candidates, selection_a, selection_b" in message
+    assert "candidate_only" in message
+    assert "a_only" in message
+    assert "b_only" in message
+
+
+def test_matching_problem_ids_many_can_return_partial_overlap():
+    assert matching_problem_ids_many(
+        {
+            "candidates": {"p1": {}, "candidate_only": {}},
+            "selection_a": {"p1": {}, "a_only": {}},
+            "selection_b": {"p1": {}, "b_only": {}},
+        },
         allow_partial_overlap=True,
     ) == ["p1"]

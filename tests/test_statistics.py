@@ -5,6 +5,8 @@ from math import isclose
 import subprocess
 import sys
 
+import pytest
+
 from beqcritic.compare_selection_methods import compare_files, format_markdown
 from beqcritic.statistics import (
     exact_two_sided_sign_test,
@@ -176,3 +178,88 @@ def test_compare_selection_methods_rejects_duplicate_problem_ids(tmp_path):
     assert proc.returncode != 0
     assert "duplicate problem_id 'p1'" in proc.stderr
     assert f"{candidates}:2" in proc.stderr
+
+
+def test_compare_selection_methods_rejects_unmatched_problem_ids(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections_a = tmp_path / "a.jsonl"
+    selections_b = tmp_path / "b.jsonl"
+    _write_jsonl(
+        candidates,
+        [
+            {"problem_id": "p1", "candidates": ["a"], "labels": [1]},
+            {"problem_id": "candidate_only", "candidates": ["a"], "labels": [1]},
+        ],
+    )
+    _write_jsonl(
+        selections_a,
+        [
+            {"problem_id": "p1", "chosen_index": 0},
+            {"problem_id": "a_only", "chosen_index": 0},
+        ],
+    )
+    _write_jsonl(
+        selections_b,
+        [
+            {"problem_id": "p1", "chosen_index": 0},
+            {"problem_id": "b_only", "chosen_index": 0},
+        ],
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        compare_files(
+            candidates_path=candidates,
+            selections_a_path=selections_a,
+            selections_b_path=selections_b,
+            a_name="baseline",
+            b_name="critic",
+        )
+
+    message = str(excinfo.value)
+    assert "problem_id mismatch across candidates" in message
+    assert "candidate_only" in message
+    assert "a_only" in message
+    assert "b_only" in message
+
+
+def test_compare_selection_methods_can_explicitly_allow_partial_overlap(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections_a = tmp_path / "a.jsonl"
+    selections_b = tmp_path / "b.jsonl"
+    _write_jsonl(
+        candidates,
+        [
+            {"problem_id": "p1", "candidates": ["a"], "labels": [1]},
+            {"problem_id": "candidate_only", "candidates": ["a"], "labels": [1]},
+        ],
+    )
+    _write_jsonl(
+        selections_a,
+        [
+            {"problem_id": "p1", "chosen_index": 0},
+            {"problem_id": "a_only", "chosen_index": 0},
+        ],
+    )
+    _write_jsonl(
+        selections_b,
+        [
+            {"problem_id": "p1", "chosen_index": 0},
+            {"problem_id": "b_only", "chosen_index": 0},
+        ],
+    )
+
+    summary = compare_files(
+        candidates_path=candidates,
+        selections_a_path=selections_a,
+        selections_b_path=selections_b,
+        allow_partial_overlap=True,
+    )
+
+    assert summary["dataset"]["problems"] == 1
+
+
+def _write_jsonl(path, rows):
+    path.write_text(
+        "".join(json.dumps(row) + "\n" for row in rows),
+        encoding="utf-8",
+    )
