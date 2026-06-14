@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from scripts.summarize_nlverifier_paper_metrics import (
     _source_hash_mismatches,
     _stale_outputs,
@@ -55,6 +57,18 @@ def test_nlverifier_paper_metrics_summary_merges_source_artifacts(tmp_path):
     assert "Candidate-only critic (best variant)" in latex
     assert r"\resizebox{\textwidth}{!}{%" in latex
     assert r"\textbf{3/5 (60.0\%)}" in latex
+
+
+def test_nlverifier_paper_metrics_rejects_inconsistent_denominators(tmp_path):
+    results = tmp_path / "results"
+    _write_summary_inputs(results)
+    _write_json(
+        results / "exp_inductive" / "metrics_random.json",
+        _metric("random", 6, 4, 1),
+    )
+
+    with pytest.raises(ValueError, match="inductive_random.problems"):
+        build_summary(results)
 
 
 def test_paper_metrics_check_cli_fails_without_rewriting_stale_outputs(tmp_path):

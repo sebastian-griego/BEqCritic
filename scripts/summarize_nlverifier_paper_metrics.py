@@ -132,6 +132,13 @@ def build_summary(
     }
 
     settings = dict(ablation["settings"])
+    _validate_source_consistency(
+        settings=settings,
+        baselines=baselines,
+        confidence=confidence,
+        abstention=abstention,
+        leaderboard=leaderboard,
+    )
     proofnetverif = {
         split: {
             key: settings[key]
@@ -392,6 +399,76 @@ def _main_table_summary(
             }
         )
     return {"splits": split_meta, "rows": rows}
+
+
+def _validate_source_consistency(
+    *,
+    settings: dict[str, Any],
+    baselines: dict[str, dict[str, Any]],
+    confidence: dict[str, Any],
+    abstention: dict[str, Any],
+    leaderboard: dict[str, Any],
+) -> None:
+    for split, rows in SPLITS.items():
+        first_key = rows[0][1]
+        split_problems = int(settings[first_key]["problems"])
+        split_has_any = _has_any_count(settings[first_key])
+        for _, key in rows:
+            row = settings[key]
+            _require_equal(f"{key}.problems", int(row["problems"]), split_problems)
+            _require_equal(f"{key}.has_any_correct", _has_any_count(row), split_has_any)
+        for name, row in baselines[split].items():
+            _require_equal(
+                f"{split}_{name}.problems",
+                int(row["problems"]),
+                split_problems,
+            )
+            _require_equal(
+                f"{split}_{name}.has_any_correct",
+                _has_any_count(row),
+                split_has_any,
+            )
+
+    inductive_problems = int(settings["inductive_nl"]["problems"])
+    _require_equal(
+        "confidence.dataset.problems",
+        int(confidence["dataset"]["problems"]),
+        inductive_problems,
+    )
+    _require_equal(
+        "leaderboard.dataset.problems",
+        int(leaderboard["dataset"]["problems"]),
+        inductive_problems,
+    )
+    _require_equal(
+        "abstention.accepted_plus_abstained",
+        int(abstention["accepted"]) + int(abstention["abstained"]),
+        inductive_problems,
+    )
+    _require_equal(
+        "abstention.coverage.total",
+        int(abstention["coverage"]["total"]),
+        inductive_problems,
+    )
+    _require_equal(
+        "abstention.coverage.successes",
+        int(abstention["coverage"]["successes"]),
+        int(abstention["accepted"]),
+    )
+
+
+def _has_any_count(row: dict[str, Any]) -> int:
+    return int(
+        row.get(
+            "has_any_correct",
+            _pct_to_count(float(row["has_any_correct_pct"]), int(row["problems"])),
+        )
+    )
+
+
+def _require_equal(label: str, actual: int, expected: int) -> None:
+    if actual != expected:
+        raise ValueError(f"Inconsistent source artifact {label}: {actual} != {expected}")
 
 
 def _split_meta(rows: dict[str, Any]) -> dict[str, int]:
