@@ -362,10 +362,22 @@ Run the full local reproducibility gate used by CI:
 python scripts/verify_reproducibility.py
 ```
 
+With `make` available, the equivalent shortcut is:
+
+```bash
+make verify
+```
+
 Write a machine-readable command report:
 
 ```bash
 python scripts/verify_reproducibility.py --report-json runs/reproducibility_report.json
+```
+
+With `make` available:
+
+```bash
+make verify-report
 ```
 
 The JSON report records `schema_version`, planned and executed command counts,
@@ -386,6 +398,12 @@ python scripts/summarize_nlverifier_paper_metrics.py \
   --check
 ```
 
+With `make` available:
+
+```bash
+make paper-check
+```
+
 Verify that the source hashes embedded in the checked-in rollup still match the
 current source result files:
 
@@ -393,6 +411,12 @@ current source result files:
 python scripts/summarize_nlverifier_paper_metrics.py \
   --output-json results/nlverifier_paper_metrics.json \
   --verify-source-hashes
+```
+
+With `make` available:
+
+```bash
+make source-hashes
 ```
 
 Prefer new output filenames containing `nlverifier` (existing `runs/` artifacts keep their original names).
