@@ -5,6 +5,7 @@ from beqcritic.jsonl import (
     load_jsonl_map_by_key,
     load_jsonl_map_by_problem_id,
     load_jsonl_objects,
+    matching_problem_ids,
 )
 
 
@@ -74,3 +75,28 @@ def test_load_jsonl_map_by_problem_id_rejects_duplicates(tmp_path):
     assert f"{path}:3" in message
     assert "first seen at line 1" in message
     assert "duplicate problem_id 'p1'" in message
+
+
+def test_matching_problem_ids_rejects_unmatched_ids_by_default():
+    with pytest.raises(ValueError) as excinfo:
+        matching_problem_ids(
+            {"p1": {}, "left_only": {}},
+            {"p1": {}, "right_only": {}},
+            left_name="left",
+            right_name="right",
+        )
+
+    message = str(excinfo.value)
+    assert "problem_id mismatch across left and right" in message
+    assert "left_only" in message
+    assert "right_only" in message
+
+
+def test_matching_problem_ids_can_return_partial_overlap():
+    assert matching_problem_ids(
+        {"p1": {}, "left_only": {}},
+        {"p1": {}, "right_only": {}},
+        left_name="left",
+        right_name="right",
+        allow_partial_overlap=True,
+    ) == ["p1"]

@@ -12,11 +12,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .jsonl import load_jsonl_map_by_problem_id
+from .jsonl import load_jsonl_map_by_problem_id, matching_problem_ids
 from .nlverifier_selective import (
     SelectiveExample,
     load_selective_examples,
-    matching_problem_ids,
 )
 from .statistics import proportion_summary
 

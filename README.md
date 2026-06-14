@@ -234,6 +234,11 @@ python -m beqcritic.nlverifier_diagnostics \
   --failures-jsonl runs/myrun/nlverifier_failures.jsonl
 ```
 
+NLVerifier reports that join separate candidate and selection JSONL files require
+the `problem_id` sets to match exactly by default. Pass
+`--allow-partial-overlap` only for ad hoc subset/debug runs where dropping
+unmatched rows is intentional.
+
 Check whether emitted scores are calibrated as probabilities and fit a scalar
 temperature for reporting:
 
@@ -328,10 +333,6 @@ python -m beqcritic.nlverifier_abstention_cases \
   --output-json runs/myrun/nlverifier_abstention_cases_p50.json \
   --cases-jsonl runs/myrun/nlverifier_abstention_cases_p50.jsonl
 ```
-
-When these reports consume separate candidate and selection JSONL files, the
-problem-id sets must match exactly by default. Pass `--allow-partial-overlap`
-only for ad hoc subset/debug runs where dropping unmatched rows is intentional.
 
 On `results/exp_inductive`, the certified 50% Wilson-LCB threshold accepts
 `36/55` problems and raises accepted-selection accuracy from full-coverage

@@ -12,8 +12,9 @@ import json
 from dataclasses import dataclass
 from math import exp, isfinite
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
+from .jsonl import matching_problem_ids
 from .nlverifier_diagnostics import load_jsonl_map
 from .schema import validate_grouped_candidates
 
@@ -108,43 +109,6 @@ def load_selective_examples(
             for problem_id in problem_ids
         ]
     return [example for example in examples if example.n_candidates > 0]
-
-
-def matching_problem_ids(
-    left: Mapping[str, Any],
-    right: Mapping[str, Any],
-    *,
-    left_name: str,
-    right_name: str,
-    allow_partial_overlap: bool = False,
-) -> list[str]:
-    left_ids = set(left)
-    right_ids = set(right)
-    common = sorted(left_ids & right_ids)
-    if not common:
-        raise ValueError(f"no overlapping problem_ids across {left_name} and {right_name}")
-    if allow_partial_overlap:
-        return common
-
-    left_only = sorted(left_ids - right_ids)
-    right_only = sorted(right_ids - left_ids)
-    if left_only or right_only:
-        parts = []
-        if left_only:
-            parts.append(
-                f"{len(left_only)} {left_name} problem_ids missing from {right_name}: "
-                f"{_preview_ids(left_only)}"
-            )
-        if right_only:
-            parts.append(
-                f"{len(right_only)} {right_name} problem_ids missing from {left_name}: "
-                f"{_preview_ids(right_only)}"
-            )
-        raise ValueError(
-            f"problem_id mismatch across {left_name} and {right_name}; "
-            + "; ".join(parts)
-        )
-    return common
 
 
 def analyze_selective_risk(
@@ -404,13 +368,6 @@ def _parse_coverages(raw: str) -> list[float]:
         if text:
             out.append(float(text))
     return out or [0.25, 0.5, 0.75, 1.0]
-
-
-def _preview_ids(ids: list[str], limit: int = 5) -> str:
-    shown = ", ".join(repr(item) for item in ids[:limit])
-    if len(ids) > limit:
-        shown += f", ... ({len(ids)} total)"
-    return shown
 
 
 def main() -> None:

@@ -15,7 +15,7 @@ from math import isfinite, log2
 from pathlib import Path
 from typing import Any, Iterable
 
-from .jsonl import load_jsonl_map_by_problem_id
+from .jsonl import load_jsonl_map_by_problem_id, matching_problem_ids
 from .schema import validate_grouped_candidates
 from .statistics import proportion_summary
 
@@ -61,14 +61,19 @@ def analyze_scores(
     top_ks: Iterable[int] = (1, 2, 5, 10),
     minimize: bool = False,
     failure_top_k: int = 5,
+    allow_partial_overlap: bool = False,
 ) -> dict[str, Any]:
     """Build a JSON-serializable NLVerifier score diagnostics summary."""
 
     candidate_rows = load_jsonl_map(candidates_path)
     selection_rows = load_jsonl_map(selections_path)
-    problem_ids = sorted(set(candidate_rows) & set(selection_rows))
-    if not problem_ids:
-        raise ValueError("no overlapping problem_ids across candidates and selections")
+    problem_ids = matching_problem_ids(
+        candidate_rows,
+        selection_rows,
+        left_name="candidates",
+        right_name="selections",
+        allow_partial_overlap=allow_partial_overlap,
+    )
 
     top_ks_clean = sorted({max(1, int(k)) for k in top_ks})
     selected_success: list[bool] = []
@@ -430,6 +435,11 @@ def main() -> None:
     parser.add_argument("--chosen-index-key", default="chosen_index")
     parser.add_argument("--top-ks", default="1,2,5,10")
     parser.add_argument("--minimize", action="store_true", help="Treat lower scores as better.")
+    parser.add_argument(
+        "--allow-partial-overlap",
+        action="store_true",
+        help="Analyze only overlapping candidates/selections IDs instead of failing on mismatches.",
+    )
     parser.add_argument("--failure-top-k", type=int, default=10)
     parser.add_argument("--output-json")
     parser.add_argument("--output-md")
@@ -444,6 +454,7 @@ def main() -> None:
         top_ks=_parse_top_ks(str(args.top_ks)),
         minimize=bool(args.minimize),
         failure_top_k=int(args.failure_top_k),
+        allow_partial_overlap=bool(args.allow_partial_overlap),
     )
     markdown = format_markdown(summary)
     print(markdown)

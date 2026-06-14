@@ -5,6 +5,8 @@ import subprocess
 import sys
 from math import isclose
 
+import pytest
+
 from beqcritic.nlverifier_diagnostics import analyze_scores, format_markdown
 
 
@@ -56,6 +58,61 @@ def test_analyze_scores_reports_ranking_and_failures(tmp_path):
     assert summary["failures"]["top"][0]["problem_id"] == "p2"
     assert summary["failures"]["top"][0]["best_correct_rank"] == 2
     assert "NLVerifier score diagnostics" in format_markdown(summary)
+
+
+def test_analyze_scores_rejects_unmatched_candidate_selection_ids(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections = tmp_path / "selections.jsonl"
+    _write_jsonl(
+        candidates,
+        [
+            {"problem_id": "p1", "candidates": ["a"], "labels": [1]},
+            {"problem_id": "candidate_only", "candidates": ["a"], "labels": [1]},
+        ],
+    )
+    _write_jsonl(
+        selections,
+        [
+            {"problem_id": "p1", "chosen_index": 0, "scores": [1.0]},
+            {"problem_id": "selection_only", "chosen_index": 0, "scores": [1.0]},
+        ],
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        analyze_scores(candidates_path=candidates, selections_path=selections)
+
+    message = str(excinfo.value)
+    assert "problem_id mismatch across candidates and selections" in message
+    assert "candidate_only" in message
+    assert "selection_only" in message
+
+
+def test_analyze_scores_allows_explicit_partial_overlap(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections = tmp_path / "selections.jsonl"
+    _write_jsonl(
+        candidates,
+        [
+            {"problem_id": "p1", "candidates": ["a"], "labels": [1]},
+            {"problem_id": "candidate_only", "candidates": ["a"], "labels": [1]},
+        ],
+    )
+    _write_jsonl(
+        selections,
+        [
+            {"problem_id": "p1", "chosen_index": 0, "scores": [1.0]},
+            {"problem_id": "selection_only", "chosen_index": 0, "scores": [1.0]},
+        ],
+    )
+
+    summary = analyze_scores(
+        candidates_path=candidates,
+        selections_path=selections,
+        allow_partial_overlap=True,
+    )
+
+    assert summary["dataset"]["problems"] == 1
+    assert summary["dataset"]["overlap_problem_ids"] == 1
 
 
 def test_nlverifier_diagnostics_cli_writes_outputs(tmp_path):
