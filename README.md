@@ -117,6 +117,21 @@ python -m beqcritic.compare_selection_methods \
   --output-md runs/myrun/selection_comparison.md
 ```
 
+Build a multi-method leaderboard with pairwise sign tests and deterministic
+`first` / `shortest` baselines:
+
+```bash
+python -m beqcritic.selection_leaderboard \
+  --candidates runs/myrun/proofnetverif_test_candidates.jsonl \
+  --include-baseline first \
+  --include-baseline shortest \
+  --selection self_bleu=runs/myrun/proofnetverif_test_selection_selfbleu.jsonl \
+  --selection critic=runs/myrun/proofnetverif_test_selection_beqcritic.jsonl \
+  --selection nlverifier=runs/myrun/proofnetverif_test_selection_nlverifier.jsonl \
+  --output-md runs/myrun/selection_leaderboard.md \
+  --output-json runs/myrun/selection_leaderboard.json
+```
+
 For reproducible error analysis, ask the selector to write a compact audit JSONL alongside the selections:
 
 ```bash
@@ -297,6 +312,12 @@ On `results/exp_inductive`, the certified 50% Wilson-LCB threshold accepts
 bucket's oracle ceiling is `25/36`, so only one accepted problem still has a
 correct candidate that NLVerifier missed. The abstention-aware evaluator writes
 the same operational split to `results/exp_inductive/metrics_nlverifier_abstain_p50.json`.
+The multi-method leaderboard in `results/exp_inductive/selection_leaderboard.md`
+shows NLVerifier at `27/55` selected correct, ahead of `critic` and `hybrid`
+at `18/55`, `self_bleu` at `17/55`, `first` at `13/55`, and `shortest` at
+`6/55`; paired sign tests have NLVerifier beating `critic` and `hybrid` by
+`9` wins to `0` losses (`p = 0.00390625`) and `self_bleu` by `10` to `0`
+(`p = 0.00195312`).
 The leave-one-out stability report in
 `results/exp_inductive/nlverifier_threshold_stability_p50.md` finds three
 nearby recommended thresholds (`0.5132`, `0.5413`, `0.6006`); although the exact
