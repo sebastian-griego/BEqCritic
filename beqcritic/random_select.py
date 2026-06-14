@@ -18,6 +18,8 @@ import hashlib
 import json
 import random
 
+from .schema import load_grouped_candidates_jsonl
+
 
 def _stable_index(pid: str, n: int, seed: int) -> int:
     if n <= 0:
@@ -30,29 +32,20 @@ def _stable_index(pid: str, n: int, seed: int) -> int:
     return int(rng.randrange(n))
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--input", type=str, required=True)
     p.add_argument("--output", type=str, required=True)
     p.add_argument("--seed", type=int, default=0)
-    args = p.parse_args()
+    args = p.parse_args(argv)
 
     seed = int(args.seed)
+    rows = load_grouped_candidates_jsonl(args.input, require_non_empty=True)
 
-    with open(args.input, "r", encoding="utf-8") as fin, open(args.output, "w", encoding="utf-8") as fout:
-        for line in fin:
-            if not line.strip():
-                continue
-            obj = json.loads(line)
-            pid = obj.get("problem_id")
-            candidates = obj.get("candidates") or []
-            if pid is None:
-                raise ValueError(f"Missing problem_id in input row: {obj}")
-            if not isinstance(candidates, list):
-                raise ValueError(f"Expected candidates list for problem_id={pid!r}")
-            if not candidates:
-                continue
-
+    with open(args.output, "w", encoding="utf-8") as fout:
+        for row in rows:
+            pid = row.problem_id
+            candidates = row.candidates
             idx = _stable_index(str(pid), len(candidates), seed)
             out = {
                 "problem_id": str(pid),

@@ -95,9 +95,16 @@ def _load_input_rows(
     labels_key: str = "labels",
 ) -> list[dict]:
     rows: list[dict] = []
+    first_lines: dict[str, int] = {}
     for line_no, obj in iter_jsonl_objects(path):
         if problem_id_key not in obj:
             raise ValueError(f"Missing {problem_id_key!r} at {Path(path)}:{line_no}")
+        problem_id = str(obj.get(problem_id_key))
+        if problem_id in first_lines:
+            raise ValueError(
+                f"duplicate {problem_id_key} {problem_id!r} at {Path(path)}:{line_no}; "
+                f"first seen at line {first_lines[problem_id]}"
+            )
         candidates = obj.get(candidates_key)
         if not isinstance(candidates, list):
             raise ValueError(
@@ -132,6 +139,7 @@ def _load_input_rows(
                     f"{candidates_key}={len(candidates)} {labels_key}={len(labels)}"
                 )
         rows.append(obj)
+        first_lines[problem_id] = line_no
     return rows
 
 

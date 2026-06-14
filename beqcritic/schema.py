@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
+
+from .jsonl import iter_jsonl_objects
 
 
 class SchemaError(ValueError):
@@ -70,4 +73,33 @@ def validate_grouped_candidates(obj: dict[str, Any], *, require_labels: bool = F
         raise SchemaError(f"labels[{i}] must be 0/1 (int/bool), got {type(v).__name__}")
 
     return GroupedCandidates(problem_id=problem_id, candidates=cand_out, labels=labels_out)
+
+
+def load_grouped_candidates_jsonl(
+    path: str | Path,
+    *,
+    require_labels: bool = False,
+    require_non_empty: bool = True,
+) -> list[GroupedCandidates]:
+    path = Path(path)
+    rows: list[GroupedCandidates] = []
+    first_lines: dict[str, int] = {}
+    for line_no, obj in iter_jsonl_objects(path, encoding="utf-8-sig"):
+        try:
+            grouped = validate_grouped_candidates(obj, require_labels=require_labels)
+        except SchemaError as exc:
+            raise SchemaError(f"{path}:{line_no}: {exc}") from exc
+        if require_non_empty and not grouped.candidates:
+            raise SchemaError(
+                f"{path}:{line_no}: candidates must be non-empty "
+                f"for problem_id={grouped.problem_id!r}"
+            )
+        if grouped.problem_id in first_lines:
+            raise SchemaError(
+                f"duplicate problem_id {grouped.problem_id!r} at {path}:{line_no}; "
+                f"first seen at line {first_lines[grouped.problem_id]}"
+            )
+        first_lines[grouped.problem_id] = line_no
+        rows.append(grouped)
+    return rows
 

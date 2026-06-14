@@ -162,3 +162,33 @@ def test_score_and_select_rejects_bad_candidate_schema_before_writing_outputs(tm
     assert f"{candidates}:1" in str(excinfo.value)
     assert "Length mismatch" in str(excinfo.value)
     assert not selections.exists()
+
+
+def test_score_and_select_rejects_duplicate_problem_ids_before_writing_outputs(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections = tmp_path / "selections.jsonl"
+    candidates.write_text(
+        json.dumps({"problem_id": "p1", "candidates": ["theorem a : True"]})
+        + "\n"
+        + json.dumps({"problem_id": "p1", "candidates": ["theorem b : True"]})
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        score_and_select.main(
+            [
+                "--similarity",
+                "bleu",
+                "--input",
+                str(candidates),
+                "--output",
+                str(selections),
+            ]
+        )
+
+    message = str(excinfo.value)
+    assert f"{candidates}:2" in message
+    assert "duplicate problem_id 'p1'" in message
+    assert "first seen at line 1" in message
+    assert not selections.exists()
