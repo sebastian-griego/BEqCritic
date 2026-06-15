@@ -82,6 +82,15 @@ def run_verification(
     return 0, report
 
 
+def write_report(path: Path, report: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(report, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -108,8 +117,7 @@ def main() -> int:
 
     if args.report_json:
         report_path = Path(args.report_json)
-        report_path.parent.mkdir(parents=True, exist_ok=True)
-        report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        write_report(report_path, report)
         print(f"Wrote {report_path}")
 
     return returncode

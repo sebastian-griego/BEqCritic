@@ -1,6 +1,10 @@
 from types import SimpleNamespace
 
-from scripts.verify_reproducibility import run_verification, verification_commands
+from scripts.verify_reproducibility import (
+    run_verification,
+    verification_commands,
+    write_report,
+)
 
 
 def test_verification_commands_cover_reproducibility_gate():
@@ -58,3 +62,13 @@ def test_run_verification_stops_and_reports_first_failure(tmp_path):
     assert report["executed_command_count"] == 2
     assert report["failed_command"] == ["python", "bad"]
     assert [row["command"] for row in report["commands"]] == [["python", "ok"], ["python", "bad"]]
+
+
+def test_write_report_uses_lf_newlines(tmp_path):
+    path = tmp_path / "nested" / "report.json"
+
+    write_report(path, {"schema_version": 1, "status": "passed"})
+
+    report_bytes = path.read_bytes()
+    assert report_bytes.endswith(b"\n")
+    assert b"\r\n" not in report_bytes

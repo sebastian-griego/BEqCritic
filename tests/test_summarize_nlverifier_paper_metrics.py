@@ -11,6 +11,7 @@ from scripts.summarize_nlverifier_paper_metrics import (
     _file_sha256,
     _source_hash_mismatches,
     _stale_outputs,
+    _write_text,
     build_summary,
     format_latex_main_table,
     format_markdown,
@@ -164,6 +165,9 @@ def test_paper_metrics_verify_source_hashes_cli_detects_changed_source(tmp_path)
         cwd=ROOT,
         check=True,
     )
+    assert b"\r\n" not in output_json.read_bytes()
+    assert b"\r\n" not in output_md.read_bytes()
+    assert b"\r\n" not in output_tex.read_bytes()
     subprocess.run(
         [
             sys.executable,
@@ -220,6 +224,14 @@ def test_source_hashes_are_stable_across_line_endings(tmp_path):
     artifact.write_bytes(b'{"value": 1}\r\n')
 
     assert _file_sha256(artifact) == lf_hash
+
+
+def test_write_text_uses_lf_newlines(tmp_path):
+    path = tmp_path / "paper_metrics.md"
+
+    _write_text(path, "alpha\nbeta\n")
+
+    assert path.read_bytes() == b"alpha\nbeta\n"
 
 
 def test_checked_in_nlverifier_paper_artifacts_are_current(monkeypatch):

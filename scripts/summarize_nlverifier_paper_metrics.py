@@ -1049,6 +1049,10 @@ def _display_hash_mismatches(mismatches: list[dict[str, str]]) -> str:
     )
 
 
+def _write_text(path: Path, text: str) -> None:
+    path.write_text(text, encoding="utf-8", newline="\n")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results-dir", default="results")
@@ -1111,9 +1115,9 @@ def main() -> None:
     output_json.parent.mkdir(parents=True, exist_ok=True)
     output_md.parent.mkdir(parents=True, exist_ok=True)
     output_tex.parent.mkdir(parents=True, exist_ok=True)
-    output_json.write_text(json_text, encoding="utf-8")
-    output_md.write_text(markdown, encoding="utf-8")
-    output_tex.write_text(latex, encoding="utf-8")
+    _write_text(output_json, json_text)
+    _write_text(output_md, markdown)
+    _write_text(output_tex, latex)
     print(f"Wrote {output_json}, {output_md}, and {output_tex}")
 
 

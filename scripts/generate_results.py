@@ -195,7 +195,7 @@ def main() -> None:
         lines.append(f"Paired wins (selected_correct): nlverifier vs beqcritic = {win}/{lose}/{tie} (n={n})")
         lines.append("")
 
-    out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    out_path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     print(f"Wrote {out_path}")
 
 
