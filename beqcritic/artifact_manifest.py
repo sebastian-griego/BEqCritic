@@ -9,7 +9,9 @@ from typing import Any
 
 
 MANIFEST_NAME = "manifest.json"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+LEGACY_SCHEMA_VERSION = 1
+SUPPORTED_SCHEMA_VERSIONS = {LEGACY_SCHEMA_VERSION, SCHEMA_VERSION}
 
 
 class ManifestError(ValueError):
@@ -52,14 +54,19 @@ def verify_manifest(run_dir: str | Path, *, allow_extra: bool = False) -> dict[s
 
     if not isinstance(manifest, dict):
         raise ManifestError("manifest must be a JSON object")
-    if manifest.get("schema_version") != SCHEMA_VERSION:
+    schema_version = manifest.get("schema_version")
+    if (
+        not isinstance(schema_version, int)
+        or isinstance(schema_version, bool)
+        or schema_version not in SUPPORTED_SCHEMA_VERSIONS
+    ):
         raise ManifestError(
-            f"unsupported manifest schema_version: {manifest.get('schema_version')!r}"
+            f"unsupported manifest schema_version: {schema_version!r}"
         )
     run_id = manifest.get("run_id")
-    if not isinstance(run_id, str) or not run_id:
+    if schema_version >= SCHEMA_VERSION and (not isinstance(run_id, str) or not run_id):
         raise ManifestError("manifest run_id must be a non-empty string")
-    if run_id != run_dir.name:
+    if run_id is not None and run_id != run_dir.name:
         raise ManifestError(
             f"manifest run_id {run_id!r} does not match run directory {run_dir.name!r}"
         )
@@ -120,18 +127,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"manifest error: {exc}", file=sys.stderr)
         return 1
 
-    print(
-        json.dumps(
-            {
-                "action": action,
-                "run_dir": str(Path(args.run_dir)).replace("\\", "/"),
-                "run_id": str(manifest["run_id"]),
-                "artifact_count": int(manifest["artifact_count"]),
-            },
-            indent=2,
-            sort_keys=True,
-        )
-    )
+    result = {
+        "action": action,
+        "run_dir": str(Path(args.run_dir)).replace("\\", "/"),
+        "artifact_count": int(manifest["artifact_count"]),
+    }
+    if manifest.get("run_id"):
+        result["run_id"] = str(manifest["run_id"])
+    print(json.dumps(result, indent=2, sort_keys=True))
     return 0
 
 

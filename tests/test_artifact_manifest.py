@@ -22,6 +22,7 @@ def test_write_manifest_hashes_nested_run_artifacts(tmp_path):
     manifest_bytes = (run_dir / "manifest.json").read_bytes()
     assert manifest_bytes.endswith(b"\n")
     assert b"\r\n" not in manifest_bytes
+    assert manifest["schema_version"] == 2
 
     paths = {entry["path"] for entry in manifest["artifacts"]}
     assert paths == {"logs/manifest.json", "logs/train.log", "smoke.json"}
@@ -89,13 +90,47 @@ def test_verify_manifest_rejects_mismatched_run_id(tmp_path):
         verify_manifest(run_dir)
 
 
+def test_verify_manifest_accepts_legacy_v1_without_run_id(tmp_path):
+    run_dir = tmp_path / "quickstart"
+    run_dir.mkdir()
+    (run_dir / "ab_metrics.json").write_text("{}\n", encoding="utf-8")
+    manifest = write_manifest(run_dir)
+    manifest["schema_version"] = 1
+    del manifest["run_id"]
+    (run_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    verified = verify_manifest(run_dir)
+
+    assert verified["schema_version"] == 1
+    assert "run_id" not in verified
+
+
+def test_verify_manifest_rejects_legacy_v1_mismatched_run_id(tmp_path):
+    run_dir = tmp_path / "quickstart"
+    run_dir.mkdir()
+    (run_dir / "ab_metrics.json").write_text("{}\n", encoding="utf-8")
+    manifest = write_manifest(run_dir)
+    manifest["schema_version"] = 1
+    manifest["run_id"] = "other"
+    (run_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ManifestError, match="does not match run directory"):
+        verify_manifest(run_dir)
+
+
 def test_verify_manifest_rejects_path_escape(tmp_path):
     run_dir = tmp_path / "quickstart"
     run_dir.mkdir()
     (run_dir / "manifest.json").write_text(
         json.dumps(
             {
-                "schema_version": 1,
+                "schema_version": 2,
                 "run_id": "quickstart",
                 "artifact_count": 1,
                 "artifacts": [
@@ -112,6 +147,26 @@ def test_verify_manifest_rejects_path_escape(tmp_path):
     )
 
     with pytest.raises(ManifestError, match="run directory"):
+        verify_manifest(run_dir)
+
+
+def test_verify_manifest_rejects_unsupported_schema_version(tmp_path):
+    run_dir = tmp_path / "quickstart"
+    run_dir.mkdir()
+    (run_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 3,
+                "run_id": "quickstart",
+                "artifact_count": 0,
+                "artifacts": [],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ManifestError, match="unsupported manifest schema_version"):
         verify_manifest(run_dir)
 
 
