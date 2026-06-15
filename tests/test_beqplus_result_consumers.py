@@ -164,6 +164,138 @@ def test_beqplus_vs_labels_rejects_duplicate_results_with_line_number(tmp_path):
     assert "duplicate problem_id 'p1'" in proc.stderr
 
 
+def test_beqplus_vs_labels_rejects_unmatched_problem_ids(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections_a = tmp_path / "a.jsonl"
+    selections_b = tmp_path / "b.jsonl"
+    results = tmp_path / "beqplus_results.jsonl"
+    output_jsonl = tmp_path / "joined.jsonl"
+
+    _write_jsonl(
+        candidates,
+        [
+            {"problem_id": "p1", "candidates": ["theorem p1 : True := by trivial"], "labels": [1]},
+            {"problem_id": "candidate_only", "candidates": ["theorem c : True := by trivial"], "labels": [1]},
+        ],
+    )
+    _write_jsonl(
+        selections_a,
+        [
+            {"problem_id": "p1", "chosen_index": 0},
+            {"problem_id": "a_only", "chosen_index": 0},
+        ],
+    )
+    _write_jsonl(
+        selections_b,
+        [
+            {"problem_id": "p1", "chosen_index": 0},
+            {"problem_id": "b_only", "chosen_index": 0},
+        ],
+    )
+    _write_jsonl(
+        results,
+        [
+            {"problem_id": "p1", "a_ok": True, "b_ok": True},
+            {"problem_id": "result_only", "a_ok": False, "b_ok": False},
+        ],
+    )
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "beqcritic.analyze_beqplus_vs_labels",
+            "--candidates",
+            str(candidates),
+            "--selections-a",
+            str(selections_a),
+            "--selections-b",
+            str(selections_b),
+            "--beqplus-results",
+            str(results),
+            "--output-jsonl",
+            str(output_jsonl),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode != 0
+    assert "problem_id mismatch across candidates" in proc.stderr
+    assert "candidate_only" in proc.stderr
+    assert "a_only" in proc.stderr
+    assert "b_only" in proc.stderr
+    assert "result_only" in proc.stderr
+    assert not output_jsonl.exists()
+
+
+def test_beqplus_vs_labels_can_explicitly_allow_partial_overlap(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections_a = tmp_path / "a.jsonl"
+    selections_b = tmp_path / "b.jsonl"
+    results = tmp_path / "beqplus_results.jsonl"
+    output_jsonl = tmp_path / "joined.jsonl"
+
+    _write_jsonl(
+        candidates,
+        [
+            {"problem_id": "p1", "candidates": ["theorem p1 : True := by trivial"], "labels": [1]},
+            {"problem_id": "candidate_only", "candidates": ["theorem c : True := by trivial"], "labels": [1]},
+        ],
+    )
+    _write_jsonl(
+        selections_a,
+        [
+            {"problem_id": "p1", "chosen_index": 0},
+            {"problem_id": "a_only", "chosen_index": 0},
+        ],
+    )
+    _write_jsonl(
+        selections_b,
+        [
+            {"problem_id": "p1", "chosen_index": 0},
+            {"problem_id": "b_only", "chosen_index": 0},
+        ],
+    )
+    _write_jsonl(
+        results,
+        [
+            {"problem_id": "p1", "a_ok": True, "b_ok": True},
+            {"problem_id": "result_only", "a_ok": False, "b_ok": False},
+        ],
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "beqcritic.analyze_beqplus_vs_labels",
+            "--candidates",
+            str(candidates),
+            "--selections-a",
+            str(selections_a),
+            "--selections-b",
+            str(selections_b),
+            "--beqplus-results",
+            str(results),
+            "--output-jsonl",
+            str(output_jsonl),
+            "--allow-partial-overlap",
+        ],
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    rows = [
+        json.loads(line)
+        for line in output_jsonl.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert [row["problem_id"] for row in rows] == ["p1"]
+
+
 def _write_jsonl(path, rows):
     path.write_text(
         "".join(json.dumps(row) + "\n" for row in rows),

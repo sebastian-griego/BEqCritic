@@ -114,9 +114,10 @@ Metric, comparison, quickstart A/B, report-generation, BEq+ summary/audit, and
 BEq+ paper-pipeline CLIs reject duplicate `problem_id` rows rather than silently
 keeping the last row, so accidental concatenation, partial reruns, or corrupted
 resume ledgers cannot overwrite earlier records inside reported scores.
-Selection comparison and quickstart A/B reports also require candidate,
-selection-A, and selection-B `problem_id` sets to match exactly by default;
-pass `--allow-partial-overlap` only for intentional subset/debug comparisons.
+Selection comparison, quickstart A/B, legacy selection summaries, and BEq+
+label-vs-certifiability audits also require joined `problem_id` sets to match
+exactly by default; pass `--allow-partial-overlap` only for intentional
+subset/debug comparisons.
 
 Compare two selectors with Wilson confidence intervals and a paired exact
 sign test:

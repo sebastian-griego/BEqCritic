@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from .features import extract_features
-from .jsonl import load_jsonl_map_by_problem_id
+from .jsonl import load_jsonl_map_by_problem_id, matching_problem_ids_many
 from .textnorm import normalize_lean_statement
 
 
@@ -84,6 +84,11 @@ def main() -> None:
     p.add_argument("--name-b", type=str, default="B")
     p.add_argument("--output-jsonl", type=str, default="", help="Optional joined per-problem JSONL")
     p.add_argument("--max-examples", type=int, default=20, help="Max problem_ids printed per category")
+    p.add_argument(
+        "--allow-partial-overlap",
+        action="store_true",
+        help="Analyze only overlapping candidate/selection/result IDs instead of failing on mismatches.",
+    )
     args = p.parse_args()
 
     cand = _load_jsonl_map(args.candidates)
@@ -98,19 +103,15 @@ def main() -> None:
     if "a_ok" not in sample or "b_ok" not in sample:
         raise ValueError("--beqplus-results must contain paired fields `a_ok` and `b_ok`")
 
-    pids = sorted(set(cand) & set(sel_a) & set(sel_b) & set(res))
-    if not pids:
-        raise SystemExit("No overlapping problem_ids across candidates/selections/results.")
-
-    missing = {
-        "candidates": len(set(sel_a) - set(cand)),
-        "selections_a": len(set(cand) - set(sel_a)),
-        "selections_b": len(set(cand) - set(sel_b)),
-        "beqplus_results": len(set(cand) - set(res)),
-    }
-    for k, v in missing.items():
-        if v:
-            print(f"Warning: {v} ids missing {k}")
+    pids = matching_problem_ids_many(
+        {
+            "candidates": cand,
+            f"selections_a:{args.name_a}": sel_a,
+            f"selections_b:{args.name_b}": sel_b,
+            "beqplus_results": res,
+        },
+        allow_partial_overlap=bool(args.allow_partial_overlap),
+    )
 
     rows: list[_Row] = []
     out_f = open(args.output_jsonl, "w", encoding="utf-8") if str(args.output_jsonl).strip() else None
