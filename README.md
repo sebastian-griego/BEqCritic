@@ -231,10 +231,10 @@ python -m beqcritic.verifier_select \
   --calibration-json runs/myrun/nlverifier_calibration.json
 ```
 
-The selector validates the grouped candidate JSONL before loading models or
-writing output, so malformed rows, missing problem IDs, candidate/typecheck
-shape errors, and missing NL statements fail early instead of producing partial
-selection files.
+The standard and clustering selectors validate the grouped candidate JSONL
+before loading models or writing output, so malformed rows, duplicate or missing
+problem IDs, candidate/typecheck shape errors, and missing NL statements fail
+early instead of producing partial selection files.
 
 Turn emitted scores into a ranking-quality and failure-analysis report:
 
