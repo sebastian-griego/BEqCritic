@@ -26,7 +26,9 @@ def test_write_manifest_hashes_nested_run_artifacts(tmp_path):
     paths = {entry["path"] for entry in manifest["artifacts"]}
     assert paths == {"logs/manifest.json", "logs/train.log", "smoke.json"}
     assert (run_dir / "manifest.json").exists()
-    assert verify_manifest(run_dir)["artifact_count"] == 3
+    verified = verify_manifest(run_dir)
+    assert verified["artifact_count"] == 3
+    assert verified["run_id"] == "quickstart"
 
 
 def test_verify_manifest_detects_tampered_artifact(tmp_path):
@@ -70,6 +72,23 @@ def test_verify_manifest_rejects_unlisted_nested_manifest(tmp_path):
         verify_manifest(run_dir)
 
 
+def test_verify_manifest_rejects_mismatched_run_id(tmp_path):
+    run_dir = tmp_path / "quickstart"
+    run_dir.mkdir()
+    (run_dir / "ab_metrics.json").write_text("{}\n", encoding="utf-8")
+    write_manifest(run_dir)
+    manifest_path = run_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["run_id"] = "other"
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ManifestError, match="does not match run directory"):
+        verify_manifest(run_dir)
+
+
 def test_verify_manifest_rejects_path_escape(tmp_path):
     run_dir = tmp_path / "quickstart"
     run_dir.mkdir()
@@ -77,6 +96,7 @@ def test_verify_manifest_rejects_path_escape(tmp_path):
         json.dumps(
             {
                 "schema_version": 1,
+                "run_id": "quickstart",
                 "artifact_count": 1,
                 "artifacts": [
                     {
@@ -114,7 +134,9 @@ def test_manifest_module_cli_writes_and_verifies(tmp_path):
         check=False,
     )
     assert write.returncode == 0
-    assert json.loads(write.stdout)["artifact_count"] == 1
+    write_payload = json.loads(write.stdout)
+    assert write_payload["artifact_count"] == 1
+    assert write_payload["run_id"] == "quickstart"
 
     verify = subprocess.run(
         [

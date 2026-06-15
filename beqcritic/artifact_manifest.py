@@ -28,6 +28,7 @@ def write_manifest(run_dir: str | Path) -> dict[str, Any]:
     ]
     manifest = {
         "schema_version": SCHEMA_VERSION,
+        "run_id": run_dir.name,
         "artifact_count": len(artifacts),
         "artifacts": artifacts,
     }
@@ -54,6 +55,13 @@ def verify_manifest(run_dir: str | Path, *, allow_extra: bool = False) -> dict[s
     if manifest.get("schema_version") != SCHEMA_VERSION:
         raise ManifestError(
             f"unsupported manifest schema_version: {manifest.get('schema_version')!r}"
+        )
+    run_id = manifest.get("run_id")
+    if not isinstance(run_id, str) or not run_id:
+        raise ManifestError("manifest run_id must be a non-empty string")
+    if run_id != run_dir.name:
+        raise ManifestError(
+            f"manifest run_id {run_id!r} does not match run directory {run_dir.name!r}"
         )
 
     artifacts = manifest.get("artifacts")
@@ -117,6 +125,7 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "action": action,
                 "run_dir": str(Path(args.run_dir)).replace("\\", "/"),
+                "run_id": str(manifest["run_id"]),
                 "artifact_count": int(manifest["artifact_count"]),
             },
             indent=2,
