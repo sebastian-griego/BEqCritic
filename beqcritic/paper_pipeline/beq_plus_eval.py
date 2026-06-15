@@ -28,7 +28,12 @@ from pathlib import Path
 
 from datasets import load_dataset
 
-from ..jsonl import JsonlError, iter_jsonl_objects, load_jsonl_map_by_key
+from ..jsonl import (
+    JsonlError,
+    iter_jsonl_objects,
+    load_jsonl_map_by_key,
+    matching_problem_ids_many,
+)
 
 
 def _load_jsonl_map(path: str, key: str, value: str) -> dict[str, str]:
@@ -99,6 +104,40 @@ def _load_dataset_rows(
         out[pid] = _DatasetRow(ref=str(r[ref_key]), header=str(r[header_key]))
         first_rows[pid] = row_no
     return out
+
+
+def _select_problem_ids(
+    dataset_rows: dict[str, _DatasetRow],
+    selections_a: dict[str, str],
+    selections_b: dict[str, str] | None = None,
+    *,
+    a_name: str = "A",
+    b_name: str = "B",
+    allow_partial_overlap: bool = False,
+) -> list[str]:
+    maps: dict[str, dict[str, object]] = {
+        f"selections_a:{a_name}": selections_a,
+    }
+    if selections_b is not None:
+        maps[f"selections_b:{b_name}"] = selections_b
+    if allow_partial_overlap:
+        return matching_problem_ids_many(
+            {
+                "dataset": dataset_rows,
+                **maps,
+            },
+            allow_partial_overlap=True,
+        )
+
+    pids = matching_problem_ids_many(maps)
+    missing_dataset = [pid for pid in pids if pid not in dataset_rows]
+    if missing_dataset:
+        raise ValueError(
+            "problem_id mismatch across dataset and selections; "
+            f"{len(missing_dataset)} selection problem_ids missing from dataset: "
+            + ", ".join(repr(pid) for pid in missing_dataset[:5])
+        )
+    return pids
 
 
 def _require_lean_interact():
@@ -279,6 +318,11 @@ def main() -> None:
     p.add_argument("--output-jsonl", type=str, default="", help="Optional per-problem results JSONL.")
     p.add_argument("--project-dir", type=str, default="", help="Reuse a stable Lean project directory.")
     p.add_argument("--resume", action="store_true", help="Resume from an existing output JSONL file.")
+    p.add_argument(
+        "--allow-partial-overlap",
+        action="store_true",
+        help="Evaluate only overlapping dataset/selection IDs instead of failing on mismatches.",
+    )
     args = p.parse_args()
 
     _require_lean_interact()
@@ -299,11 +343,14 @@ def main() -> None:
         else None
     )
 
-    pids = sorted(set(sel_a.keys()) & set(dataset_rows.keys()))
-    if sel_b is not None:
-        pids = sorted(set(pids) & set(sel_b.keys()))
-    if not pids:
-        raise SystemExit("No overlapping problem_ids between selections and dataset split.")
+    pids = _select_problem_ids(
+        dataset_rows,
+        sel_a,
+        sel_b,
+        a_name=str(args.a_name),
+        b_name=str(args.b_name),
+        allow_partial_overlap=bool(args.allow_partial_overlap),
+    )
 
     if int(args.shuffle_seed):
         rnd = random.Random(int(args.shuffle_seed))

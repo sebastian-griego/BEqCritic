@@ -120,6 +120,10 @@ summaries, and BEq+ label-vs-certifiability audits also require joined
 only for intentional subset/debug comparisons, or
 `--treat-missing-as-abstain` / `--allow-missing-as-abstain` for selective
 policies where absent candidate IDs are intentional abstentions.
+BEq+ paper-pipeline evaluators allow dataset splits to contain extra rows, but
+they require selected/candidate-pool IDs to be present in the split and require
+paired selection/candidate-pool inputs to cover the same IDs unless
+`--allow-partial-overlap` is explicitly set.
 
 Compare two selectors with Wilson confidence intervals and a paired exact
 sign test:

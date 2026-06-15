@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .beq_plus_eval import _load_dataset_rows, _require_lean_interact, beq_plus, _load_jsonl_map
-from ..jsonl import JsonlError, iter_jsonl_objects, load_jsonl_map_by_key
+from ..jsonl import JsonlError, iter_jsonl_objects, load_jsonl_map_by_key, matching_problem_ids_many
 
 
 def _load_done_stats(path: str) -> tuple[set[str], int, int, int, int, int]:
@@ -79,6 +79,41 @@ def _find_candidate_index(candidates: list[str], stmt: str) -> int | None:
         return None
 
 
+def _select_problem_ids(
+    dataset_rows: dict[str, object],
+    grouped: dict[str, list[str]],
+    sel_a: _SelectionInfo | None = None,
+    sel_b: _SelectionInfo | None = None,
+    *,
+    allow_partial_overlap: bool = False,
+) -> list[str]:
+    maps: dict[str, dict[str, object]] = {
+        "candidate_pool": grouped,
+    }
+    if sel_a is not None:
+        maps[f"selections_a:{sel_a.name}"] = sel_a.choices
+    if sel_b is not None:
+        maps[f"selections_b:{sel_b.name}"] = sel_b.choices
+    if allow_partial_overlap:
+        return matching_problem_ids_many(
+            {
+                "dataset": dataset_rows,
+                **maps,
+            },
+            allow_partial_overlap=True,
+        )
+
+    pids = matching_problem_ids_many(maps)
+    missing_dataset = [pid for pid in pids if pid not in dataset_rows]
+    if missing_dataset:
+        raise ValueError(
+            "problem_id mismatch across dataset and candidate_pool; "
+            f"{len(missing_dataset)} candidate_pool problem_ids missing from dataset: "
+            + ", ".join(repr(pid) for pid in missing_dataset[:5])
+        )
+    return pids
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--dataset", type=str, default="PAug/ProofNetVerif")
@@ -105,6 +140,11 @@ def main() -> None:
     p.add_argument("--output-jsonl", type=str, default="")
     p.add_argument("--project-dir", type=str, default="", help="Reuse a stable Lean project directory.")
     p.add_argument("--resume", action="store_true", help="Resume from an existing output JSONL file.")
+    p.add_argument(
+        "--allow-partial-overlap",
+        action="store_true",
+        help="Evaluate only overlapping dataset/candidate/selection IDs instead of failing on mismatches.",
+    )
     args = p.parse_args()
 
     _require_lean_interact()
@@ -145,14 +185,13 @@ def main() -> None:
             ),
         )
 
-    pids = set(grouped.keys()) & set(dataset_rows.keys())
-    if sel_a is not None:
-        pids &= set(sel_a.choices.keys())
-    if sel_b is not None:
-        pids &= set(sel_b.choices.keys())
-    pids = sorted(pids)
-    if not pids:
-        raise SystemExit("No overlapping problem_ids between candidate pool, dataset split, and selections.")
+    pids = _select_problem_ids(
+        dataset_rows,
+        grouped,
+        sel_a,
+        sel_b,
+        allow_partial_overlap=bool(args.allow_partial_overlap),
+    )
 
     if int(args.shuffle_seed):
         rnd = random.Random(int(args.shuffle_seed))
