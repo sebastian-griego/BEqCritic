@@ -74,11 +74,7 @@ def verify_manifest(run_dir: str | Path, *, allow_extra: bool = False) -> dict[s
     artifacts = manifest.get("artifacts")
     if not isinstance(artifacts, list):
         raise ManifestError("manifest artifacts must be a list")
-    if manifest.get("artifact_count") != len(artifacts):
-        raise ManifestError(
-            f"manifest artifact_count {manifest.get('artifact_count')!r} "
-            f"does not match {len(artifacts)} artifacts"
-        )
+    _verify_artifact_count(manifest.get("artifact_count"), expected=len(artifacts))
 
     seen_paths: set[str] = set()
     for idx, entry in enumerate(artifacts, 1):
@@ -219,6 +215,15 @@ def _verify_entry(
     actual_hash = _sha256_file(path)
     if actual_hash != expected_hash:
         raise ManifestError(f"{where}: sha256 mismatch for {rel_path!r}")
+
+
+def _verify_artifact_count(value: Any, *, expected: int) -> None:
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise ManifestError("manifest artifact_count must be a non-negative integer")
+    if value != expected:
+        raise ManifestError(
+            f"manifest artifact_count {value!r} does not match {expected} artifacts"
+        )
 
 
 def _sha256_file(path: Path) -> str:

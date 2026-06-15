@@ -42,7 +42,9 @@ The quickstart also writes `runs/quickstart/manifest.json`, which records byte
 sizes and SHA-256 hashes for the generated artifacts, excluding the root
 manifest file itself. Current manifests use schema v2 and record the run
 directory name as `run_id`, so verification catches copied or mismatched
-manifests. Legacy v1 manifests without `run_id` still verify. Verify it with:
+manifests. The verifier also checks schema and artifact-count metadata types,
+so JSON booleans or floats cannot masquerade as version or count integers.
+Legacy v1 manifests without `run_id` still verify. Verify it with:
 
 ```bash
 python -m beqcritic.artifact_manifest --run-dir runs/quickstart --verify
