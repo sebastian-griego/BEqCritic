@@ -16,7 +16,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .jsonl import load_jsonl_map_by_problem_id
+from .jsonl import load_jsonl_map_by_problem_id, matching_problem_ids
 from .statistics import proportion_summary
 from .textnorm import normalize_lean_statement
 
@@ -80,6 +80,7 @@ def evaluate_selection_records(
     *,
     max_k: int = 1,
     treat_missing_as_abstain: bool = False,
+    allow_partial_overlap: bool = False,
 ) -> dict[str, Any]:
     """Return selection metrics as a JSON-serializable summary."""
     max_k = max(1, int(max_k))
@@ -92,9 +93,20 @@ def evaluate_selection_records(
     )
     abstention_mode = bool(treat_missing_as_abstain or has_explicit_abstentions)
     if treat_missing_as_abstain:
+        if missing_cand and not allow_partial_overlap:
+            raise ValueError(
+                "selection problem_ids missing from candidates: "
+                + ", ".join(repr(pid) for pid in missing_cand[:5])
+            )
         pids = sorted(candidates_by_id)
     else:
-        pids = sorted(set(candidates_by_id) & set(selections_by_id))
+        pids = matching_problem_ids(
+            candidates_by_id,
+            selections_by_id,
+            left_name="candidates",
+            right_name="selections",
+            allow_partial_overlap=allow_partial_overlap,
+        )
 
     problems = 0
     n_any = 0
@@ -403,6 +415,11 @@ def main() -> None:
         help="Count candidate problem_ids absent from selections as abstentions.",
     )
     p.add_argument(
+        "--allow-partial-overlap",
+        action="store_true",
+        help="Evaluate only overlapping IDs instead of failing on candidate/selection mismatches.",
+    )
+    p.add_argument(
         "--summary-json",
         type=str,
         default="",
@@ -427,6 +444,7 @@ def main() -> None:
             sel,
             max_k=int(args.max_k),
             treat_missing_as_abstain=bool(args.treat_missing_as_abstain),
+            allow_partial_overlap=bool(args.allow_partial_overlap),
         )
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc

@@ -4,6 +4,8 @@ import json
 import subprocess
 import sys
 
+import pytest
+
 from beqcritic.selection_leaderboard import analyze_leaderboard, format_markdown
 
 
@@ -209,3 +211,65 @@ def test_selection_leaderboard_merges_explicit_abstentions(tmp_path):
         "full",
         "selective",
     }
+
+
+def test_selection_leaderboard_rejects_unmatched_problem_ids_by_default(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    complete = tmp_path / "complete.jsonl"
+    partial = tmp_path / "partial.jsonl"
+    _write_jsonl(
+        candidates,
+        [
+            {"problem_id": "p1", "candidates": ["right"], "labels": [1]},
+            {"problem_id": "candidate_only", "candidates": ["wrong"], "labels": [0]},
+        ],
+    )
+    _write_jsonl(
+        complete,
+        [
+            {"problem_id": "p1", "chosen_index": 0},
+            {"problem_id": "candidate_only", "chosen_index": 0},
+        ],
+    )
+    _write_jsonl(partial, [{"problem_id": "p1", "chosen_index": 0}])
+
+    with pytest.raises(ValueError) as excinfo:
+        analyze_leaderboard(
+            candidates_path=candidates,
+            selections={"complete": complete, "partial": partial},
+        )
+
+    message = str(excinfo.value)
+    assert "problem_id mismatch across candidates" in message
+    assert "candidate_only" in message
+
+
+def test_selection_leaderboard_can_count_missing_rows_as_abstentions(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    complete = tmp_path / "complete.jsonl"
+    partial = tmp_path / "partial.jsonl"
+    _write_jsonl(
+        candidates,
+        [
+            {"problem_id": "p1", "candidates": ["right"], "labels": [1]},
+            {"problem_id": "p2", "candidates": ["wrong"], "labels": [0]},
+        ],
+    )
+    _write_jsonl(
+        complete,
+        [
+            {"problem_id": "p1", "chosen_index": 0},
+            {"problem_id": "p2", "chosen_index": 0},
+        ],
+    )
+    _write_jsonl(partial, [{"problem_id": "p1", "chosen_index": 0}])
+
+    summary = analyze_leaderboard(
+        candidates_path=candidates,
+        selections={"complete": complete, "partial": partial},
+        allow_missing_as_abstain=True,
+    )
+
+    assert summary["dataset"]["problems"] == 2
+    assert summary["methods"]["partial"]["accepted"] == 1
+    assert summary["methods"]["partial"]["abstained"] == 1

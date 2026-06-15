@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 from typing import Any, Iterable
 
-from .jsonl import load_jsonl_map_by_problem_id
+from .jsonl import load_jsonl_map_by_problem_id, matching_problem_ids_many
 from .schema import validate_grouped_candidates
 from .statistics import paired_comparison, proportion_summary
 from .textnorm import normalize_lean_statement
@@ -65,8 +65,9 @@ def analyze_leaderboard(
     if len(methods) < 2:
         raise ValueError("at least two selection methods are required")
 
+    candidate_ids = _nonempty_candidate_ids(candidates)
     problem_ids = _problem_ids(
-        candidates,
+        candidate_ids,
         methods,
         allow_missing_as_abstain=allow_missing_as_abstain,
     )
@@ -460,17 +461,35 @@ def _derived_selection_map(
 
 
 def _problem_ids(
-    candidates: dict[str, dict[str, Any]],
+    candidate_ids: set[str],
     methods: dict[str, dict[str, dict[str, Any]]],
     *,
     allow_missing_as_abstain: bool,
 ) -> list[str]:
     if allow_missing_as_abstain:
-        return sorted(candidates)
-    ids = set(candidates)
-    for records in methods.values():
-        ids &= set(records)
-    return sorted(ids)
+        for name, records in sorted(methods.items()):
+            extra = sorted(set(records) - candidate_ids)
+            if extra:
+                raise ValueError(
+                    f"method {name!r} has problem_ids missing from candidates: "
+                    + ", ".join(repr(pid) for pid in extra[:5])
+                )
+        return sorted(candidate_ids)
+    return matching_problem_ids_many(
+        {
+            "candidates": {problem_id: {} for problem_id in candidate_ids},
+            **{f"method:{name}": records for name, records in methods.items()},
+        }
+    )
+
+
+def _nonempty_candidate_ids(candidates: dict[str, dict[str, Any]]) -> set[str]:
+    ids: set[str] = set()
+    for problem_id, row in candidates.items():
+        grouped = validate_grouped_candidates(row, require_labels=True)
+        if grouped.candidates:
+            ids.add(problem_id)
+    return ids
 
 
 def _is_abstention(record: dict[str, Any]) -> bool:
