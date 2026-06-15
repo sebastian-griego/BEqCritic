@@ -64,7 +64,9 @@ def verify_manifest(run_dir: str | Path, *, allow_extra: bool = False) -> dict[s
             f"unsupported manifest schema_version: {schema_version!r}"
         )
     run_id = manifest.get("run_id")
-    if schema_version >= SCHEMA_VERSION and (not isinstance(run_id, str) or not run_id):
+    if schema_version >= SCHEMA_VERSION and (
+        not isinstance(run_id, str) or not run_id
+    ):
         raise ManifestError("manifest run_id must be a non-empty string")
     if run_id is not None and run_id != run_dir.name:
         raise ManifestError(
@@ -74,7 +76,11 @@ def verify_manifest(run_dir: str | Path, *, allow_extra: bool = False) -> dict[s
     artifacts = manifest.get("artifacts")
     if not isinstance(artifacts, list):
         raise ManifestError("manifest artifacts must be a list")
-    _verify_artifact_count(manifest.get("artifact_count"), expected=len(artifacts))
+    if schema_version >= SCHEMA_VERSION or "artifact_count" in manifest:
+        _verify_artifact_count(
+            manifest.get("artifact_count"),
+            expected=len(artifacts),
+        )
 
     seen_paths: set[str] = set()
     for idx, entry in enumerate(artifacts, 1):
@@ -126,7 +132,9 @@ def main(argv: list[str] | None = None) -> int:
     result = {
         "action": action,
         "run_dir": str(Path(args.run_dir)).replace("\\", "/"),
-        "artifact_count": int(manifest["artifact_count"]),
+        "artifact_count": int(
+            manifest.get("artifact_count", len(manifest["artifacts"]))
+        ),
     }
     if manifest.get("run_id"):
         result["run_id"] = str(manifest["run_id"])

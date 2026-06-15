@@ -187,6 +187,55 @@ def test_verify_manifest_rejects_non_integer_artifact_count(tmp_path):
             verify_manifest(run_dir)
 
 
+def test_verify_manifest_rejects_artifact_count_mismatch(tmp_path):
+    run_dir = tmp_path / "quickstart"
+    run_dir.mkdir()
+    (run_dir / "summary.json").write_text("{}\n", encoding="utf-8")
+    manifest = write_manifest(run_dir)
+    manifest["artifact_count"] = len(manifest["artifacts"]) + 1
+    (run_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ManifestError, match="does not match"):
+        verify_manifest(run_dir)
+
+
+def test_verify_manifest_rejects_schema_v2_without_artifact_count(tmp_path):
+    run_dir = tmp_path / "quickstart"
+    run_dir.mkdir()
+    (run_dir / "summary.json").write_text("{}\n", encoding="utf-8")
+    manifest = write_manifest(run_dir)
+    del manifest["artifact_count"]
+    (run_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ManifestError, match="artifact_count"):
+        verify_manifest(run_dir)
+
+
+def test_verify_manifest_accepts_legacy_v1_without_artifact_count(tmp_path):
+    run_dir = tmp_path / "quickstart"
+    run_dir.mkdir()
+    (run_dir / "summary.json").write_text("{}\n", encoding="utf-8")
+    manifest = write_manifest(run_dir)
+    manifest["schema_version"] = 1
+    del manifest["run_id"]
+    del manifest["artifact_count"]
+    (run_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    verified = verify_manifest(run_dir)
+
+    assert verified["schema_version"] == 1
+    assert "artifact_count" not in verified
+
+
 def test_manifest_module_cli_writes_and_verifies(tmp_path):
     run_dir = tmp_path / "quickstart"
     run_dir.mkdir()
@@ -225,3 +274,36 @@ def test_manifest_module_cli_writes_and_verifies(tmp_path):
     )
     assert verify.returncode == 0
     assert json.loads(verify.stdout)["action"] == "verified"
+
+
+def test_manifest_module_cli_reports_derived_legacy_artifact_count(tmp_path):
+    run_dir = tmp_path / "quickstart"
+    run_dir.mkdir()
+    (run_dir / "summary.json").write_text("{}\n", encoding="utf-8")
+    manifest = write_manifest(run_dir)
+    manifest["schema_version"] = 1
+    del manifest["run_id"]
+    del manifest["artifact_count"]
+    (run_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "beqcritic.artifact_manifest",
+            "--run-dir",
+            str(run_dir),
+            "--verify",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0
+    payload = json.loads(completed.stdout)
+    assert payload["artifact_count"] == 1
+    assert "run_id" not in payload
