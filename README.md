@@ -39,7 +39,8 @@ cat results/results.md
 
 All quickstart artifacts/logs are written under `runs/quickstart/`.
 The quickstart also writes `runs/quickstart/manifest.json`, which records byte
-sizes and SHA-256 hashes for the generated artifacts. Verify it with:
+sizes and SHA-256 hashes for the generated artifacts, excluding the root
+manifest file itself. Verify it with:
 
 ```bash
 python -m beqcritic.artifact_manifest --run-dir runs/quickstart --verify
