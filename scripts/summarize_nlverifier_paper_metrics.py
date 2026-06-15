@@ -549,6 +549,8 @@ def _validate_abstention_metrics(abstention: dict[str, Any]) -> None:
     abstained = int(abstention["abstained"])
     total = accepted + abstained
     _validate_prop("abstention.coverage", abstention["coverage"], successes=accepted, total=total)
+    accepted_selected = int(abstention["accepted_selected_correct"]["successes"])
+    accepted_has_any = int(abstention["accepted_has_any_correct"]["successes"])
     _validate_prop(
         "abstention.accepted_selected_correct",
         abstention["accepted_selected_correct"],
@@ -557,15 +559,27 @@ def _validate_abstention_metrics(abstention: dict[str, Any]) -> None:
     _validate_prop(
         "abstention.accepted_selected_correct_given_any",
         abstention["accepted_selected_correct_given_any"],
+        successes=accepted_selected,
+        total=accepted_has_any,
     )
     _validate_prop(
         "abstention.selected_correct_counting_abstentions_incorrect",
         abstention["selected_correct_counting_abstentions_incorrect"],
+        successes=accepted_selected,
         total=total,
     )
+    abstained_selected = 0
+    if "abstained_selected_correct" in abstention:
+        abstained_selected = int(abstention["abstained_selected_correct"]["successes"])
+        _validate_prop(
+            "abstention.abstained_selected_correct",
+            abstention["abstained_selected_correct"],
+            total=abstained,
+        )
     _validate_prop(
         "abstention.selected_correct_with_abstention_choices",
         abstention["selected_correct_with_abstention_choices"],
+        successes=accepted_selected + abstained_selected,
         total=total,
     )
     _validate_prop(
@@ -573,6 +587,47 @@ def _validate_abstention_metrics(abstention: dict[str, Any]) -> None:
         abstention["accepted_has_any_correct"],
         total=accepted,
     )
+    abstained_has_any = 0
+    if "abstained_has_any_correct" in abstention:
+        abstained_has_any = int(abstention["abstained_has_any_correct"]["successes"])
+        _validate_prop(
+            "abstention.abstained_has_any_correct",
+            abstention["abstained_has_any_correct"],
+            total=abstained,
+        )
+    if "selected_correct" in abstention:
+        _validate_prop(
+            "abstention.selected_correct",
+            abstention["selected_correct"],
+            successes=accepted_selected,
+            total=accepted,
+        )
+    if "selected_correct_given_any" in abstention:
+        _validate_prop(
+            "abstention.selected_correct_given_any",
+            abstention["selected_correct_given_any"],
+            successes=accepted_selected,
+            total=accepted_has_any,
+        )
+    if "has_any_correct" in abstention:
+        _validate_prop(
+            "abstention.has_any_correct",
+            abstention["has_any_correct"],
+            successes=accepted_has_any + abstained_has_any,
+            total=total,
+        )
+    if "explicit_abstained" in abstention and "missing_as_abstained" in abstention:
+        _require_equal(
+            "abstention.explicit_plus_missing_abstained",
+            int(abstention["explicit_abstained"]) + int(abstention["missing_as_abstained"]),
+            abstained,
+        )
+    if "abstained_with_choice" in abstention:
+        _require_equal(
+            "abstention.abstained_with_choice",
+            int(abstention["abstained_with_choice"]),
+            abstained,
+        )
 
 
 def _validate_stability_metrics(stability: dict[str, Any], *, expected_problems: int) -> None:

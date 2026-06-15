@@ -106,6 +106,34 @@ def test_nlverifier_paper_metrics_rejects_unknown_best_confidence_signal(tmp_pat
         build_summary(results)
 
 
+def test_nlverifier_paper_metrics_rejects_abstention_denominator_mismatch(tmp_path):
+    results = tmp_path / "results"
+    _write_summary_inputs(results)
+    abstention = _abstention()
+    abstention["accepted_selected_correct_given_any"] = _prop(2, 3)
+    _write_json(results / "exp_inductive" / "metrics_nlverifier_abstain_p50.json", abstention)
+
+    with pytest.raises(
+        ValueError,
+        match="abstention.accepted_selected_correct_given_any.total",
+    ):
+        build_summary(results)
+
+
+def test_nlverifier_paper_metrics_rejects_abstention_partition_mismatch(tmp_path):
+    results = tmp_path / "results"
+    _write_summary_inputs(results)
+    abstention = _abstention()
+    abstention["selected_correct_with_abstention_choices"] = _prop(2, 5)
+    _write_json(results / "exp_inductive" / "metrics_nlverifier_abstain_p50.json", abstention)
+
+    with pytest.raises(
+        ValueError,
+        match="abstention.selected_correct_with_abstention_choices.successes",
+    ):
+        build_summary(results)
+
+
 def test_paper_metrics_check_cli_fails_without_rewriting_stale_outputs(tmp_path):
     results = tmp_path / "results"
     _write_summary_inputs(results)
@@ -368,12 +396,20 @@ def _abstention() -> dict:
     return {
         "accepted": 3,
         "abstained": 2,
+        "explicit_abstained": 2,
+        "missing_as_abstained": 0,
+        "abstained_with_choice": 2,
         "coverage": _prop(3, 5),
+        "selected_correct": _prop(2, 3),
         "accepted_selected_correct": _prop(2, 3),
         "accepted_selected_correct_given_any": _prop(2, 2),
+        "selected_correct_given_any": _prop(2, 2),
         "selected_correct_counting_abstentions_incorrect": _prop(2, 5),
         "selected_correct_with_abstention_choices": _prop(3, 5),
         "accepted_has_any_correct": _prop(2, 3),
+        "abstained_selected_correct": _prop(1, 2),
+        "abstained_has_any_correct": _prop(2, 2),
+        "has_any_correct": _prop(4, 5),
     }
 
 
