@@ -14,6 +14,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable
 
+from .jsonl import iter_jsonl_objects, load_jsonl_map_by_problem_id
+
 
 def analyze_cases(
     *,
@@ -361,20 +363,15 @@ def _append_case_table(
 
 
 def _load_jsonl_map(path: str | Path) -> dict[str, dict[str, Any]]:
-    rows = _load_jsonl_rows(path)
-    return {str(row["problem_id"]): row for row in rows}
+    return load_jsonl_map_by_problem_id(path, encoding="utf-8-sig")
 
 
 def _load_jsonl_rows(path: str | Path) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    with Path(path).open("r", encoding="utf-8-sig") as handle:
-        for line_no, line in enumerate(handle, start=1):
-            if not line.strip():
-                continue
-            row = json.loads(line)
-            if row.get("problem_id") is None:
-                raise ValueError(f"missing problem_id at {path}:{line_no}")
-            rows.append(row)
+    rows = []
+    for line_no, row in iter_jsonl_objects(path, encoding="utf-8-sig"):
+        if row.get("problem_id") is None:
+            raise ValueError(f"missing problem_id at {Path(path)}:{line_no}")
+        rows.append(row)
     return rows
 
 

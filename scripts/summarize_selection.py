@@ -13,20 +13,18 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
+from pathlib import Path
+from typing import Any
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-def _load_jsonl_map(path: str) -> dict[str, dict]:
-    out: dict[str, dict] = {}
-    with open(path, "r", encoding="utf-8") as f:
-        for line_no, line in enumerate(f, start=1):
-            if not line.strip():
-                continue
-            obj = json.loads(line)
-            pid = obj.get("problem_id")
-            if pid is None:
-                raise ValueError(f"Missing problem_id at {path}:{line_no}")
-            out[str(pid)] = obj
-    return out
+from beqcritic.jsonl import load_jsonl_map_by_problem_id, matching_problem_ids
+
+def _load_jsonl_map(path: str | Path) -> dict[str, dict[str, Any]]:
+    return load_jsonl_map_by_problem_id(path, encoding="utf-8-sig")
 
 
 def _normalize_lean_statement(s: str) -> str:
@@ -43,14 +41,23 @@ def main() -> None:
     p.add_argument("--name", default="")
     p.add_argument("--max-k", type=int, default=1)
     p.add_argument("--output-json", default="")
+    p.add_argument(
+        "--allow-partial-overlap",
+        action="store_true",
+        help="Summarize only overlapping candidate/selection IDs instead of failing on mismatches.",
+    )
     args = p.parse_args()
 
     cand = _load_jsonl_map(str(args.candidates))
     sel = _load_jsonl_map(str(args.selections))
 
-    pids = sorted(set(cand.keys()) & set(sel.keys()))
-    if not pids:
-        raise SystemExit("No overlapping problem_ids across candidates and selections.")
+    pids = matching_problem_ids(
+        cand,
+        sel,
+        left_name="candidates",
+        right_name="selections",
+        allow_partial_overlap=bool(args.allow_partial_overlap),
+    )
 
     max_k = max(1, int(args.max_k))
     selected_hits: list[float] = []

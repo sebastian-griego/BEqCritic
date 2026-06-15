@@ -138,4 +138,6 @@ run_step ab_compare \
   --output-json "$RUN_DIR/ab_metrics.json" \
   --output-md "$RUN_DIR/ab_metrics.md"
 
+"$PYTHON_BIN" -m beqcritic.artifact_manifest --run-dir "$RUN_DIR" --write
+
 echo "Done. Outputs in $RUN_DIR"

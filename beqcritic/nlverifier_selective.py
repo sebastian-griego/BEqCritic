@@ -14,6 +14,7 @@ from math import exp, isfinite
 from pathlib import Path
 from typing import Any
 
+from .jsonl import matching_problem_ids
 from .nlverifier_diagnostics import load_jsonl_map
 from .schema import validate_grouped_candidates
 
@@ -65,6 +66,7 @@ def load_selective_examples(
     temperature: float = 1.0,
     score_key: str = "scores",
     minimize: bool = False,
+    allow_partial_overlap: bool = False,
 ) -> list[SelectiveExample]:
     if scored_path is None and (candidates_path is None or selections_path is None):
         raise ValueError("provide either scored_path or both candidates_path and selections_path")
@@ -88,9 +90,13 @@ def load_selective_examples(
         assert selections_path is not None
         candidates = load_jsonl_map(candidates_path)
         selections = load_jsonl_map(selections_path)
-        problem_ids = sorted(set(candidates) & set(selections))
-        if not problem_ids:
-            raise ValueError("no overlapping problem_ids across candidates and selections")
+        problem_ids = matching_problem_ids(
+            candidates,
+            selections,
+            left_name="candidates",
+            right_name="selections",
+            allow_partial_overlap=allow_partial_overlap,
+        )
         examples = [
             _example_from_rows(
                 problem_id=problem_id,
@@ -374,6 +380,11 @@ def main() -> None:
     parser.add_argument("--calibration-json", default="")
     parser.add_argument("--minimize", action="store_true")
     parser.add_argument(
+        "--allow-partial-overlap",
+        action="store_true",
+        help="Analyze only overlapping candidates/selections IDs instead of failing on mismatches.",
+    )
+    parser.add_argument(
         "--confidence-key",
         default="chosen_probability",
         choices=("chosen_probability", "probability_margin", "score_margin"),
@@ -392,6 +403,7 @@ def main() -> None:
         temperature=float(args.temperature),
         score_key=str(args.score_key),
         minimize=bool(args.minimize),
+        allow_partial_overlap=bool(args.allow_partial_overlap),
     )
     summary = analyze_selective_risk(
         examples,

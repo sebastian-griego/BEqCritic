@@ -5,6 +5,8 @@ import subprocess
 import sys
 from math import isclose
 
+import pytest
+
 from beqcritic.nlverifier_selective import (
     analyze_selective_risk,
     load_selective_examples,
@@ -94,6 +96,63 @@ def test_selective_examples_can_join_candidates_and_selections(tmp_path):
     assert examples[0].selected_correct is True
     assert examples[0].chosen_index == 1
     assert isclose(examples[0].chosen_probability, 0.7310585786, abs_tol=1e-9)
+
+
+def test_selective_examples_reject_unmatched_candidate_selection_ids(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections = tmp_path / "selections.jsonl"
+    _write_jsonl(
+        candidates,
+        [
+            {"problem_id": "p1", "candidates": ["a", "b"], "labels": [0, 1]},
+            {"problem_id": "candidate_only", "candidates": ["a"], "labels": [1]},
+        ],
+    )
+    _write_jsonl(
+        selections,
+        [
+            {"problem_id": "p1", "chosen_index": 1, "scores": [-1.0, 2.0]},
+            {"problem_id": "selection_only", "chosen_index": 0, "scores": [1.0]},
+        ],
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        load_selective_examples(
+            candidates_path=candidates,
+            selections_path=selections,
+        )
+
+    message = str(excinfo.value)
+    assert "problem_id mismatch across candidates and selections" in message
+    assert "candidate_only" in message
+    assert "selection_only" in message
+
+
+def test_selective_examples_can_explicitly_allow_partial_overlap(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections = tmp_path / "selections.jsonl"
+    _write_jsonl(
+        candidates,
+        [
+            {"problem_id": "p1", "candidates": ["a", "b"], "labels": [0, 1]},
+            {"problem_id": "candidate_only", "candidates": ["a"], "labels": [1]},
+        ],
+    )
+    _write_jsonl(
+        selections,
+        [
+            {"problem_id": "p1", "chosen_index": 1, "scores": [-1.0, 2.0]},
+            {"problem_id": "selection_only", "chosen_index": 0, "scores": [1.0]},
+        ],
+    )
+
+    examples = load_selective_examples(
+        candidates_path=candidates,
+        selections_path=selections,
+        allow_partial_overlap=True,
+    )
+
+    assert [example.problem_id for example in examples] == ["p1"]
 
 
 def test_nlverifier_selective_cli_writes_outputs(tmp_path):

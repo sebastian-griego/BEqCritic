@@ -28,39 +28,44 @@ from pathlib import Path
 
 from datasets import load_dataset
 
+from ..jsonl import (
+    JsonlError,
+    iter_jsonl_objects,
+    load_jsonl_map_by_key,
+    matching_problem_ids_many,
+)
+
 
 def _load_jsonl_map(path: str, key: str, value: str) -> dict[str, str]:
+    rows = load_jsonl_map_by_key(path, key, encoding="utf-8-sig")
     out: dict[str, str] = {}
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            obj = json.loads(line)
-            if key not in obj:
-                raise ValueError(f"Missing {key!r} in {path}: {obj}")
-            if value not in obj:
-                raise ValueError(f"Missing {value!r} in {path}: {obj}")
-            pid = str(obj[key])
-            out[pid] = str(obj[value])
+    for pid, obj in rows.items():
+        if value not in obj:
+            raise JsonlError(f"missing {value} for {key} {pid!r} in {Path(path)}")
+        out[pid] = str(obj[value])
     return out
 
 
 def _load_done_stats(path: str) -> tuple[set[str], list[int], list[int]]:
     done: set[str] = set()
+    first_lines: dict[str, int] = {}
     a_hits: list[int] = []
     b_hits: list[int] = []
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            obj = json.loads(line)
-            pid = str(obj.get("problem_id"))
-            if pid:
-                done.add(pid)
-            if "a_ok" in obj:
-                a_hits.append(int(bool(obj.get("a_ok"))))
-            if "b_ok" in obj:
-                b_hits.append(int(bool(obj.get("b_ok"))))
+    for line_no, obj in iter_jsonl_objects(path):
+        if obj.get("problem_id") is None:
+            raise JsonlError(f"missing problem_id at {Path(path)}:{line_no}")
+        pid = str(obj["problem_id"])
+        if pid in done:
+            raise JsonlError(
+                f"duplicate problem_id {pid!r} at {Path(path)}:{line_no}; "
+                f"first seen at line {first_lines[pid]}"
+            )
+        done.add(pid)
+        first_lines[pid] = line_no
+        if "a_ok" in obj:
+            a_hits.append(int(bool(obj.get("a_ok"))))
+        if "b_ok" in obj:
+            b_hits.append(int(bool(obj.get("b_ok"))))
     return done, a_hits, b_hits
 
 
@@ -79,16 +84,60 @@ def _load_dataset_rows(
 ) -> dict[str, _DatasetRow]:
     ds = load_dataset(dataset, split=split)
     out: dict[str, _DatasetRow] = {}
-    for r in ds:
+    first_rows: dict[str, int] = {}
+    for row_no, r in enumerate(ds, start=1):
         if id_key not in r:
-            raise ValueError(f"Missing {id_key!r} in dataset row keys: {list(r.keys())}")
+            raise ValueError(
+                f"Missing {id_key!r} in dataset {dataset}:{split} row {row_no} "
+                f"keys: {list(r.keys())}"
+            )
         pid = str(r[id_key])
+        if pid in out:
+            raise ValueError(
+                f"Duplicate {id_key!r} {pid!r} in dataset {dataset}:{split} "
+                f"row {row_no}; first seen at row {first_rows[pid]}"
+            )
         if ref_key not in r:
             raise ValueError(f"Missing {ref_key!r} in dataset row for id={pid!r}")
         if header_key not in r:
             raise ValueError(f"Missing {header_key!r} in dataset row for id={pid!r}")
         out[pid] = _DatasetRow(ref=str(r[ref_key]), header=str(r[header_key]))
+        first_rows[pid] = row_no
     return out
+
+
+def _select_problem_ids(
+    dataset_rows: dict[str, _DatasetRow],
+    selections_a: dict[str, str],
+    selections_b: dict[str, str] | None = None,
+    *,
+    a_name: str = "A",
+    b_name: str = "B",
+    allow_partial_overlap: bool = False,
+) -> list[str]:
+    maps: dict[str, dict[str, object]] = {
+        f"selections_a:{a_name}": selections_a,
+    }
+    if selections_b is not None:
+        maps[f"selections_b:{b_name}"] = selections_b
+    if allow_partial_overlap:
+        return matching_problem_ids_many(
+            {
+                "dataset": dataset_rows,
+                **maps,
+            },
+            allow_partial_overlap=True,
+        )
+
+    pids = matching_problem_ids_many(maps)
+    missing_dataset = [pid for pid in pids if pid not in dataset_rows]
+    if missing_dataset:
+        raise ValueError(
+            "problem_id mismatch across dataset and selections; "
+            f"{len(missing_dataset)} selection problem_ids missing from dataset: "
+            + ", ".join(repr(pid) for pid in missing_dataset[:5])
+        )
+    return pids
 
 
 def _require_lean_interact():
@@ -269,6 +318,11 @@ def main() -> None:
     p.add_argument("--output-jsonl", type=str, default="", help="Optional per-problem results JSONL.")
     p.add_argument("--project-dir", type=str, default="", help="Reuse a stable Lean project directory.")
     p.add_argument("--resume", action="store_true", help="Resume from an existing output JSONL file.")
+    p.add_argument(
+        "--allow-partial-overlap",
+        action="store_true",
+        help="Evaluate only overlapping dataset/selection IDs instead of failing on mismatches.",
+    )
     args = p.parse_args()
 
     _require_lean_interact()
@@ -289,11 +343,14 @@ def main() -> None:
         else None
     )
 
-    pids = sorted(set(sel_a.keys()) & set(dataset_rows.keys()))
-    if sel_b is not None:
-        pids = sorted(set(pids) & set(sel_b.keys()))
-    if not pids:
-        raise SystemExit("No overlapping problem_ids between selections and dataset split.")
+    pids = _select_problem_ids(
+        dataset_rows,
+        sel_a,
+        sel_b,
+        a_name=str(args.a_name),
+        b_name=str(args.b_name),
+        allow_partial_overlap=bool(args.allow_partial_overlap),
+    )
 
     if int(args.shuffle_seed):
         rnd = random.Random(int(args.shuffle_seed))

@@ -14,6 +14,7 @@ from math import exp, isfinite, log, sqrt
 from pathlib import Path
 from typing import Any, Iterable
 
+from .jsonl import matching_problem_ids
 from .nlverifier_diagnostics import load_jsonl_map
 from .schema import validate_grouped_candidates
 
@@ -36,6 +37,7 @@ def load_scored_examples(
     selections_path: str | Path | None = None,
     score_key: str = "scores",
     minimize: bool = False,
+    allow_partial_overlap: bool = False,
 ) -> list[ScoredExample]:
     """Load labeled candidate scores from a scored JSONL or joined JSONLs."""
 
@@ -61,9 +63,13 @@ def load_scored_examples(
     assert selections_path is not None
     candidates = load_jsonl_map(candidates_path)
     selections = load_jsonl_map(selections_path)
-    problem_ids = sorted(set(candidates) & set(selections))
-    if not problem_ids:
-        raise ValueError("no overlapping problem_ids across candidates and selections")
+    problem_ids = matching_problem_ids(
+        candidates,
+        selections,
+        left_name="candidates",
+        right_name="selections",
+        allow_partial_overlap=allow_partial_overlap,
+    )
 
     examples = []
     for problem_id in problem_ids:
@@ -446,6 +452,11 @@ def main() -> None:
     parser.add_argument("--temperature", type=float, default=1.0)
     parser.add_argument("--fit-temperature", action="store_true")
     parser.add_argument("--minimize", action="store_true", help="Treat lower raw scores as better.")
+    parser.add_argument(
+        "--allow-partial-overlap",
+        action="store_true",
+        help="Analyze only overlapping candidates/selections IDs instead of failing on mismatches.",
+    )
     parser.add_argument("--output-json")
     parser.add_argument("--output-md")
     args = parser.parse_args()
@@ -456,6 +467,7 @@ def main() -> None:
         selections_path=args.selections,
         score_key=str(args.score_key),
         minimize=bool(args.minimize),
+        allow_partial_overlap=bool(args.allow_partial_overlap),
     )
     summary = analyze_calibration(
         examples,

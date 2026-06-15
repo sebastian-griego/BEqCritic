@@ -17,25 +17,16 @@ from __future__ import annotations
 import argparse
 import json
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from .features import extract_features
+from .jsonl import load_jsonl_map_by_problem_id, matching_problem_ids_many
 from .textnorm import normalize_lean_statement
 
 
-def _load_jsonl_map(path: str) -> dict[str, dict[str, Any]]:
-    out: dict[str, dict[str, Any]] = {}
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            s = line.strip()
-            if not s:
-                continue
-            obj = json.loads(s)
-            pid = obj.get("problem_id")
-            if pid is None:
-                raise ValueError(f"Missing problem_id in {path}: {obj}")
-            out[str(pid)] = obj
-    return out
+def _load_jsonl_map(path: str | Path) -> dict[str, dict[str, Any]]:
+    return load_jsonl_map_by_problem_id(path, encoding="utf-8-sig")
 
 
 @dataclass(frozen=True)
@@ -72,6 +63,17 @@ def _summarize_feats(rows: list[_Row], *, which: str) -> dict[str, float]:
     }
 
 
+def _chosen_index(record: dict[str, Any], *, problem_id: str, method_name: str) -> int:
+    raw_indices = record.get("chosen_indices")
+    if isinstance(raw_indices, list) and raw_indices:
+        return int(raw_indices[0])
+    if "chosen_index" in record:
+        return int(record["chosen_index"])
+    raise ValueError(
+        f"{method_name} selection has no chosen_index/chosen_indices for {problem_id}: {record!r}"
+    )
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--candidates", type=str, required=True, help="Grouped candidates JSONL (must include `labels`)")
@@ -82,6 +84,11 @@ def main() -> None:
     p.add_argument("--name-b", type=str, default="B")
     p.add_argument("--output-jsonl", type=str, default="", help="Optional joined per-problem JSONL")
     p.add_argument("--max-examples", type=int, default=20, help="Max problem_ids printed per category")
+    p.add_argument(
+        "--allow-partial-overlap",
+        action="store_true",
+        help="Analyze only overlapping candidate/selection/result IDs instead of failing on mismatches.",
+    )
     args = p.parse_args()
 
     cand = _load_jsonl_map(args.candidates)
@@ -96,19 +103,15 @@ def main() -> None:
     if "a_ok" not in sample or "b_ok" not in sample:
         raise ValueError("--beqplus-results must contain paired fields `a_ok` and `b_ok`")
 
-    pids = sorted(set(cand) & set(sel_a) & set(sel_b) & set(res))
-    if not pids:
-        raise SystemExit("No overlapping problem_ids across candidates/selections/results.")
-
-    missing = {
-        "candidates": len(set(sel_a) - set(cand)),
-        "selections_a": len(set(cand) - set(sel_a)),
-        "selections_b": len(set(cand) - set(sel_b)),
-        "beqplus_results": len(set(cand) - set(res)),
-    }
-    for k, v in missing.items():
-        if v:
-            print(f"Warning: {v} ids missing {k}")
+    pids = matching_problem_ids_many(
+        {
+            "candidates": cand,
+            f"selections_a:{args.name_a}": sel_a,
+            f"selections_b:{args.name_b}": sel_b,
+            "beqplus_results": res,
+        },
+        allow_partial_overlap=bool(args.allow_partial_overlap),
+    )
 
     rows: list[_Row] = []
     out_f = open(args.output_jsonl, "w", encoding="utf-8") if str(args.output_jsonl).strip() else None
@@ -123,8 +126,8 @@ def main() -> None:
                 raise ValueError(f"Candidates/labels length mismatch for {pid}: {len(candidates)} vs {len(labels)}")
             labels01 = [1 if int(x) else 0 for x in labels]
 
-            a_idx = int(sel_a[pid].get("chosen_index"))
-            b_idx = int(sel_b[pid].get("chosen_index"))
+            a_idx = _chosen_index(sel_a[pid], problem_id=pid, method_name=str(args.name_a))
+            b_idx = _chosen_index(sel_b[pid], problem_id=pid, method_name=str(args.name_b))
             if a_idx < 0 or a_idx >= len(labels01):
                 raise ValueError(f"A chosen_index out of range for {pid}: {a_idx} (n={len(labels01)})")
             if b_idx < 0 or b_idx >= len(labels01):

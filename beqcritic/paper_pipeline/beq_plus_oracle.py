@@ -13,35 +13,41 @@ import argparse
 import json
 import random
 from dataclasses import dataclass
+from pathlib import Path
 
 from .beq_plus_eval import _load_dataset_rows, _require_lean_interact, beq_plus, _load_jsonl_map
+from ..jsonl import JsonlError, iter_jsonl_objects, load_jsonl_map_by_key, matching_problem_ids_many
 
 
 def _load_done_stats(path: str) -> tuple[set[str], int, int, int, int, int]:
     done: set[str] = set()
+    first_lines: dict[str, int] = {}
     oracle_hits = 0
     a_hits = 0
     b_hits = 0
     a_missing = 0
     b_missing = 0
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            obj = json.loads(line)
-            pid = str(obj.get("problem_id"))
-            if pid:
-                done.add(pid)
-            if "oracle_ok" in obj:
-                oracle_hits += int(bool(obj.get("oracle_ok")))
-            if "a_ok" in obj:
-                a_hits += int(bool(obj.get("a_ok")))
-            if "b_ok" in obj:
-                b_hits += int(bool(obj.get("b_ok")))
-            if obj.get("a_in_pool") is False:
-                a_missing += 1
-            if obj.get("b_in_pool") is False:
-                b_missing += 1
+    for line_no, obj in iter_jsonl_objects(path):
+        if obj.get("problem_id") is None:
+            raise JsonlError(f"missing problem_id at {Path(path)}:{line_no}")
+        pid = str(obj["problem_id"])
+        if pid in done:
+            raise JsonlError(
+                f"duplicate problem_id {pid!r} at {Path(path)}:{line_no}; "
+                f"first seen at line {first_lines[pid]}"
+            )
+        done.add(pid)
+        first_lines[pid] = line_no
+        if "oracle_ok" in obj:
+            oracle_hits += int(bool(obj.get("oracle_ok")))
+        if "a_ok" in obj:
+            a_hits += int(bool(obj.get("a_ok")))
+        if "b_ok" in obj:
+            b_hits += int(bool(obj.get("b_ok")))
+        if obj.get("a_in_pool") is False:
+            a_missing += 1
+        if obj.get("b_in_pool") is False:
+            b_missing += 1
     return done, oracle_hits, a_hits, b_hits, a_missing, b_missing
 
 
@@ -56,19 +62,13 @@ def _load_grouped_candidates(
     problem_id_key: str,
     candidates_key: str,
 ) -> dict[str, list[str]]:
+    rows = load_jsonl_map_by_key(path, problem_id_key, encoding="utf-8-sig")
     out: dict[str, list[str]] = {}
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            obj = json.loads(line)
-            if problem_id_key not in obj:
-                raise ValueError(f"Missing {problem_id_key!r} in {path}: {obj}")
-            pid = str(obj[problem_id_key])
-            cands = obj.get(candidates_key) or []
-            if not isinstance(cands, list):
-                raise ValueError(f"Expected {candidates_key!r} to be a list for problem_id={pid!r}")
-            out[pid] = ["" if c is None else str(c) for c in cands]
+    for pid, obj in rows.items():
+        cands = obj.get(candidates_key) or []
+        if not isinstance(cands, list):
+            raise ValueError(f"Expected {candidates_key!r} to be a list for problem_id={pid!r}")
+        out[pid] = ["" if c is None else str(c) for c in cands]
     return out
 
 
@@ -77,6 +77,41 @@ def _find_candidate_index(candidates: list[str], stmt: str) -> int | None:
         return candidates.index(stmt)
     except ValueError:
         return None
+
+
+def _select_problem_ids(
+    dataset_rows: dict[str, object],
+    grouped: dict[str, list[str]],
+    sel_a: _SelectionInfo | None = None,
+    sel_b: _SelectionInfo | None = None,
+    *,
+    allow_partial_overlap: bool = False,
+) -> list[str]:
+    maps: dict[str, dict[str, object]] = {
+        "candidate_pool": grouped,
+    }
+    if sel_a is not None:
+        maps[f"selections_a:{sel_a.name}"] = sel_a.choices
+    if sel_b is not None:
+        maps[f"selections_b:{sel_b.name}"] = sel_b.choices
+    if allow_partial_overlap:
+        return matching_problem_ids_many(
+            {
+                "dataset": dataset_rows,
+                **maps,
+            },
+            allow_partial_overlap=True,
+        )
+
+    pids = matching_problem_ids_many(maps)
+    missing_dataset = [pid for pid in pids if pid not in dataset_rows]
+    if missing_dataset:
+        raise ValueError(
+            "problem_id mismatch across dataset and candidate_pool; "
+            f"{len(missing_dataset)} candidate_pool problem_ids missing from dataset: "
+            + ", ".join(repr(pid) for pid in missing_dataset[:5])
+        )
+    return pids
 
 
 def main() -> None:
@@ -105,6 +140,11 @@ def main() -> None:
     p.add_argument("--output-jsonl", type=str, default="")
     p.add_argument("--project-dir", type=str, default="", help="Reuse a stable Lean project directory.")
     p.add_argument("--resume", action="store_true", help="Resume from an existing output JSONL file.")
+    p.add_argument(
+        "--allow-partial-overlap",
+        action="store_true",
+        help="Evaluate only overlapping dataset/candidate/selection IDs instead of failing on mismatches.",
+    )
     args = p.parse_args()
 
     _require_lean_interact()
@@ -145,14 +185,13 @@ def main() -> None:
             ),
         )
 
-    pids = set(grouped.keys()) & set(dataset_rows.keys())
-    if sel_a is not None:
-        pids &= set(sel_a.choices.keys())
-    if sel_b is not None:
-        pids &= set(sel_b.choices.keys())
-    pids = sorted(pids)
-    if not pids:
-        raise SystemExit("No overlapping problem_ids between candidate pool, dataset split, and selections.")
+    pids = _select_problem_ids(
+        dataset_rows,
+        grouped,
+        sel_a,
+        sel_b,
+        allow_partial_overlap=bool(args.allow_partial_overlap),
+    )
 
     if int(args.shuffle_seed):
         rnd = random.Random(int(args.shuffle_seed))

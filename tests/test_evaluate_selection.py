@@ -4,6 +4,8 @@ import json
 import subprocess
 import sys
 
+import pytest
+
 from beqcritic.evaluate_selection import evaluate_selection_records, format_summary
 
 
@@ -59,6 +61,47 @@ def test_missing_selections_can_be_counted_as_abstentions():
     assert summary["abstained_has_any_correct"]["successes"] == 1
     assert "Accepted selected correct: 1 (100.0%)" in text
     assert "Missing selections counted as abstentions: 2" in text
+
+
+def test_evaluate_selection_rejects_unmatched_problem_ids_by_default():
+    candidates = {
+        "p1": {"candidates": ["a"], "labels": [1]},
+        "candidate_only": {"candidates": ["b"], "labels": [0]},
+    }
+    selections = {
+        "p1": {"problem_id": "p1", "chosen_index": 0},
+        "selection_only": {"problem_id": "selection_only", "chosen_index": 0},
+    }
+
+    with pytest.raises(ValueError) as excinfo:
+        evaluate_selection_records(candidates, selections)
+
+    message = str(excinfo.value)
+    assert "problem_id mismatch across candidates and selections" in message
+    assert "candidate_only" in message
+    assert "selection_only" in message
+
+
+def test_evaluate_selection_can_explicitly_allow_partial_overlap():
+    candidates = {
+        "p1": {"candidates": ["a"], "labels": [1]},
+        "candidate_only": {"candidates": ["b"], "labels": [0]},
+    }
+    selections = {
+        "p1": {"problem_id": "p1", "chosen_index": 0},
+        "selection_only": {"problem_id": "selection_only", "chosen_index": 0},
+    }
+
+    summary = evaluate_selection_records(
+        candidates,
+        selections,
+        allow_partial_overlap=True,
+    )
+
+    assert summary["problems"] == 1
+    assert summary["accepted_selected_correct"]["successes"] == 1
+    assert summary["warnings"]["selections_missing_candidates"] == 1
+    assert summary["warnings"]["candidates_missing_selections"] == 1
 
 
 def test_explicit_abstention_rows_do_not_require_chosen_index():
@@ -131,3 +174,82 @@ def test_evaluate_selection_cli_merges_abstentions_and_writes_summary(tmp_path):
     assert payload["coverage"]["successes"] == 1
     assert payload["accepted_selected_correct"]["successes"] == 1
     assert "Accepted: 1 (50.0%)" in proc.stdout
+
+
+def test_evaluate_selection_cli_rejects_duplicate_problem_ids(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections = tmp_path / "selections.jsonl"
+    summary_json = tmp_path / "summary.json"
+    _write_jsonl(
+        candidates,
+        [
+            {"problem_id": "p1", "candidates": ["a"], "labels": [1]},
+            {"problem_id": "p1", "candidates": ["b"], "labels": [0]},
+        ],
+    )
+    _write_jsonl(selections, [{"problem_id": "p1", "chosen_index": 0}])
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "beqcritic.evaluate_selection",
+            "--candidates",
+            str(candidates),
+            "--selections",
+            str(selections),
+            "--summary-json",
+            str(summary_json),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode != 0
+    assert "duplicate problem_id 'p1'" in proc.stderr
+    assert f"{candidates}:2" in proc.stderr
+    assert not summary_json.exists()
+
+
+def test_evaluate_selection_cli_rejects_unmatched_problem_ids_before_writing_summary(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections = tmp_path / "selections.jsonl"
+    summary_json = tmp_path / "summary.json"
+    _write_jsonl(
+        candidates,
+        [
+            {"problem_id": "p1", "candidates": ["a"], "labels": [1]},
+            {"problem_id": "candidate_only", "candidates": ["b"], "labels": [0]},
+        ],
+    )
+    _write_jsonl(
+        selections,
+        [
+            {"problem_id": "p1", "chosen_index": 0},
+            {"problem_id": "selection_only", "chosen_index": 0},
+        ],
+    )
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "beqcritic.evaluate_selection",
+            "--candidates",
+            str(candidates),
+            "--selections",
+            str(selections),
+            "--summary-json",
+            str(summary_json),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode != 0
+    assert "problem_id mismatch across candidates and selections" in proc.stderr
+    assert "candidate_only" in proc.stderr
+    assert "selection_only" in proc.stderr
+    assert not summary_json.exists()

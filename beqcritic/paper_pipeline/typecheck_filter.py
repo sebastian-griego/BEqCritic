@@ -21,7 +21,10 @@ import subprocess
 import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Iterable
+
+from ..jsonl import iter_jsonl_objects
 
 
 @dataclass(frozen=True)
@@ -53,7 +56,7 @@ def _check_one(
 ) -> _CheckResult:
     fd, path = tempfile.mkstemp(prefix="beqcritic_typecheck_", suffix=".lean", dir=tmp_dir, text=True)
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
             f.write(header)
             f.write(decl)
             f.write("\n")
@@ -78,14 +81,44 @@ def _check_one(
 
 
 def _iter_jsonl(path: str) -> Iterable[dict]:
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            yield json.loads(line)
+    for _line_no, row in iter_jsonl_objects(path):
+        yield row
 
 
-def main() -> None:
+def _load_input_rows(
+    path: str,
+    *,
+    problem_id_key: str,
+    candidates_key: str,
+    header_key: str,
+) -> list[dict]:
+    rows: list[dict] = []
+    for line_no, obj in iter_jsonl_objects(path):
+        if problem_id_key not in obj:
+            raise ValueError(f"Missing {problem_id_key!r} at {Path(path)}:{line_no}")
+        pid = str(obj[problem_id_key])
+        cands = obj.get(candidates_key) or []
+        if not isinstance(cands, list):
+            raise ValueError(
+                f"Expected {candidates_key!r} to be a list at {Path(path)}:{line_no} "
+                f"for problem_id={pid!r}"
+            )
+        if header_key and header_key not in obj:
+            raise ValueError(
+                f"Missing {header_key!r} at {Path(path)}:{line_no} "
+                f"for problem_id={pid!r}"
+            )
+        rows.append(obj)
+    return rows
+
+
+def _open_text_output(path: str):
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    return output_path.open("w", encoding="utf-8", newline="\n")
+
+
+def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--input", type=str, required=True)
     p.add_argument("--output", type=str, required=True)
@@ -131,7 +164,7 @@ def main() -> None:
         default="",
         help="Optional JSONL to write failing candidates + stderr for debugging.",
     )
-    args = p.parse_args()
+    args = p.parse_args(argv)
 
     # Support multi-word lean commands like: --lean-cmd "lake env lean"
     lean_cmd = [s for s in str(args.lean_cmd).split(" ") if s]
@@ -146,8 +179,14 @@ def main() -> None:
     imports = [s.strip() for s in str(args.imports).split(",") if s.strip()]
     global_header = _lean_header(imports=imports, extra_header=str(args.header))
     lean_workdir = str(args.lean_workdir).strip() or None
+    rows = _load_input_rows(
+        str(args.input),
+        problem_id_key=str(args.problem_id_key),
+        candidates_key=str(args.candidates_key),
+        header_key=str(args.header_key),
+    )
 
-    errors_out = open(args.errors_jsonl, "w", encoding="utf-8") if args.errors_jsonl else None
+    errors_out = _open_text_output(args.errors_jsonl) if args.errors_jsonl else None
     tmp_dir_obj = None
     tmp_dir = None
     try:
@@ -158,14 +197,10 @@ def main() -> None:
             tmp_dir_obj = tempfile.TemporaryDirectory(prefix="beqcritic_typecheck_")
             tmp_dir = tmp_dir_obj.name
 
-        with open(args.output, "w", encoding="utf-8") as fout:
-            for obj in _iter_jsonl(args.input):
-                if args.problem_id_key not in obj:
-                    raise ValueError(f"Missing {args.problem_id_key!r} in input row: {obj}")
+        with _open_text_output(args.output) as fout:
+            for obj in rows:
                 pid = str(obj[args.problem_id_key])
                 cands = obj.get(args.candidates_key) or []
-                if not isinstance(cands, list):
-                    raise ValueError(f"Expected {args.candidates_key!r} to be a list for problem_id={pid!r}")
                 if not cands:
                     if not args.drop_empty_problems:
                         fout.write(json.dumps(obj, ensure_ascii=False) + "\n")
@@ -173,8 +208,6 @@ def main() -> None:
 
                 header = global_header
                 if args.header_key:
-                    if args.header_key not in obj:
-                        raise ValueError(f"Missing {args.header_key!r} in input row for problem_id={pid!r}")
                     per_header = "" if obj.get(args.header_key) is None else str(obj.get(args.header_key))
                     header = per_header.rstrip() + "\n\n" + global_header
 

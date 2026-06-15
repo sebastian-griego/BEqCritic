@@ -38,6 +38,18 @@ cat results/results.md
 ```
 
 All quickstart artifacts/logs are written under `runs/quickstart/`.
+The quickstart also writes `runs/quickstart/manifest.json`, which records byte
+sizes and SHA-256 hashes for the generated artifacts, excluding the root
+manifest file itself. Current schema-v2 manifests record the run directory name
+as `run_id` and an `artifact_count`, so verification catches copied manifests,
+mismatched manifests, and stale artifact lists. The verifier also checks schema
+and artifact-count metadata types, so JSON booleans or floats cannot masquerade
+as version or count integers. Legacy schema-v1 manifests without `run_id` or
+`artifact_count` still verify. Verify it with:
+
+```bash
+python -m beqcritic.artifact_manifest --run-dir runs/quickstart --verify
+```
 
 Quickstart trains on a single GPU for stability. Choose the GPU with `BEQCRITIC_TRAIN_CUDA_VISIBLE_DEVICES`:
 
@@ -96,6 +108,12 @@ python -m beqcritic.score_and_select \
   --emit-stats
 ```
 
+The learned, Self-BLEU, and random selectors validate the full grouped-candidate
+JSONL before loading a critic or writing selection/audit outputs. Malformed rows,
+duplicate or missing `problem_id`, empty or non-string candidates, and
+label/candidate length mismatches fail early with the physical input line
+number.
+
 Evaluate selections:
 
 ```bash
@@ -103,6 +121,24 @@ python -m beqcritic.evaluate_selection \
   --candidates runs/myrun/proofnetverif_test_candidates.jsonl \
   --selections runs/myrun/proofnetverif_test_selection.jsonl
 ```
+
+Metric, comparison, quickstart A/B, report-generation, BEq+ summary/audit, and
+BEq+ paper-pipeline CLIs reject duplicate `problem_id` rows rather than silently
+keeping the last row, so accidental concatenation, partial reruns, or corrupted
+resume ledgers cannot overwrite earlier records inside reported scores. Shared
+artifact loaders accept UTF-8 files with or without a BOM and require
+`problem_id` keys to be non-empty strings, so numeric or blank join keys fail
+before reported denominators are computed.
+Selection evaluation, comparison, leaderboard, quickstart A/B, legacy selection
+summaries, and BEq+ label-vs-certifiability audits also require joined
+`problem_id` sets to match exactly by default; pass `--allow-partial-overlap`
+only for intentional subset/debug comparisons, or
+`--treat-missing-as-abstain` / `--allow-missing-as-abstain` for selective
+policies where absent candidate IDs are intentional abstentions.
+BEq+ paper-pipeline evaluators allow dataset splits to contain extra rows, but
+they require selected/candidate-pool IDs to be present in the split and require
+paired selection/candidate-pool inputs to cover the same IDs unless
+`--allow-partial-overlap` is explicitly set.
 
 Compare two selectors with Wilson confidence intervals and a paired exact
 sign test:
@@ -207,6 +243,11 @@ python -m beqcritic.verifier_select \
   --calibration-json runs/myrun/nlverifier_calibration.json
 ```
 
+The standard and clustering selectors validate the grouped candidate JSONL
+before loading models or writing output, so malformed rows, duplicate or missing
+problem IDs, candidate/typecheck shape errors, and missing NL statements fail
+early instead of producing partial selection files.
+
 Turn emitted scores into a ranking-quality and failure-analysis report:
 
 ```bash
@@ -217,6 +258,11 @@ python -m beqcritic.nlverifier_diagnostics \
   --output-json runs/myrun/nlverifier_diagnostics.json \
   --failures-jsonl runs/myrun/nlverifier_failures.jsonl
 ```
+
+NLVerifier reports that join separate candidate and selection JSONL files require
+the `problem_id` sets to match exactly by default. Pass
+`--allow-partial-overlap` only for ad hoc subset/debug runs where dropping
+unmatched rows is intentional.
 
 Check whether emitted scores are calibrated as probabilities and fit a scalar
 temperature for reporting:
@@ -343,6 +389,81 @@ The casebook in `results/exp_inductive/nlverifier_abstention_cases_p50.md`
 shows that the 12 accepted errors include 11 problems with no correct candidate
 available, and that the abstained bucket contains 3 correct selections plus 1
 miss with an available correct candidate.
+
+Regenerate the paper-ready NLVerifier rollup after refreshing any of the
+component reports. The rollup records each source path and SHA-256 digest so
+reported tables can be traced to exact checked-in result bytes:
+
+```bash
+python scripts/summarize_nlverifier_paper_metrics.py \
+  --results-dir results \
+  --output-json results/nlverifier_paper_metrics.json \
+  --output-md results/nlverifier_paper_metrics.md \
+  --output-tex paper/generated/nlverifier_main_table.tex
+```
+
+Run the full local reproducibility gate used by CI:
+
+```bash
+python scripts/verify_reproducibility.py
+```
+
+With `make` available, the equivalent shortcut is:
+
+```bash
+make verify
+```
+
+Write a machine-readable command report:
+
+```bash
+python scripts/verify_reproducibility.py --report-json runs/reproducibility_report.json
+```
+
+With `make` available:
+
+```bash
+make verify-report
+```
+
+The JSON report records `schema_version`, planned and executed command counts,
+per-command return codes, elapsed times, git commit/worktree metadata, and the
+first failed command when the gate stops early.
+
+CI uploads this report as an artifact for each supported Python version.
+
+Verify the checked-in rollup and generated table are current without rewriting
+them:
+
+```bash
+python scripts/summarize_nlverifier_paper_metrics.py \
+  --results-dir results \
+  --output-json results/nlverifier_paper_metrics.json \
+  --output-md results/nlverifier_paper_metrics.md \
+  --output-tex paper/generated/nlverifier_main_table.tex \
+  --check
+```
+
+With `make` available:
+
+```bash
+make paper-check
+```
+
+Verify that the source hashes embedded in the checked-in rollup still match the
+current source result files:
+
+```bash
+python scripts/summarize_nlverifier_paper_metrics.py \
+  --output-json results/nlverifier_paper_metrics.json \
+  --verify-source-hashes
+```
+
+With `make` available:
+
+```bash
+make source-hashes
+```
 
 Prefer new output filenames containing `nlverifier` (existing `runs/` artifacts keep their original names).
 

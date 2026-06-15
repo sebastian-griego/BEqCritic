@@ -14,22 +14,81 @@ from __future__ import annotations
 import argparse
 import json
 import math
-from typing import Iterable
+from pathlib import Path
 
 from .features import extract_features
 from .hf_datasets import load_dataset_split
+from .jsonl import iter_jsonl_objects
 from .modeling import BeqCritic
 from .select import ranked_components_from_scores, score_candidate_matrix
 from .textnorm import normalize_lean_statement
 from .verifier import NLVerifier
 
 
-def _iter_jsonl(path: str) -> Iterable[dict]:
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            yield json.loads(line)
+def _load_input_rows(
+    path: str | Path,
+    *,
+    problem_id_key: str,
+    candidates_key: str,
+    typechecks_key: str,
+) -> list[dict]:
+    rows: list[dict] = []
+    first_lines: dict[str, int] = {}
+    path = Path(path)
+    for line_no, obj in iter_jsonl_objects(path):
+        if problem_id_key not in obj:
+            raise ValueError(f"Missing {problem_id_key!r} at {path}:{line_no}")
+        raw_pid = obj[problem_id_key]
+        if not isinstance(raw_pid, str) or not raw_pid.strip():
+            raise ValueError(
+                f"Expected {problem_id_key!r} to be a non-empty string at "
+                f"{path}:{line_no}, got {type(raw_pid).__name__}"
+            )
+        pid = raw_pid
+        if pid in first_lines:
+            raise ValueError(
+                f"duplicate {problem_id_key} {pid!r} at {path}:{line_no}; "
+                f"first seen at line {first_lines[pid]}"
+            )
+        first_lines[pid] = line_no
+
+        if candidates_key not in obj:
+            raise ValueError(f"Missing {candidates_key!r} at {path}:{line_no} for problem_id={pid!r}")
+        cands = obj[candidates_key]
+        if not isinstance(cands, list):
+            raise ValueError(
+                f"Expected {candidates_key!r} to be a list at {path}:{line_no} "
+                f"for problem_id={pid!r}"
+            )
+        for index, candidate in enumerate(cands):
+            if not isinstance(candidate, str):
+                raise ValueError(
+                    f"Expected {candidates_key}[{index}] to be a string at "
+                    f"{path}:{line_no} for problem_id={pid!r}, "
+                    f"got {type(candidate).__name__}"
+                )
+
+        typechecks = obj.get(typechecks_key)
+        if typechecks is not None:
+            if not isinstance(typechecks, list):
+                raise ValueError(
+                    f"Expected {typechecks_key!r} to be a list at {path}:{line_no} "
+                    f"for problem_id={pid!r}"
+                )
+            if len(typechecks) != len(cands):
+                raise ValueError(
+                    f"Length mismatch at {path}:{line_no} for {pid}: "
+                    f"candidates={len(cands)} {typechecks_key}={len(typechecks)}"
+                )
+            for index, value in enumerate(typechecks):
+                if not isinstance(value, bool):
+                    raise ValueError(
+                        f"Expected {typechecks_key}[{index}] to be a boolean at "
+                        f"{path}:{line_no} for problem_id={pid!r}, "
+                        f"got {type(value).__name__}"
+                    )
+        rows.append(obj)
+    return rows
 
 
 def _load_nl_map(dataset: str, split: str, id_key: str, nl_key: str) -> dict[str, str]:
@@ -91,7 +150,7 @@ def _simplicity_penalty(
     )
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--verifier-model", type=str, required=True)
     p.add_argument("--beqcritic-model", type=str, required=True)
@@ -134,7 +193,14 @@ def main() -> None:
     p.add_argument("--simple-weight-binders", type=float, default=0.5)
     p.add_argument("--simple-weight-prop-assumptions", type=float, default=0.25)
     p.add_argument("--simple-chars-scale", type=float, default=100.0)
-    args = p.parse_args()
+    args = p.parse_args(argv)
+
+    input_rows = _load_input_rows(
+        args.input,
+        problem_id_key=str(args.problem_id_key),
+        candidates_key=str(args.candidates_key),
+        typechecks_key=str(args.typechecks_key),
+    )
 
     nl_map = _load_nl_map(str(args.dataset), str(args.split), str(args.dataset_id_key), str(args.dataset_nl_key))
 
@@ -151,13 +217,9 @@ def main() -> None:
     )
 
     with open(args.output, "w", encoding="utf-8") as fout:
-        for obj in _iter_jsonl(str(args.input)):
-            if args.problem_id_key not in obj:
-                raise ValueError(f"Missing {args.problem_id_key!r} in input row: {obj}")
+        for obj in input_rows:
             pid = str(obj[args.problem_id_key])
             cands = obj.get(args.candidates_key) or []
-            if not isinstance(cands, list):
-                raise ValueError(f"Expected {args.candidates_key!r} to be a list for problem_id={pid!r}")
             if not cands:
                 continue
             if pid not in nl_map:
@@ -170,12 +232,6 @@ def main() -> None:
             valid_idx = list(range(len(cands)))
             no_typecheck_survivors = False
             if typechecks is not None:
-                if not isinstance(typechecks, list):
-                    raise ValueError(f"Expected {args.typechecks_key!r} to be a list for problem_id={pid!r}")
-                if len(typechecks) != len(cands):
-                    raise ValueError(
-                        f"Length mismatch for {pid}: candidates={len(cands)} {args.typechecks_key}={len(typechecks)}"
-                    )
                 mask = [bool(x) for x in typechecks]
                 if any(mask):
                     valid_idx = [i for i, ok in enumerate(mask) if ok]

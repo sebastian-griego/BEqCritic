@@ -4,6 +4,8 @@ import json
 import subprocess
 import sys
 
+import pytest
+
 from beqcritic.nlverifier_abstain import (
     apply_abstention,
     load_source_rows,
@@ -61,6 +63,33 @@ def test_apply_abstention_splits_accepted_and_abstained(tmp_path):
     assert report["dataset"]["abstained_has_any_correct"] == 1
     assert report["dataset"]["abstained_missed_available_correct"] == 1
     assert report["dataset"]["rejected_correct_selections"] == 0
+
+
+def test_load_source_rows_rejects_unmatched_candidate_selection_ids(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections = tmp_path / "selections.jsonl"
+    _write_jsonl(
+        candidates,
+        [
+            {"problem_id": "p1", "candidates": ["a", "b"], "labels": [0, 1]},
+            {"problem_id": "candidate_only", "candidates": ["a"], "labels": [1]},
+        ],
+    )
+    _write_jsonl(
+        selections,
+        [
+            {"problem_id": "p1", "chosen_index": 1, "scores": [-1.0, 2.0]},
+            {"problem_id": "selection_only", "chosen_index": 0, "scores": [1.0]},
+        ],
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        load_source_rows(candidates_path=candidates, selections_path=selections)
+
+    message = str(excinfo.value)
+    assert "problem_id mismatch across candidates and selections" in message
+    assert "candidate_only" in message
+    assert "selection_only" in message
 
 
 def test_resolve_threshold_from_target_recommendation(tmp_path):

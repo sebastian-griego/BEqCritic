@@ -14,35 +14,20 @@ import subprocess
 import sys
 from pathlib import Path
 
+from beqcritic.jsonl import load_jsonl_map_by_problem_id
+
 
 def _load_jsonl_map(path: Path) -> dict[str, dict]:
-    out: dict[str, dict] = {}
-    with path.open("r", encoding="utf-8") as f:
-        for line_no, line in enumerate(f, start=1):
-            if not line.strip():
-                continue
-            obj = json.loads(line)
-            pid = obj.get("problem_id")
-            if pid is None:
-                raise ValueError(f"Missing problem_id at {path}:{line_no}")
-            out[str(pid)] = obj
-    return out
+    return load_jsonl_map_by_problem_id(path, encoding="utf-8-sig")
 
 
 def _load_labels_map(candidates: Path) -> dict[str, list[int]]:
     out: dict[str, list[int]] = {}
-    with candidates.open("r", encoding="utf-8") as f:
-        for line_no, line in enumerate(f, start=1):
-            if not line.strip():
-                continue
-            obj = json.loads(line)
-            pid = obj.get("problem_id")
-            if pid is None:
-                raise ValueError(f"Missing problem_id at {candidates}:{line_no}")
-            labels = obj.get("labels")
-            if not isinstance(labels, list):
-                raise ValueError(f"Missing labels list for {pid} at {candidates}:{line_no}")
-            out[str(pid)] = [1 if int(x) else 0 for x in labels]
+    for pid, obj in _load_jsonl_map(candidates).items():
+        labels = obj.get("labels")
+        if not isinstance(labels, list):
+            raise ValueError(f"Missing labels list for {pid} in {candidates}")
+        out[str(pid)] = [1 if int(x) else 0 for x in labels]
     return out
 
 
@@ -210,7 +195,7 @@ def main() -> None:
         lines.append(f"Paired wins (selected_correct): nlverifier vs beqcritic = {win}/{lose}/{tie} (n={n})")
         lines.append("")
 
-    out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    out_path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     print(f"Wrote {out_path}")
 
 

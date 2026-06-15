@@ -273,6 +273,11 @@ def main() -> None:
     parser.add_argument("--calibration-json", default="")
     parser.add_argument("--minimize", action="store_true")
     parser.add_argument(
+        "--allow-partial-overlap",
+        action="store_true",
+        help="Analyze only overlapping candidates/selections IDs instead of failing on mismatches.",
+    )
+    parser.add_argument(
         "--confidence-keys",
         default=",".join(DEFAULT_CONFIDENCE_KEYS),
         help="Comma-separated confidence keys to compare.",
@@ -290,6 +295,7 @@ def main() -> None:
         temperature=float(args.temperature),
         score_key=str(args.score_key),
         minimize=bool(args.minimize),
+        allow_partial_overlap=bool(args.allow_partial_overlap),
     )
     summary = analyze_confidence_signals(
         examples,

@@ -18,10 +18,11 @@ import argparse
 import json
 
 from .bleu import bleu_score_matrix
+from .schema import load_grouped_candidates_jsonl
 from .select import global_medoid_index
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--input", type=str, required=True)
     p.add_argument("--output", type=str, required=True)
@@ -33,20 +34,15 @@ def main() -> None:
         action="store_true",
         help="When used with --top-k > 1, also include the selected top-k Lean strings in output JSONL.",
     )
-    args = p.parse_args()
+    args = p.parse_args(argv)
 
     k = max(1, int(args.top_k))
+    rows = load_grouped_candidates_jsonl(args.input, require_non_empty=True)
 
-    with open(args.input, "r", encoding="utf-8") as fin, open(args.output, "w", encoding="utf-8") as fout:
-        for line in fin:
-            if not line.strip():
-                continue
-            obj = json.loads(line)
-            pid = obj.get("problem_id")
-            candidates = obj.get("candidates") or []
-            if not candidates:
-                continue
-
+    with open(args.output, "w", encoding="utf-8") as fout:
+        for row in rows:
+            pid = row.problem_id
+            candidates = row.candidates
             norm, scores = bleu_score_matrix(
                 candidates=list(candidates),
                 max_n=int(args.bleu_max_n),

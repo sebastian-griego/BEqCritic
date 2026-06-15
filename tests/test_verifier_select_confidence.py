@@ -5,7 +5,9 @@ from math import isclose
 
 import pytest
 
-from beqcritic.verifier_select import _load_score_temperature, _selection_confidence
+from beqcritic.jsonl import JsonlError
+from beqcritic.verifier_select import _load_input_rows, _load_score_temperature, _selection_confidence
+from beqcritic import verifier_select
 
 
 def test_selection_confidence_reports_probability_and_margin():
@@ -55,3 +57,53 @@ def test_load_score_temperature_from_calibration_json(tmp_path):
 def test_selection_confidence_rejects_bad_temperature():
     with pytest.raises(ValueError):
         _selection_confidence([1.0, 0.0], 0, temperature=0.0)
+
+
+def test_load_input_rows_rejects_typecheck_length_mismatch(tmp_path):
+    path = tmp_path / "candidates.jsonl"
+    path.write_text(
+        json.dumps(
+            {
+                "problem_id": "p1",
+                "candidates": ["a", "b"],
+                "typechecks": [True],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        _load_input_rows(
+            path,
+            problem_id_key="problem_id",
+            candidates_key="candidates",
+            typechecks_key="typechecks",
+        )
+    assert f"{path}:1" in str(excinfo.value)
+
+
+def test_verifier_select_rejects_malformed_jsonl_before_writing_output(tmp_path):
+    input_path = tmp_path / "candidates.jsonl"
+    output_path = tmp_path / "selections.jsonl"
+    input_path.write_text(
+        '{"problem_id": "p1", "candidates": ["a"]}\n{"problem_id": bad}\n',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(JsonlError) as excinfo:
+        verifier_select.main(
+            [
+                "--model",
+                "unused-model",
+                "--dataset",
+                "unused-dataset",
+                "--input",
+                str(input_path),
+                "--output",
+                str(output_path),
+            ]
+        )
+
+    assert f"{input_path}:2" in str(excinfo.value)
+    assert not output_path.exists()

@@ -13,11 +13,13 @@ import argparse
 from contextlib import ExitStack
 import json
 import math
+from pathlib import Path
 
 from .audit import build_selection_audit
 from .bleu import bleu_medoid_index, bleu_centrality_ranking
 from .embedder import TextEmbedder
 from .features import extract_features
+from .jsonl import iter_jsonl_objects
 from .modeling import BeqCritic
 from .select import (
     component_representative_index,
@@ -84,7 +86,81 @@ def _global_cohesion(scores: list[list[float]]) -> float | None:
             m += 1
     return s / max(1, m)
 
-def main():
+
+def _load_input_rows(
+    path: str | Path,
+    *,
+    problem_id_key: str = "problem_id",
+    candidates_key: str = "candidates",
+    labels_key: str = "labels",
+) -> list[dict]:
+    rows: list[dict] = []
+    first_lines: dict[str, int] = {}
+    for line_no, obj in iter_jsonl_objects(path):
+        if problem_id_key not in obj:
+            raise ValueError(f"Missing {problem_id_key!r} at {Path(path)}:{line_no}")
+        raw_problem_id = obj.get(problem_id_key)
+        if not isinstance(raw_problem_id, str) or not raw_problem_id.strip():
+            raise ValueError(
+                f"Expected {problem_id_key!r} to be a non-empty string at "
+                f"{Path(path)}:{line_no}, got {type(raw_problem_id).__name__}"
+            )
+        problem_id = raw_problem_id
+        if problem_id in first_lines:
+            raise ValueError(
+                f"duplicate {problem_id_key} {problem_id!r} at {Path(path)}:{line_no}; "
+                f"first seen at line {first_lines[problem_id]}"
+            )
+        candidates = obj.get(candidates_key)
+        if not isinstance(candidates, list):
+            raise ValueError(
+                f"Expected {candidates_key!r} to be a list at {Path(path)}:{line_no} "
+                f"for problem_id={obj.get(problem_id_key)!r}"
+            )
+        if not candidates:
+            raise ValueError(
+                f"Expected non-empty {candidates_key!r} at {Path(path)}:{line_no} "
+                f"for problem_id={obj.get(problem_id_key)!r}"
+            )
+        bad_types = [
+            idx
+            for idx, candidate in enumerate(candidates)
+            if not isinstance(candidate, str)
+        ]
+        if bad_types:
+            raise ValueError(
+                f"Expected every {candidates_key!r} item to be a string at {Path(path)}:{line_no} "
+                f"for problem_id={obj.get(problem_id_key)!r}; bad indices={bad_types[:5]}"
+            )
+        empty_candidates = [
+            idx
+            for idx, candidate in enumerate(candidates)
+            if isinstance(candidate, str) and not candidate.strip()
+        ]
+        if empty_candidates:
+            raise ValueError(
+                f"Expected every {candidates_key!r} item to be non-empty at "
+                f"{Path(path)}:{line_no} for problem_id={problem_id!r}; "
+                f"bad indices={empty_candidates[:5]}"
+            )
+        labels = obj.get(labels_key)
+        if labels is not None:
+            if not isinstance(labels, list):
+                raise ValueError(
+                    f"Expected {labels_key!r} to be a list at {Path(path)}:{line_no} "
+                    f"for problem_id={obj.get(problem_id_key)!r}"
+                )
+            if len(labels) != len(candidates):
+                raise ValueError(
+                    f"Length mismatch at {Path(path)}:{line_no} for {obj.get(problem_id_key)!r}: "
+                    f"{candidates_key}={len(candidates)} {labels_key}={len(labels)}"
+                )
+        rows.append(obj)
+        first_lines[problem_id] = line_no
+    return rows
+
+
+def main(argv: list[str] | None = None):
     p = argparse.ArgumentParser()
     p.add_argument("--model", type=str, default="", help="Required for --similarity critic|hybrid")
     p.add_argument("--input", type=str, required=True)
@@ -259,7 +335,9 @@ def main():
         default=500,
         help="Maximum candidate text length stored in audits; use 0 for full text.",
     )
-    args = p.parse_args()
+    args = p.parse_args(argv)
+
+    input_rows = _load_input_rows(args.input)
 
     critic = None
     used_critic_temperature = None
@@ -281,17 +359,13 @@ def main():
             )
 
     with ExitStack() as stack:
-        fin = stack.enter_context(open(args.input, "r", encoding="utf-8"))
         fout = stack.enter_context(open(args.output, "w", encoding="utf-8"))
         audit_fout = (
             stack.enter_context(open(args.audit_output, "w", encoding="utf-8"))
             if args.audit_output
             else None
         )
-        for line in fin:
-            if not line.strip():
-                continue
-            obj = json.loads(line)
+        for obj in input_rows:
             candidates = obj.get("candidates", [])
             norm_scored, scores = similarity_matrix(
                 candidates=candidates,

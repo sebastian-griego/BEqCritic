@@ -4,6 +4,8 @@ import json
 import subprocess
 import sys
 
+import pytest
+
 from beqcritic.nlverifier_calibration import (
     analyze_calibration,
     fit_temperature_for_nll,
@@ -71,6 +73,62 @@ def test_load_scored_examples_from_candidate_selection_join(tmp_path):
     assert [(e.problem_id, e.candidate_index, e.label, e.score) for e in examples] == [
         ("p1", 0, 0, -1.0),
         ("p1", 1, 1, 2.0),
+    ]
+
+
+def test_load_scored_examples_rejects_unmatched_candidate_selection_ids(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections = tmp_path / "selections.jsonl"
+    _write_jsonl(
+        candidates,
+        [
+            {"problem_id": "p1", "candidates": ["a"], "labels": [1]},
+            {"problem_id": "candidate_only", "candidates": ["a"], "labels": [1]},
+        ],
+    )
+    _write_jsonl(
+        selections,
+        [
+            {"problem_id": "p1", "chosen_index": 0, "scores": [1.0]},
+            {"problem_id": "selection_only", "chosen_index": 0, "scores": [1.0]},
+        ],
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        load_scored_examples(candidates_path=candidates, selections_path=selections)
+
+    message = str(excinfo.value)
+    assert "problem_id mismatch across candidates and selections" in message
+    assert "candidate_only" in message
+    assert "selection_only" in message
+
+
+def test_load_scored_examples_can_explicitly_allow_partial_overlap(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections = tmp_path / "selections.jsonl"
+    _write_jsonl(
+        candidates,
+        [
+            {"problem_id": "p1", "candidates": ["a"], "labels": [1]},
+            {"problem_id": "candidate_only", "candidates": ["a"], "labels": [1]},
+        ],
+    )
+    _write_jsonl(
+        selections,
+        [
+            {"problem_id": "p1", "chosen_index": 0, "scores": [1.0]},
+            {"problem_id": "selection_only", "chosen_index": 0, "scores": [1.0]},
+        ],
+    )
+
+    examples = load_scored_examples(
+        candidates_path=candidates,
+        selections_path=selections,
+        allow_partial_overlap=True,
+    )
+
+    assert [(example.problem_id, example.candidate_index) for example in examples] == [
+        ("p1", 0)
     ]
 
 

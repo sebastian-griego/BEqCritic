@@ -73,6 +73,11 @@ def main() -> None:
     p.add_argument("--timeout-s", type=int, default=60)
     p.add_argument("--max-problems", type=int, default=0)
     p.add_argument("--shuffle-seed", type=int, default=0)
+    p.add_argument(
+        "--allow-partial-overlap",
+        action="store_true",
+        help="Pass through to beq_plus_eval for intentional subset/debug sweeps.",
+    )
 
     p.add_argument("--dataset-id-key", type=str, default="id")
     p.add_argument("--dataset-ref-key", type=str, default="lean4_formalization")
@@ -194,6 +199,8 @@ def main() -> None:
             "--output-jsonl",
             str(ab_out),
         ]
+        if args.allow_partial_overlap:
+            cmd_eval.append("--allow-partial-overlap")
 
         if args.dry_run:
             print(" ".join(cmd_select))

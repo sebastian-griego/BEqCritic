@@ -7,22 +7,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .jsonl import load_jsonl_map_by_problem_id, matching_problem_ids_many
 from .schema import validate_grouped_candidates
 from .statistics import paired_comparison, proportion_summary
 
 
 def _load_jsonl_map(path: str | Path) -> dict[str, dict[str, Any]]:
-    records: dict[str, dict[str, Any]] = {}
-    with Path(path).open("r", encoding="utf-8-sig") as handle:
-        for line_no, line in enumerate(handle, start=1):
-            if not line.strip():
-                continue
-            record = json.loads(line)
-            problem_id = record.get("problem_id")
-            if problem_id is None:
-                raise ValueError(f"missing problem_id at {path}:{line_no}")
-            records[str(problem_id)] = record
-    return records
+    return load_jsonl_map_by_problem_id(path, encoding="utf-8-sig")
 
 
 def _chosen_indices(record: dict[str, Any]) -> list[int]:
@@ -53,16 +44,20 @@ def compare_files(
     selections_b_path: str | Path,
     a_name: str = "A",
     b_name: str = "B",
+    allow_partial_overlap: bool = False,
 ) -> dict[str, Any]:
     candidates = _load_jsonl_map(candidates_path)
     selections_a = _load_jsonl_map(selections_a_path)
     selections_b = _load_jsonl_map(selections_b_path)
 
-    problem_ids = sorted(set(candidates) & set(selections_a) & set(selections_b))
-    if not problem_ids:
-        raise ValueError(
-            "no overlapping problem_ids across candidates and both selection files"
-        )
+    problem_ids = matching_problem_ids_many(
+        {
+            "candidates": candidates,
+            f"selections_a:{a_name}": selections_a,
+            f"selections_b:{b_name}": selections_b,
+        },
+        allow_partial_overlap=allow_partial_overlap,
+    )
 
     a_success: list[bool] = []
     b_success: list[bool] = []
@@ -191,6 +186,11 @@ def main() -> None:
     parser.add_argument("--selections-b", required=True)
     parser.add_argument("--a-name", default="A")
     parser.add_argument("--b-name", default="B")
+    parser.add_argument(
+        "--allow-partial-overlap",
+        action="store_true",
+        help="Compare only overlapping candidate/selection IDs instead of failing on mismatches.",
+    )
     parser.add_argument("--output-json")
     parser.add_argument("--output-md")
     args = parser.parse_args()
@@ -201,6 +201,7 @@ def main() -> None:
         selections_b_path=args.selections_b,
         a_name=args.a_name,
         b_name=args.b_name,
+        allow_partial_overlap=bool(args.allow_partial_overlap),
     )
     markdown = format_markdown(summary)
     print(markdown)
