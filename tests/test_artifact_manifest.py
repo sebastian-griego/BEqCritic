@@ -19,6 +19,10 @@ def test_write_manifest_hashes_nested_run_artifacts(tmp_path):
 
     manifest = write_manifest(run_dir)
 
+    manifest_bytes = (run_dir / "manifest.json").read_bytes()
+    assert manifest_bytes.endswith(b"\n")
+    assert b"\r\n" not in manifest_bytes
+
     paths = {entry["path"] for entry in manifest["artifacts"]}
     assert paths == {"logs/manifest.json", "logs/train.log", "smoke.json"}
     assert (run_dir / "manifest.json").exists()
