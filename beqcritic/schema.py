@@ -35,10 +35,9 @@ def validate_grouped_candidates(obj: dict[str, Any], *, require_labels: bool = F
     if "problem_id" not in obj:
         raise SchemaError("Missing required key: problem_id")
     problem_id = obj["problem_id"]
-    if problem_id is None:
-        raise SchemaError("problem_id must be a string, got null")
-    problem_id = str(problem_id)
-    if not problem_id:
+    if not isinstance(problem_id, str):
+        raise SchemaError(f"problem_id must be a string, got {type(problem_id).__name__}")
+    if not problem_id.strip():
         raise SchemaError("problem_id must be non-empty")
 
     candidates = obj.get("candidates")
@@ -48,6 +47,8 @@ def validate_grouped_candidates(obj: dict[str, Any], *, require_labels: bool = F
     for i, c in enumerate(candidates):
         if not isinstance(c, str):
             raise SchemaError(f"candidates[{i}] must be a string, got {type(c).__name__}")
+        if not c.strip():
+            raise SchemaError(f"candidates[{i}] must be non-empty")
         cand_out.append(c)
 
     labels_raw = obj.get("labels", None)

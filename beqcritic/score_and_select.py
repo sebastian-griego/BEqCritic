@@ -99,7 +99,13 @@ def _load_input_rows(
     for line_no, obj in iter_jsonl_objects(path):
         if problem_id_key not in obj:
             raise ValueError(f"Missing {problem_id_key!r} at {Path(path)}:{line_no}")
-        problem_id = str(obj.get(problem_id_key))
+        raw_problem_id = obj.get(problem_id_key)
+        if not isinstance(raw_problem_id, str) or not raw_problem_id.strip():
+            raise ValueError(
+                f"Expected {problem_id_key!r} to be a non-empty string at "
+                f"{Path(path)}:{line_no}, got {type(raw_problem_id).__name__}"
+            )
+        problem_id = raw_problem_id
         if problem_id in first_lines:
             raise ValueError(
                 f"duplicate {problem_id_key} {problem_id!r} at {Path(path)}:{line_no}; "
@@ -125,6 +131,17 @@ def _load_input_rows(
             raise ValueError(
                 f"Expected every {candidates_key!r} item to be a string at {Path(path)}:{line_no} "
                 f"for problem_id={obj.get(problem_id_key)!r}; bad indices={bad_types[:5]}"
+            )
+        empty_candidates = [
+            idx
+            for idx, candidate in enumerate(candidates)
+            if isinstance(candidate, str) and not candidate.strip()
+        ]
+        if empty_candidates:
+            raise ValueError(
+                f"Expected every {candidates_key!r} item to be non-empty at "
+                f"{Path(path)}:{line_no} for problem_id={problem_id!r}; "
+                f"bad indices={empty_candidates[:5]}"
             )
         labels = obj.get(labels_key)
         if labels is not None:

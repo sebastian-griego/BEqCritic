@@ -164,6 +164,59 @@ def test_score_and_select_rejects_bad_candidate_schema_before_writing_outputs(tm
     assert not selections.exists()
 
 
+def test_score_and_select_rejects_non_string_problem_id_before_writing_outputs(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections = tmp_path / "selections.jsonl"
+    candidates.write_text(
+        json.dumps({"problem_id": 1, "candidates": ["theorem a : True"]}) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        score_and_select.main(
+            [
+                "--similarity",
+                "bleu",
+                "--input",
+                str(candidates),
+                "--output",
+                str(selections),
+            ]
+        )
+
+    message = str(excinfo.value)
+    assert f"{candidates}:1" in message
+    assert "Expected 'problem_id' to be a non-empty string" in message
+    assert not selections.exists()
+
+
+def test_score_and_select_rejects_empty_candidate_before_writing_outputs(tmp_path):
+    candidates = tmp_path / "candidates.jsonl"
+    selections = tmp_path / "selections.jsonl"
+    candidates.write_text(
+        json.dumps({"problem_id": "p1", "candidates": ["theorem a : True", ""]}) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        score_and_select.main(
+            [
+                "--similarity",
+                "bleu",
+                "--input",
+                str(candidates),
+                "--output",
+                str(selections),
+            ]
+        )
+
+    message = str(excinfo.value)
+    assert f"{candidates}:1" in message
+    assert "Expected every 'candidates' item to be non-empty" in message
+    assert "bad indices=[1]" in message
+    assert not selections.exists()
+
+
 def test_score_and_select_rejects_duplicate_problem_ids_before_writing_outputs(tmp_path):
     candidates = tmp_path / "candidates.jsonl"
     selections = tmp_path / "selections.jsonl"

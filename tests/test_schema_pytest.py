@@ -15,6 +15,27 @@ def test_grouped_candidates_accepts_minimal_record_without_labels():
     assert out.labels is None
 
 
+@pytest.mark.parametrize(
+    "problem_id, expected",
+    [
+        (1, "problem_id must be a string"),
+        ("   ", "problem_id must be non-empty"),
+    ],
+)
+def test_grouped_candidates_rejects_invalid_problem_id(problem_id, expected):
+    rec = {"problem_id": problem_id, "candidates": ["theorem t : True := by trivial"]}
+
+    with pytest.raises(SchemaError, match=expected):
+        validate_grouped_candidates(rec)
+
+
+def test_grouped_candidates_rejects_empty_candidate_string():
+    rec = {"problem_id": "p1", "candidates": ["theorem t : True := by trivial", "  "]}
+
+    with pytest.raises(SchemaError, match=r"candidates\[1\] must be non-empty"):
+        validate_grouped_candidates(rec)
+
+
 def test_grouped_candidates_requires_labels_when_requested():
     rec = {"problem_id": "p1", "candidates": ["a"]}
     with pytest.raises(SchemaError):
