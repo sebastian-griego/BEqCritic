@@ -9,7 +9,7 @@ class JsonlError(ValueError):
     """Raised when a JSONL artifact has an invalid row."""
 
 
-def load_jsonl_objects(path: str | Path, *, encoding: str = "utf-8") -> list[dict[str, Any]]:
+def load_jsonl_objects(path: str | Path, *, encoding: str = "utf-8-sig") -> list[dict[str, Any]]:
     return [row for _line_no, row in iter_jsonl_objects(path, encoding=encoding)]
 
 
@@ -17,7 +17,8 @@ def load_jsonl_map_by_key(
     path: str | Path,
     key: str,
     *,
-    encoding: str = "utf-8",
+    encoding: str = "utf-8-sig",
+    require_nonempty_string_key: bool = False,
 ) -> dict[str, dict[str, Any]]:
     records: dict[str, dict[str, Any]] = {}
     first_lines: dict[str, int] = {}
@@ -25,6 +26,13 @@ def load_jsonl_map_by_key(
         raw_key = record.get(key)
         if raw_key is None:
             raise JsonlError(f"missing {key} at {Path(path)}:{line_no}")
+        if require_nonempty_string_key and (
+            not isinstance(raw_key, str) or not raw_key.strip()
+        ):
+            raise JsonlError(
+                f"expected {key} to be a non-empty string at {Path(path)}:{line_no}, "
+                f"got {type(raw_key).__name__}"
+            )
         map_key = str(raw_key)
         if map_key in records:
             raise JsonlError(
@@ -39,9 +47,14 @@ def load_jsonl_map_by_key(
 def load_jsonl_map_by_problem_id(
     path: str | Path,
     *,
-    encoding: str = "utf-8",
+    encoding: str = "utf-8-sig",
 ) -> dict[str, dict[str, Any]]:
-    return load_jsonl_map_by_key(path, "problem_id", encoding=encoding)
+    return load_jsonl_map_by_key(
+        path,
+        "problem_id",
+        encoding=encoding,
+        require_nonempty_string_key=True,
+    )
 
 
 def matching_problem_ids(
@@ -115,7 +128,7 @@ def matching_problem_ids_many(
 def iter_jsonl_objects(
     path: str | Path,
     *,
-    encoding: str = "utf-8",
+    encoding: str = "utf-8-sig",
 ) -> Iterator[tuple[int, dict[str, Any]]]:
     path = Path(path)
     with path.open("r", encoding=encoding) as handle:

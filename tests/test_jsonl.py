@@ -17,6 +17,13 @@ def test_load_jsonl_objects_skips_blank_lines(tmp_path):
     assert load_jsonl_objects(path) == [{"id": "a"}, {"id": "b"}]
 
 
+def test_load_jsonl_objects_accepts_utf8_bom_by_default(tmp_path):
+    path = tmp_path / "rows.jsonl"
+    path.write_text('{"id": "a"}\n', encoding="utf-8-sig")
+
+    assert load_jsonl_objects(path) == [{"id": "a"}]
+
+
 def test_load_jsonl_objects_reports_invalid_json_line(tmp_path):
     path = tmp_path / "rows.jsonl"
     path.write_text('{"id": "a"}\n\n{"id": bad}\n', encoding="utf-8")
@@ -60,6 +67,42 @@ def test_load_jsonl_map_by_key_rejects_missing_key(tmp_path):
     message = str(excinfo.value)
     assert f"{path}:2" in message
     assert "missing id" in message
+
+
+def test_load_jsonl_map_by_key_can_require_non_empty_string_keys(tmp_path):
+    path = tmp_path / "rows.jsonl"
+    path.write_text('{"id": 1}\n', encoding="utf-8")
+
+    with pytest.raises(JsonlError) as excinfo:
+        load_jsonl_map_by_key(path, "id", require_nonempty_string_key=True)
+
+    message = str(excinfo.value)
+    assert f"{path}:1" in message
+    assert "expected id to be a non-empty string" in message
+
+
+def test_load_jsonl_map_by_problem_id_rejects_non_string_ids(tmp_path):
+    path = tmp_path / "rows.jsonl"
+    path.write_text('{"problem_id": 1}\n', encoding="utf-8")
+
+    with pytest.raises(JsonlError) as excinfo:
+        load_jsonl_map_by_problem_id(path)
+
+    message = str(excinfo.value)
+    assert f"{path}:1" in message
+    assert "expected problem_id to be a non-empty string" in message
+
+
+def test_load_jsonl_map_by_problem_id_rejects_empty_ids(tmp_path):
+    path = tmp_path / "rows.jsonl"
+    path.write_text('{"problem_id": ""}\n', encoding="utf-8")
+
+    with pytest.raises(JsonlError) as excinfo:
+        load_jsonl_map_by_problem_id(path)
+
+    message = str(excinfo.value)
+    assert f"{path}:1" in message
+    assert "expected problem_id to be a non-empty string" in message
 
 
 def test_load_jsonl_map_by_problem_id_rejects_duplicates(tmp_path):

@@ -113,7 +113,10 @@ python -m beqcritic.evaluate_selection \
 Metric, comparison, quickstart A/B, report-generation, BEq+ summary/audit, and
 BEq+ paper-pipeline CLIs reject duplicate `problem_id` rows rather than silently
 keeping the last row, so accidental concatenation, partial reruns, or corrupted
-resume ledgers cannot overwrite earlier records inside reported scores.
+resume ledgers cannot overwrite earlier records inside reported scores. Shared
+artifact loaders accept UTF-8 files with or without a BOM and require
+`problem_id` keys to be non-empty strings, so numeric or blank join keys fail
+before reported denominators are computed.
 Selection evaluation, comparison, leaderboard, quickstart A/B, legacy selection
 summaries, and BEq+ label-vs-certifiability audits also require joined
 `problem_id` sets to match exactly by default; pass `--allow-partial-overlap`
