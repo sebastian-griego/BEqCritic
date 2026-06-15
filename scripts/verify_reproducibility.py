@@ -82,6 +82,56 @@ def run_verification(
     return 0, report
 
 
+def collect_git_metadata(
+    cwd: Path = ROOT,
+    *,
+    runner: Callable[..., Any] = subprocess.run,
+) -> dict[str, Any]:
+    def git(args: list[str]) -> Any:
+        return runner(
+            ["git", *args],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    head = git(["rev-parse", "HEAD"])
+    if int(getattr(head, "returncode", 1)) != 0:
+        error = str(getattr(head, "stderr", "") or getattr(head, "stdout", "")).strip()
+        return {"available": False, "error": error}
+
+    branch = git(["branch", "--show-current"])
+    branch_name = ""
+    if int(getattr(branch, "returncode", 1)) == 0:
+        branch_name = str(getattr(branch, "stdout", "")).strip()
+    status = git(["status", "--porcelain"])
+    if int(getattr(status, "returncode", 1)) != 0:
+        error = str(
+            getattr(status, "stderr", "") or getattr(status, "stdout", "")
+        ).strip()
+        return {
+            "available": True,
+            "branch": branch_name,
+            "head_commit": str(getattr(head, "stdout", "")).strip(),
+            "status_available": False,
+            "status_error": error,
+        }
+    status_lines = [
+        line
+        for line in str(getattr(status, "stdout", "")).splitlines()
+        if line.strip()
+    ]
+    return {
+        "available": True,
+        "branch": branch_name,
+        "head_commit": str(getattr(head, "stdout", "")).strip(),
+        "status_available": True,
+        "uncommitted_change_count": len(status_lines),
+        "working_tree_clean": len(status_lines) == 0,
+    }
+
+
 def write_report(path: Path, report: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -114,6 +164,7 @@ def main() -> int:
     returncode, report = run_verification(commands)
     report["python"] = args.python
     report["include_tests"] = not args.skip_tests
+    report["git"] = collect_git_metadata()
 
     if args.report_json:
         report_path = Path(args.report_json)

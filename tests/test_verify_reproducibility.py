@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 from scripts.verify_reproducibility import (
+    collect_git_metadata,
     run_verification,
     verification_commands,
     write_report,
@@ -62,6 +63,86 @@ def test_run_verification_stops_and_reports_first_failure(tmp_path):
     assert report["executed_command_count"] == 2
     assert report["failed_command"] == ["python", "bad"]
     assert [row["command"] for row in report["commands"]] == [["python", "ok"], ["python", "bad"]]
+
+
+def test_collect_git_metadata_records_clean_worktree(tmp_path):
+    calls = []
+
+    def fake_runner(command, **kwargs):
+        calls.append((command, kwargs))
+        if command[-2:] == ["rev-parse", "HEAD"]:
+            return SimpleNamespace(returncode=0, stdout="abc123\n", stderr="")
+        if command[-2:] == ["branch", "--show-current"]:
+            return SimpleNamespace(returncode=0, stdout="main\n", stderr="")
+        if command[-2:] == ["status", "--porcelain"]:
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+        return SimpleNamespace(returncode=99, stdout="", stderr="unexpected")
+
+    metadata = collect_git_metadata(tmp_path, runner=fake_runner)
+
+    assert metadata == {
+        "available": True,
+        "branch": "main",
+        "head_commit": "abc123",
+        "status_available": True,
+        "uncommitted_change_count": 0,
+        "working_tree_clean": True,
+    }
+    assert calls[0][1]["cwd"] == tmp_path
+    assert calls[0][1]["capture_output"] is True
+    assert calls[0][1]["text"] is True
+    assert calls[0][1]["check"] is False
+
+
+def test_collect_git_metadata_counts_dirty_worktree(tmp_path):
+    def fake_runner(command, **kwargs):
+        if command[-2:] == ["rev-parse", "HEAD"]:
+            return SimpleNamespace(returncode=0, stdout="abc123\n", stderr="")
+        if command[-2:] == ["branch", "--show-current"]:
+            return SimpleNamespace(returncode=0, stdout="feature\n", stderr="")
+        if command[-2:] == ["status", "--porcelain"]:
+            return SimpleNamespace(
+                returncode=0,
+                stdout=" M a.py\n?? b.py\n",
+                stderr="",
+            )
+        return SimpleNamespace(returncode=99, stdout="", stderr="unexpected")
+
+    metadata = collect_git_metadata(tmp_path, runner=fake_runner)
+
+    assert metadata["status_available"] is True
+    assert metadata["working_tree_clean"] is False
+    assert metadata["uncommitted_change_count"] == 2
+
+
+def test_collect_git_metadata_reports_unavailable_status(tmp_path):
+    def fake_runner(command, **kwargs):
+        if command[-2:] == ["rev-parse", "HEAD"]:
+            return SimpleNamespace(returncode=0, stdout="abc123\n", stderr="")
+        if command[-2:] == ["branch", "--show-current"]:
+            return SimpleNamespace(returncode=0, stdout="main\n", stderr="")
+        if command[-2:] == ["status", "--porcelain"]:
+            return SimpleNamespace(returncode=128, stdout="", stderr="status failed\n")
+        return SimpleNamespace(returncode=99, stdout="", stderr="unexpected")
+
+    metadata = collect_git_metadata(tmp_path, runner=fake_runner)
+
+    assert metadata == {
+        "available": True,
+        "branch": "main",
+        "head_commit": "abc123",
+        "status_available": False,
+        "status_error": "status failed",
+    }
+
+
+def test_collect_git_metadata_handles_unavailable_git(tmp_path):
+    def fake_runner(command, **kwargs):
+        return SimpleNamespace(returncode=128, stdout="", stderr="not a git repo\n")
+
+    metadata = collect_git_metadata(tmp_path, runner=fake_runner)
+
+    assert metadata == {"available": False, "error": "not a git repo"}
 
 
 def test_write_report_uses_lf_newlines(tmp_path):
