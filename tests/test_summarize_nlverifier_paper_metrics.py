@@ -134,6 +134,53 @@ def test_nlverifier_paper_metrics_rejects_abstention_partition_mismatch(tmp_path
         build_summary(results)
 
 
+def test_nlverifier_paper_metrics_rejects_stale_leaderboard_best_method(tmp_path):
+    results = tmp_path / "results"
+    _write_summary_inputs(results)
+    leaderboard = _leaderboard()
+    leaderboard["best_method"] = "self_bleu"
+    _write_json(results / "exp_inductive" / "selection_leaderboard.json", leaderboard)
+
+    with pytest.raises(ValueError, match="leaderboard.best_method"):
+        build_summary(results)
+
+
+def test_nlverifier_paper_metrics_rejects_stale_leaderboard_frontier(tmp_path):
+    results = tmp_path / "results"
+    _write_summary_inputs(results)
+    leaderboard = _leaderboard()
+    leaderboard["coverage_accuracy_frontier"][0]["accepted"] = 4
+    _write_json(results / "exp_inductive" / "selection_leaderboard.json", leaderboard)
+
+    with pytest.raises(ValueError, match="leaderboard.coverage_accuracy_frontier"):
+        build_summary(results)
+
+
+def test_nlverifier_paper_metrics_rejects_leaderboard_missed_available_mismatch(tmp_path):
+    results = tmp_path / "results"
+    _write_summary_inputs(results)
+    leaderboard = _leaderboard()
+    leaderboard["methods"]["nlverifier"]["missed_available_correct"] = 0
+    _write_json(results / "exp_inductive" / "selection_leaderboard.json", leaderboard)
+
+    with pytest.raises(ValueError, match="leaderboard.nlverifier.missed_available_correct"):
+        build_summary(results)
+
+
+def test_nlverifier_paper_metrics_rejects_stale_pairwise_lift(tmp_path):
+    results = tmp_path / "results"
+    _write_summary_inputs(results)
+    leaderboard = _leaderboard()
+    leaderboard["pairwise"]["nlverifier"]["self_bleu"]["b_minus_a"] = 0.0
+    _write_json(results / "exp_inductive" / "selection_leaderboard.json", leaderboard)
+
+    with pytest.raises(
+        ValueError,
+        match="leaderboard.pairwise.nlverifier.self_bleu.b_minus_a",
+    ):
+        build_summary(results)
+
+
 def test_paper_metrics_check_cli_fails_without_rewriting_stale_outputs(tmp_path):
     results = tmp_path / "results"
     _write_summary_inputs(results)
@@ -442,7 +489,7 @@ def _stability() -> dict:
 def _leaderboard() -> dict:
     return {
         "best_method": "nlverifier",
-        "dataset": {"problems": 5},
+        "dataset": {"problems": 5, "has_any_correct": _prop(4, 5)},
         "coverage_accuracy_frontier": [
             {
                 "method": "nlverifier",
@@ -453,25 +500,70 @@ def _leaderboard() -> dict:
         ],
         "methods": {
             "nlverifier": {
+                "problems": 5,
+                "accepted": 5,
                 "coverage": 1.0,
                 "selected_correct": _prop(3, 5),
                 "accepted_accuracy": _prop(3, 5),
                 "missed_available_correct": 1,
                 "abstained": 0,
+                "selected_correct_given_any": _prop(3, 4),
             },
             "self_bleu": {
+                "problems": 5,
+                "accepted": 5,
                 "coverage": 1.0,
                 "selected_correct": _prop(2, 5),
                 "accepted_accuracy": _prop(2, 5),
                 "missed_available_correct": 2,
                 "abstained": 0,
+                "selected_correct_given_any": _prop(2, 4),
             },
         },
         "pairwise": {
             "nlverifier": {
-                "self_bleu": {"best_only": 1, "compared_only": 0}
-            }
+                "self_bleu": _pairwise(
+                    a_successes=3,
+                    b_successes=2,
+                    both_success=2,
+                    a_only=1,
+                    b_only=0,
+                )
+            },
+            "self_bleu": {
+                "nlverifier": _pairwise(
+                    a_successes=2,
+                    b_successes=3,
+                    both_success=2,
+                    a_only=0,
+                    b_only=1,
+                )
+            },
         },
+    }
+
+
+def _pairwise(
+    *,
+    a_successes: int,
+    b_successes: int,
+    both_success: int,
+    a_only: int,
+    b_only: int,
+) -> dict:
+    total = 5
+    discordant = a_only + b_only
+    return {
+        "a_successes": a_successes,
+        "b_successes": b_successes,
+        "both_success": both_success,
+        "a_only": a_only,
+        "b_only": b_only,
+        "neither_success": total - both_success - a_only - b_only,
+        "total": total,
+        "b_minus_a": (b_only - a_only) / total,
+        "discordant": discordant,
+        "exact_sign_p": 1.0,
     }
 
 

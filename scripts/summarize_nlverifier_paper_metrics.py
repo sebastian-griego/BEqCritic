@@ -688,27 +688,201 @@ def _validate_stability_metrics(stability: dict[str, Any], *, expected_problems:
 
 def _validate_leaderboard_metrics(leaderboard: dict[str, Any]) -> None:
     problems = int(leaderboard["dataset"]["problems"])
+    methods = leaderboard["methods"]
+    best_method = leaderboard.get("best_method")
+    if best_method not in methods:
+        raise ValueError(
+            f"Inconsistent source artifact leaderboard.best_method: "
+            f"{best_method!r} not in methods"
+        )
+    expected_best = _leaderboard_best_method(methods)
+    if best_method != expected_best:
+        raise ValueError(
+            f"Inconsistent source artifact leaderboard.best_method: "
+            f"{best_method!r} != {expected_best!r}"
+        )
+
+    any_correct = None
+    dataset_any = leaderboard["dataset"].get("has_any_correct")
+    if isinstance(dataset_any, dict):
+        _validate_prop(
+            "leaderboard.dataset.has_any_correct",
+            dataset_any,
+            total=problems,
+        )
+        any_correct = int(dataset_any["successes"])
+
     for name, row in leaderboard["methods"].items():
-        accepted = int(row.get("accepted", problems - int(row["abstained"])))
+        accepted = _leaderboard_accepted(row, problems=problems)
         abstained = int(row["abstained"])
+        if "problems" in row:
+            _require_equal(f"leaderboard.{name}.problems", int(row["problems"]), problems)
         _require_equal(f"leaderboard.{name}.accepted_plus_abstained", accepted + abstained, problems)
         _require_rate(f"leaderboard.{name}.coverage", row["coverage"], accepted, problems)
         _validate_prop(f"leaderboard.{name}.selected_correct", row["selected_correct"], total=problems)
         _validate_prop(f"leaderboard.{name}.accepted_accuracy", row["accepted_accuracy"], total=accepted)
+        _require_equal(
+            f"leaderboard.{name}.accepted_accuracy.successes",
+            int(row["accepted_accuracy"]["successes"]),
+            int(row["selected_correct"]["successes"]),
+        )
         if "selected_correct_given_any" in row:
             _validate_prop(
                 f"leaderboard.{name}.selected_correct_given_any",
                 row["selected_correct_given_any"],
+                successes=int(row["selected_correct"]["successes"]),
+                total=any_correct,
+            )
+        if any_correct is not None and "missed_available_correct" in row:
+            _require_equal(
+                f"leaderboard.{name}.missed_available_correct",
+                int(row["missed_available_correct"]),
+                any_correct - int(row["selected_correct"]["successes"]),
             )
 
-    for row in leaderboard.get("coverage_accuracy_frontier", []):
+    expected_frontier = _leaderboard_frontier(methods)
+    actual_frontier = leaderboard.get("coverage_accuracy_frontier", [])
+    if actual_frontier != expected_frontier:
+        raise ValueError(
+            "Inconsistent source artifact leaderboard.coverage_accuracy_frontier"
+        )
+
+    for row in actual_frontier:
         accepted = int(row["accepted"])
+        method = row["method"]
+        if method not in methods:
+            raise ValueError(
+                f"Inconsistent source artifact frontier.{method}: method not in methods"
+            )
         _require_rate(f"frontier.{row['method']}.coverage", row["coverage"], accepted, problems)
         _validate_prop(
             f"frontier.{row['method']}.accepted_accuracy",
             row["accepted_accuracy"],
             total=accepted,
         )
+    _validate_leaderboard_pairwise(
+        leaderboard.get("pairwise", {}),
+        methods=methods,
+        problems=problems,
+    )
+
+
+def _leaderboard_best_method(methods: dict[str, Any]) -> str:
+    return sorted(
+        methods,
+        key=lambda name: (
+            -int(methods[name]["selected_correct"]["successes"]),
+            -float(methods[name]["accepted_accuracy"]["rate"]),
+            name,
+        ),
+    )[0]
+
+
+def _leaderboard_accepted(row: dict[str, Any], *, problems: int | None = None) -> int:
+    if "accepted" in row:
+        return int(row["accepted"])
+    if problems is None:
+        problems = int(row["selected_correct"]["total"])
+    return int(problems) - int(row["abstained"])
+
+
+def _leaderboard_frontier(methods: dict[str, Any]) -> list[dict[str, Any]]:
+    frontier = []
+    for name, row in methods.items():
+        accepted = _leaderboard_accepted(row)
+        if accepted == 0:
+            continue
+        coverage = float(row["coverage"])
+        accuracy = float(row["accepted_accuracy"]["rate"])
+        dominated = False
+        for other_name, other in methods.items():
+            other_accepted = _leaderboard_accepted(other)
+            if other_name == name or other_accepted == 0:
+                continue
+            other_coverage = float(other["coverage"])
+            other_accuracy = float(other["accepted_accuracy"]["rate"])
+            if (
+                other_coverage >= coverage
+                and other_accuracy >= accuracy
+                and (other_coverage > coverage or other_accuracy > accuracy)
+            ):
+                dominated = True
+                break
+        if not dominated:
+            frontier.append(
+                {
+                    "method": name,
+                    "coverage": coverage,
+                    "accepted_accuracy": row["accepted_accuracy"],
+                    "accepted": accepted,
+                }
+            )
+    return sorted(
+        frontier,
+        key=lambda row: (
+            -float(row["coverage"]),
+            -float(row["accepted_accuracy"]["rate"]),
+            row["method"],
+        ),
+    )
+
+
+def _validate_leaderboard_pairwise(
+    pairwise: dict[str, Any],
+    *,
+    methods: dict[str, Any],
+    problems: int,
+) -> None:
+    method_names = set(methods)
+    if not isinstance(pairwise, dict):
+        raise ValueError("Inconsistent source artifact leaderboard.pairwise: missing")
+    for name in sorted(method_names):
+        row = pairwise.get(name)
+        if not isinstance(row, dict):
+            raise ValueError(
+                f"Inconsistent source artifact leaderboard.pairwise.{name}: missing"
+            )
+        missing = sorted(method_names - {name} - set(row))
+        if missing:
+            shown = ", ".join(missing)
+            raise ValueError(
+                f"Inconsistent source artifact leaderboard.pairwise.{name}: "
+                f"missing {shown}"
+            )
+        for other in sorted(method_names - {name}):
+            _validate_pairwise_comparison(
+                f"leaderboard.pairwise.{name}.{other}",
+                row[other],
+                total=problems,
+            )
+
+
+def _validate_pairwise_comparison(
+    label: str,
+    row: dict[str, Any],
+    *,
+    total: int,
+) -> None:
+    actual_total = int(row["total"])
+    _require_equal(f"{label}.total", actual_total, total)
+    both = int(row["both_success"])
+    a_only = int(row["a_only"])
+    b_only = int(row["b_only"])
+    neither = int(row["neither_success"])
+    for key, value in (
+        ("both_success", both),
+        ("a_only", a_only),
+        ("b_only", b_only),
+        ("neither_success", neither),
+    ):
+        _require_bounds(f"{label}.{key}", value, total)
+    _require_equal(f"{label}.partition", both + a_only + b_only + neither, total)
+    _require_equal(f"{label}.a_successes", int(row["a_successes"]), both + a_only)
+    _require_equal(f"{label}.b_successes", int(row["b_successes"]), both + b_only)
+    _require_equal(f"{label}.discordant", int(row["discordant"]), a_only + b_only)
+    expected_lift = 0.0 if total == 0 else (b_only - a_only) / float(total)
+    _require_close(f"{label}.b_minus_a", float(row["b_minus_a"]), expected_lift)
+    _require_rate_bounds(f"{label}.exact_sign_p", row["exact_sign_p"])
 
 
 def _validate_ood_metrics(ood: dict[str, Any]) -> None:
