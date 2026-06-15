@@ -20,6 +20,7 @@ __all__ = [
     "selection_leaderboard",
     "debug_selection",
     "audit",
+    "artifact_manifest",
     "select",
     "modeling",
     "embedder",

@@ -1,0 +1,110 @@
+import json
+import subprocess
+import sys
+
+import pytest
+
+from beqcritic.artifact_manifest import ManifestError, verify_manifest, write_manifest
+
+
+def test_write_manifest_hashes_nested_run_artifacts(tmp_path):
+    run_dir = tmp_path / "quickstart"
+    (run_dir / "logs").mkdir(parents=True)
+    (run_dir / "smoke.json").write_text('{"ok": true}\n', encoding="utf-8")
+    (run_dir / "logs" / "train.log").write_text("started\n", encoding="utf-8")
+
+    manifest = write_manifest(run_dir)
+
+    paths = {entry["path"] for entry in manifest["artifacts"]}
+    assert paths == {"logs/train.log", "smoke.json"}
+    assert (run_dir / "manifest.json").exists()
+    assert verify_manifest(run_dir)["artifact_count"] == 2
+
+
+def test_verify_manifest_detects_tampered_artifact(tmp_path):
+    run_dir = tmp_path / "quickstart"
+    run_dir.mkdir()
+    artifact = run_dir / "timing.txt"
+    artifact.write_text("train_seconds=1\n", encoding="utf-8")
+    write_manifest(run_dir)
+
+    artifact.write_text("train_seconds=2\n", encoding="utf-8")
+
+    with pytest.raises(ManifestError, match="sha256 mismatch"):
+        verify_manifest(run_dir)
+
+
+def test_verify_manifest_rejects_unlisted_extra_file(tmp_path):
+    run_dir = tmp_path / "quickstart"
+    run_dir.mkdir()
+    (run_dir / "ab_metrics.json").write_text("{}\n", encoding="utf-8")
+    write_manifest(run_dir)
+
+    (run_dir / "late.json").write_text("{}\n", encoding="utf-8")
+
+    with pytest.raises(ManifestError, match="unexpected artifacts"):
+        verify_manifest(run_dir)
+    assert verify_manifest(run_dir, allow_extra=True)["artifact_count"] == 1
+
+
+def test_verify_manifest_rejects_path_escape(tmp_path):
+    run_dir = tmp_path / "quickstart"
+    run_dir.mkdir()
+    (run_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "artifact_count": 1,
+                "artifacts": [
+                    {
+                        "path": "../outside.json",
+                        "bytes": 2,
+                        "sha256": "0" * 64,
+                    }
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ManifestError, match="run directory"):
+        verify_manifest(run_dir)
+
+
+def test_manifest_module_cli_writes_and_verifies(tmp_path):
+    run_dir = tmp_path / "quickstart"
+    run_dir.mkdir()
+    (run_dir / "summary.json").write_text("{}\n", encoding="utf-8")
+
+    write = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "beqcritic.artifact_manifest",
+            "--run-dir",
+            str(run_dir),
+            "--write",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert write.returncode == 0
+    assert json.loads(write.stdout)["artifact_count"] == 1
+
+    verify = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "beqcritic.artifact_manifest",
+            "--run-dir",
+            str(run_dir),
+            "--verify",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert verify.returncode == 0
+    assert json.loads(verify.stdout)["action"] == "verified"
